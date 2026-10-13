@@ -95,6 +95,38 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | `PUT` | `/api/terminals/{id}/appointments/{no}/assignment` | Assign / change truck and driver |
 | `GET` | `/health` | Health check |
 
+**Capacity configuration** (view: terminal staff of the terminal · change: Planner / TerminalAdmin):
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` / `POST` | `/api/terminals/{id}/capacity/templates` | List / create a template (default or seasonal with dates) |
+| `PUT` | `/api/terminals/{id}/capacity/templates/{templateId}` | Replace a template's windows, quotas, dates, priority |
+| `POST` | `/api/terminals/{id}/capacity/templates/{templateId}/deactivate` | Remove a seasonal template |
+| `GET` / `POST` | `/api/terminals/{id}/capacity/overrides` | List / add an override (`Set`, `Adjust`, `Close`) — reason required |
+| `POST` | `/api/terminals/{id}/capacity/overrides/{overrideId}/deactivate` | Lift an override |
+| `GET` / `POST` | `/api/terminals/{id}/capacity/reservations` | Capacity held for a company or walk-ins |
+| `POST` | `/api/terminals/{id}/capacity/reservations/{reservationId}/deactivate` | End a reservation |
+| `GET` / `PUT` | `/api/terminals/{id}/capacity/release-rules` | Unused quota opens to all categories N hours before the slot |
+| `GET` | `/api/terminals/{id}/capacity/slot-board?date=2026-10-20` | Capacity vs booked per slot and category, closed / over-capacity flags |
+| `GET` / `PUT` | `/api/terminals/{id}/settings` | Grace windows, cancellation cut-off, per-truck daily limit |
+| `GET` | `/api/terminals/{id}/audit?entity=capacity_override` | Who changed what, when, why — with before / after values |
+
+Changes that affect capacity regenerate the affected slots immediately (the response says which). Bookings are never cancelled by a change; slots booked above their new capacity are flagged `overCapacity` for the planner.
+
+Example — close tomorrow 10:00–11:00 for crane maintenance:
+
+```json
+POST /api/terminals/1/capacity/overrides
+{ "startAt": "2026-10-20T10:00:00+03:00", "endAt": "2026-10-20T11:00:00+03:00", "action": "Close", "reason": "Crane 3 maintenance" }
+```
+
+Example — a weekly template window (times are local; `24:00` = midnight):
+
+```json
+{ "day": "Sunday", "start": "06:00", "end": "24:00", "totalCapacity": 30, "overbookPct": 5,
+  "quotas": { "IMP_PICKUP": 15, "EXP_DROP": 12 } }
+```
+
 Background workers: slot generation (every 6 h) and no-show marking (every 10 min).
 
 Booking responses: `201` booked · `400` invalid request · `404` not found · `409` no capacity / conflict ·
@@ -180,6 +212,7 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] TOS validation through an adapter interface, with a configurable fake
 - [x] Driver traffic light and automatic no-shows
 - [x] Authentication and roles: login, lockout, rotating refresh tokens, company isolation, terminal scope, user creation
+- [x] Capacity admin API: templates, seasonal templates, overrides, reservations, release rules, settings, slot board, audit log
 - [ ] Navis N4 adapter
 - [ ] Operator portal (React)
 - [ ] Driver app (Flutter)

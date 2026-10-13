@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after authentication)
+Last updated: 2026-10-14 (after capacity admin API)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -63,6 +63,19 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Database: auth columns, refresh token table, upgrade script `db/migrations/002_auth.sql` |
 | ✅ | Tests: 79 unit + 16 database + 9 end-to-end API, all passing in CI |
 
+### 6. Capacity admin API (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Weekly default template and seasonal templates: create, edit (whole grid), remove seasonal |
+| ✅ | Validation: overlapping windows, times (24:00 = midnight), quotas, capacity and overbooking limits, dates |
+| ✅ | Overrides set / adjust / close for specific hours with a mandatory reason; lift an override |
+| ✅ | Reservations for priority companies / walk-ins; quota release rules; terminal settings |
+| ✅ | Slot board: capacity vs booked per slot and category, closed and over-capacity flags |
+| ✅ | Audit log of every change: who, when, why, before / after values |
+| ✅ | Affected slots regenerate immediately; bookings are kept and over-capacity is flagged |
+| ✅ | Access: terminal staff view; planners and terminal admins change; companies have no access |
+| ✅ | Tests: 94 unit + 16 database + 16 end-to-end API, all passing in CI |
+
 ---
 
 ## Remaining
@@ -70,10 +83,8 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase A — Backend MVP (make it usable by real customers)
 | | Item | Notes |
 |---|---|---|
-| 🔜 | **Capacity admin API** | Templates, seasonal templates, overrides (with reason + audit log), reservations, quota release rules, terminal settings |
-| ⬜ | Master data API | Companies, trucks, drivers, categories, cargo allocations; list / edit / deactivate users |
+| 🔜 | **Master data API** | Companies, trucks, drivers, categories, cargo allocations; list / edit / deactivate users |
 | ⬜ | Password reset | Forgotten-password flow (email or SMS), invited users set their own password |
-| ⬜ | Audit log | Every capacity/settings change: who, when, old/new values, reason |
 | ⬜ | Bulk booking | CSV/Excel upload for dispatchers |
 | ⬜ | Re-validation before arrival | Re-check TOS status of booked items periodically and when the driver starts the trip; update traffic light |
 | ⬜ | EF Core migrations | Replace `db/schema.sql` as the source of truth |
