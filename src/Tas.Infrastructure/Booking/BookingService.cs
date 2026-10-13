@@ -184,7 +184,7 @@ public sealed class BookingService(
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
         var unitsByCategory = p.Items.GroupBy(i => i.Category.CategoryId).ToDictionary(g => g.Key, g => g.Count());
-        var capacityError = await TryConsumeSlotAsync(p.Slot, p.Company.CompanyId, unitsByCategory, now, ct);
+        var capacityError = await TryConsumeSlotAsync(p.Slot, p.Company.CompanyId, unitsByCategory, now, ct, request.WalkIn);
         if (capacityError is not null)
         {
             await tx.RollbackAsync(ct);
@@ -446,12 +446,12 @@ public sealed class BookingService(
 
     /// <summary>Units held back from this company in the slot, and release hours per category (if a rule exists).</summary>
     private async Task<(int Reserved, IReadOnlyDictionary<int, int?> ReleaseHours)> ReservedAndReleaseAsync(
-        Slot slot, int companyId, IEnumerable<int> categoryIds, DateTimeOffset now, CancellationToken ct)
+        Slot slot, int companyId, IEnumerable<int> categoryIds, DateTimeOffset now, CancellationToken ct, bool walkIn = false)
     {
         var reservations = await db.CapacityReservations.AsNoTracking()
             .Where(r => r.TerminalId == slot.TerminalId && r.IsActive && r.StartAt <= slot.StartAt && r.EndAt > slot.StartAt)
             .ToListAsync(ct);
-        var reserved = AvailabilityCalculator.ReservedUnits(reservations, slot.StartAt, now, companyId);
+        var reserved = AvailabilityCalculator.ReservedUnits(reservations, slot.StartAt, now, companyId, walkIn);
 
         var ids = categoryIds.ToList();
         var rules = await db.QuotaReleaseRules.AsNoTracking()
@@ -462,9 +462,9 @@ public sealed class BookingService(
 
     /// <summary>Consumes slot capacity for a company; returns an error message when there is no room.</summary>
     private async Task<string?> TryConsumeSlotAsync(
-        Slot slot, int companyId, IReadOnlyDictionary<int, int> unitsByCategory, DateTimeOffset now, CancellationToken ct)
+        Slot slot, int companyId, IReadOnlyDictionary<int, int> unitsByCategory, DateTimeOffset now, CancellationToken ct, bool walkIn = false)
     {
-        var (reserved, releaseHours) = await ReservedAndReleaseAsync(slot, companyId, unitsByCategory.Keys, now, ct);
+        var (reserved, releaseHours) = await ReservedAndReleaseAsync(slot, companyId, unitsByCategory.Keys, now, ct, walkIn);
         var released = releaseHours
             .Where(r => AvailabilityCalculator.IsQuotaReleased(slot.StartAt, now, r.Value))
             .Select(r => r.Key)

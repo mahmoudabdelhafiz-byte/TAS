@@ -4,13 +4,15 @@ namespace Tas.Application.Booking;
 
 /// <summary>A request to book one truck visit into a slot.</summary>
 /// <param name="UserId">The portal user making the booking (will come from authentication later).</param>
+/// <param name="WalkIn">Booked at the gate for a truck that arrived without an appointment: may use the walk-in reserve.</param>
 public sealed record BookingRequest(
     int CompanyId,
     int UserId,
     long SlotId,
     int? TruckId,
     int? DriverId,
-    IReadOnlyList<BookingItemRequest> Items);
+    IReadOnlyList<BookingItemRequest> Items,
+    bool WalkIn = false);
 
 /// <summary>
 /// One move. Container categories need a container number (or, for an empty pickup, just a booking reference).

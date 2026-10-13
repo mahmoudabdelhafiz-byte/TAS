@@ -39,12 +39,14 @@ public static class AvailabilityCalculator
     /// <paramref name="slotStart"/>: active reservations covering the slot that belong to someone else
     /// (or to walk-ins) and have not yet been released.
     /// </summary>
+    /// <param name="walkIn">A truck booked at the gate may use the walk-in reserve (reservations without a company).</param>
     public static int ReservedUnits(
-        IEnumerable<CapacityReservation> reservations, DateTimeOffset slotStart, DateTimeOffset now, int? bookingCompanyId) =>
+        IEnumerable<CapacityReservation> reservations, DateTimeOffset slotStart, DateTimeOffset now, int? bookingCompanyId, bool walkIn = false) =>
         reservations
             .Where(r => r.IsActive
                         && r.StartAt <= slotStart && slotStart < r.EndAt
                         && !(bookingCompanyId is not null && r.CompanyId == bookingCompanyId)
+                        && !(walkIn && r.CompanyId is null)
                         && now < slotStart.AddHours(-r.ReleaseHoursBefore))
             .Sum(r => r.UnitsPerSlot);
 }

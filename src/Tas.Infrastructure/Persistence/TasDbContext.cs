@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Tas.Domain;
 using Tas.Domain.Booking;
 using Tas.Domain.Capacity;
+using Tas.Domain.Gate;
 using Tas.Domain.Parties;
 
 namespace Tas.Infrastructure.Persistence;
@@ -31,6 +32,9 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
+    public DbSet<GateLane> GateLanes => Set<GateLane>();
+    public DbSet<GateEvent> GateEvents => Set<GateEvent>();
+    public DbSet<GateTrouble> GateTroubles => Set<GateTrouble>();
     public DbSet<Truck> Trucks => Set<Truck>();
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<CargoAllocation> CargoAllocations => Set<CargoAllocation>();
@@ -97,6 +101,29 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
         b.Entity<SlotCategoryCapacity>(e => e.HasKey(x => new { x.SlotId, x.CategoryId }));
 
         b.Entity<TerminalSetting>(e => e.HasKey(x => new { x.TerminalId, x.SettingKey }));
+
+        // ---------- Gate ----------
+
+        b.Entity<GateLane>(e =>
+        {
+            e.HasKey(x => x.LaneId);
+            e.Property(x => x.Direction).HasUpperCaseConversion();
+        });
+
+        b.Entity<GateEvent>(e =>
+        {
+            e.HasKey(x => x.GateEventId);
+            e.Property(x => x.EventType).HasUpperCaseConversion();
+        });
+
+        b.Entity<GateTrouble>(e =>
+        {
+            e.HasKey(x => x.TroubleId);
+            e.Property(x => x.ReasonCode).HasUpperCaseConversion();
+            e.Property(x => x.Status).HasUpperCaseConversion();
+            e.Property(x => x.Resolution).HasConversion(new UpperSnakeEnumConverter<TroubleResolution>());
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
 
         b.Entity<NotificationLog>(e =>
         {

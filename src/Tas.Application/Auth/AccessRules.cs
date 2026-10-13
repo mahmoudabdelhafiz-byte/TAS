@@ -45,6 +45,10 @@ public static class AccessRules
         return (requestedCompanyId, null);
     }
 
+    /// <summary>Work the gate: arrivals, gate-in/out, trouble desk, gate board — any staff of the terminal.</summary>
+    public static bool CanOperateGate(CurrentUser user, int terminalId) =>
+        user.IsSysAdmin || (user.IsTerminalStaff && user.TerminalId == terminalId);
+
     // ---------------------------------------------------------------- master data
 
     /// <summary>Register companies, change their details and suspend them: terminal admins and sys admins.</summary>

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Tas.Domain;
 using Tas.Domain.Booking;
 using Tas.Domain.Capacity;
+using Tas.Domain.Gate;
 using Tas.Domain.Parties;
 using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Capacity;
@@ -106,6 +107,11 @@ public sealed class DemoDataSeeder(TasDbContext db, SlotGenerationService slotGe
             new TerminalSetting { TerminalId = tid, SettingKey = TerminalSettings.MaxPerTruckPerDayKey, SettingValue = "6" });
 
         db.QuotaReleaseRules.Add(new QuotaReleaseRule { TerminalId = tid, CategoryId = ids["MTY_RETURN"], HoursBefore = 12 });
+
+        db.GateLanes.AddRange(
+            new GateLane { TerminalId = tid, GateCode = "MAIN", LaneCode = "IN-1", Direction = LaneDirection.In },
+            new GateLane { TerminalId = tid, GateCode = "MAIN", LaneCode = "IN-2", Direction = LaneDirection.In },
+            new GateLane { TerminalId = tid, GateCode = "MAIN", LaneCode = "OUT-1", Direction = LaneDirection.Out });
 
         var now = clock.GetUtcNow();
         db.CapacityReservations.Add(new CapacityReservation

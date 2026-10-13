@@ -5,6 +5,7 @@ using Tas.Application.Tos;
 using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
+using Tas.Infrastructure.Gate;
 using Tas.Infrastructure.MasterData;
 using Tas.Infrastructure.Persistence;
 using Tas.Infrastructure.Tos;
@@ -42,6 +43,9 @@ public static class DependencyInjection
         services.AddHostedService<RevalidationWorker>();
         services.AddHostedService<NoShowWorker>();
         services.AddScoped<DemoDataSeeder>();
+
+        // Gate
+        services.AddScoped<GateService>();
 
         // TOS: the fake until the N4 adapter exists ("Tos:Adapter": "Fake").
         var adapter = config.GetValue("Tos:Adapter", "Fake");
