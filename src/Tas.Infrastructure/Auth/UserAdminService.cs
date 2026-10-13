@@ -3,6 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Tas.Application.Auth;
+using Tas.Application.Capacity;
+using Tas.Application.MasterData;
+using Tas.Domain;
 using Tas.Domain.Parties;
 using Tas.Infrastructure.Persistence;
 
@@ -29,7 +32,7 @@ public enum UserAdminStatus
 public sealed record UserAdminResult(UserAdminStatus Status, UserProfile? User = null, string? Error = null);
 
 /// <summary>Creates users within the rules of <see cref="AccessRules.CanCreateUser"/>.</summary>
-public sealed class UserAdminService(TasDbContext db, PasswordService passwords, AuthService auth)
+public sealed class UserAdminService(TasDbContext db, PasswordService passwords, AuthService auth, TimeProvider clock)
 {
     private static readonly HashSet<string> Languages = ["ar", "en", "ur", "hi"];
 
@@ -82,8 +85,145 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             return new UserAdminResult(UserAdminStatus.Conflict, Error: "A user with this email already exists.");
         }
 
+        Audit(user, AuditAction.Insert, null, UserView.From(user), null, actor);
+        await db.SaveChangesAsync(ct);
         return new UserAdminResult(UserAdminStatus.Created, await auth.ProfileAsync(user, ct));
     }
+
+    /// <summary>
+    /// Users the actor manages: CompanyAdmin — own company; TerminalAdmin — own terminal's staff and all
+    /// company users; SysAdmin — everyone. Optional filters narrow it further.
+    /// </summary>
+    public async Task<AdminResult<IReadOnlyList<UserView>>> ListAsync(
+        CurrentUser actor, int? companyId, int? terminalId, CancellationToken ct = default)
+    {
+        var query = db.AppUsers.AsNoTracking();
+        switch (actor.Role)
+        {
+            case UserRole.SysAdmin:
+                break;
+            case UserRole.TerminalAdmin:
+                query = query.Where(u => u.TerminalId == actor.TerminalId || u.CompanyId != null);
+                break;
+            case UserRole.CompanyAdmin:
+                query = query.Where(u => u.CompanyId == actor.CompanyId);
+                break;
+            default:
+                return AdminResult<IReadOnlyList<UserView>>.Forbidden("You cannot list users.");
+        }
+
+        if (companyId is not null)
+            query = query.Where(u => u.CompanyId == companyId);
+        if (terminalId is not null)
+            query = query.Where(u => u.TerminalId == terminalId);
+
+        var users = await query.OrderBy(u => u.Email).Take(1000).ToListAsync(ct);
+        return AdminResult<IReadOnlyList<UserView>>.Ok(users.Select(UserView.From).ToList());
+    }
+
+    /// <summary>Changes name, mobile, language and role (within the actor's scope). Nobody changes their own role.</summary>
+    public async Task<AdminResult<UserView>> UpdateAsync(CurrentUser actor, int userId, UpdateUserInput input, CancellationToken ct = default)
+    {
+        var (user, denied) = await LoadManagedAsync(actor, userId, ct);
+        if (denied is not null)
+            return denied;
+
+        var errors = MasterDataValidator.User(input);
+        if (errors.Count > 0)
+            return AdminResult<UserView>.Invalid(errors);
+        if (input.Role != user!.Role)
+        {
+            if (user.UserId == actor.UserId)
+                return AdminResult<UserView>.Invalid("You cannot change your own role.");
+            if (!AccessRules.CanCreateUser(actor, input.Role, user.CompanyId, user.TerminalId))
+                return AdminResult<UserView>.Forbidden($"You cannot give this user the role {input.Role}.");
+        }
+
+        var before = UserView.From(user);
+        user.FullName = input.FullName.Trim();
+        user.Mobile = string.IsNullOrWhiteSpace(input.Mobile) ? null : PhoneNumber.Normalize(input.Mobile);
+        user.PreferredLanguage = input.PreferredLanguage.Trim().ToLowerInvariant();
+        user.Role = input.Role;
+        Audit(user, AuditAction.Update, before, UserView.From(user), null, actor);
+        await db.SaveChangesAsync(ct);
+        return AdminResult<UserView>.Ok(UserView.From(user));
+    }
+
+    /// <summary>Deactivating signs the user out everywhere; their tokens stop working on the next request.</summary>
+    public async Task<AdminResult<UserView>> SetActiveAsync(
+        CurrentUser actor, int userId, bool active, string? reason, CancellationToken ct = default)
+    {
+        var (user, denied) = await LoadManagedAsync(actor, userId, ct);
+        if (denied is not null)
+            return denied;
+        if (user!.UserId == actor.UserId)
+            return AdminResult<UserView>.Invalid("You cannot deactivate your own account.");
+        if (!active && string.IsNullOrWhiteSpace(reason))
+            return AdminResult<UserView>.Invalid("A reason is required to deactivate a user.");
+
+        if (user.IsActive != active)
+        {
+            var before = UserView.From(user);
+            user.IsActive = active;
+            if (active)
+            {
+                user.FailedLoginCount = 0;
+                user.LockedUntil = null;
+            }
+            Audit(user, AuditAction.Update, before, UserView.From(user), reason, actor);
+            await db.SaveChangesAsync(ct);
+            if (!active)
+                await RevokeSessionsAsync(user.UserId, ct);
+        }
+        return AdminResult<UserView>.Ok(UserView.From(user));
+    }
+
+    /// <summary>Sets a new password for someone else (use change-password for yourself) and ends their sessions.</summary>
+    public async Task<AdminResult<UserView>> ResetPasswordAsync(
+        CurrentUser actor, int userId, string newPassword, CancellationToken ct = default)
+    {
+        var (user, denied) = await LoadManagedAsync(actor, userId, ct);
+        if (denied is not null)
+            return denied;
+        if (user!.UserId == actor.UserId)
+            return AdminResult<UserView>.Invalid("Use change-password for your own account.");
+
+        var problem = PasswordPolicy.Check(newPassword, user.Email);
+        if (problem is not null)
+            return AdminResult<UserView>.Invalid(problem);
+
+        user.PasswordHash = passwords.Hash(user, newPassword);
+        user.FailedLoginCount = 0;
+        user.LockedUntil = null;
+        Audit(user, AuditAction.Update, null, null, "Password reset by administrator", actor);
+        await db.SaveChangesAsync(ct);
+        await RevokeSessionsAsync(user.UserId, ct);
+        return AdminResult<UserView>.Ok(UserView.From(user));
+    }
+
+    private async Task<(AppUser? User, AdminResult<UserView>? Denied)> LoadManagedAsync(CurrentUser actor, int userId, CancellationToken ct)
+    {
+        var user = await db.AppUsers.SingleOrDefaultAsync(u => u.UserId == userId, ct);
+        if (user is null)
+            return (null, AdminResult<UserView>.NotFound($"User {userId} not found."));
+
+        // Managing an existing user needs the same rights as creating one like it — except editing yourself.
+        if (user.UserId != actor.UserId && !AccessRules.CanCreateUser(actor, user.Role, user.CompanyId, user.TerminalId))
+            return (null, AdminResult<UserView>.NotFound($"User {userId} not found."));
+
+        return (user, null);
+    }
+
+    private Task RevokeSessionsAsync(int userId, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow();
+        return db.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), ct);
+    }
+
+    private void Audit(AppUser user, AuditAction action, object? before, object? after, string? reason, CurrentUser actor) =>
+        AuditWriter.Add(db, user.TerminalId, "app_user", user.UserId, action, before, after, reason, actor.UserId, clock.GetUtcNow());
 }
 
 /// <summary>

@@ -5,6 +5,7 @@ using Tas.Application.Tos;
 using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
+using Tas.Infrastructure.MasterData;
 using Tas.Infrastructure.Persistence;
 using Tas.Infrastructure.Tos;
 
@@ -26,6 +27,10 @@ public static class DependencyInjection
         services.AddScoped<AvailabilityQueryService>();
         services.AddScoped<BookingCounterStore>();
         services.AddScoped<CapacityAdminService>();
+
+        // Master data
+        services.AddScoped<FleetService>();
+        services.AddScoped<TerminalDataService>();
         services.AddHostedService<SlotGenerationWorker>();
 
         // Booking

@@ -124,6 +124,7 @@ public enum AdminStatus
     Invalid,
     NotFound,
     Conflict,
+    Forbidden,
 }
 
 /// <summary>Result of a configuration change, with the regenerated-slot summary when slots were affected.</summary>
@@ -135,4 +136,5 @@ public sealed record AdminResult<T>(AdminStatus Status, T? Value, IReadOnlyList<
     public static AdminResult<T> Invalid(string error) => Invalid(new[] { error });
     public static AdminResult<T> NotFound(string error) => new(AdminStatus.NotFound, default, new[] { error });
     public static AdminResult<T> Conflict(string error) => new(AdminStatus.Conflict, default, new[] { error });
+    public static AdminResult<T> Forbidden(string error) => new(AdminStatus.Forbidden, default, new[] { error });
 }

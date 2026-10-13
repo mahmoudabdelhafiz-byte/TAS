@@ -45,6 +45,32 @@ public static class AccessRules
         return (requestedCompanyId, null);
     }
 
+    // ---------------------------------------------------------------- master data
+
+    /// <summary>Register companies, change their details and suspend them: terminal admins and sys admins.</summary>
+    public static bool CanManageCompanies(CurrentUser user) =>
+        user.Role is UserRole.SysAdmin or UserRole.TerminalAdmin;
+
+    /// <summary>See a company and its fleet: its own users, or any terminal staff.</summary>
+    public static bool CanViewCompany(CurrentUser user, int companyId) =>
+        user.IsTerminalStaff || (user.IsCompanyUser && user.CompanyId == companyId);
+
+    /// <summary>Add / edit trucks and drivers: the company's admin, or terminal admins / sys admins.</summary>
+    public static bool CanManageFleet(CurrentUser user, int companyId) =>
+        user.Role is UserRole.SysAdmin or UserRole.TerminalAdmin
+        || (user.Role == UserRole.CompanyAdmin && user.CompanyId == companyId);
+
+    /// <summary>Block / unblock trucks and drivers: a terminal decision.</summary>
+    public static bool CanBlockFleet(CurrentUser user) =>
+        user.Role is UserRole.SysAdmin or UserRole.TerminalAdmin;
+
+    /// <summary>Define the terminal's transaction categories.</summary>
+    public static bool CanManageCategories(CurrentUser user, int terminalId) =>
+        user.IsSysAdmin || (user.Role == UserRole.TerminalAdmin && user.TerminalId == terminalId);
+
+    /// <summary>Record multipurpose cargo releases (BL / DO, trips, tonnage).</summary>
+    public static bool CanManageCargo(CurrentUser user, int terminalId) => CanManageCapacity(user, terminalId);
+
     /// <summary>
     /// Whether <paramref name="actor"/> may create a user with this role for this company / terminal.
     ///   SysAdmin: anyone.

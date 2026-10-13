@@ -1,5 +1,6 @@
 using Tas.Application.Auth;
 using Tas.Application.Booking;
+using Tas.Application.Capacity;
 using Tas.Infrastructure.Auth;
 
 namespace Tas.Api;
@@ -48,6 +49,23 @@ internal static class TasApi
         Results.Problem(detail, statusCode: status, extensions: extensions);
 
     public static IResult Forbidden(string detail) => Problem(StatusCodes.Status403Forbidden, detail);
+
+    /// <summary>Maps a configuration change result: 200/201 with { data, regeneratedSlots }, or a problem response.</summary>
+    public static IResult Admin<T>(AdminResult<T> result, Func<T, string>? location = null)
+    {
+        var extensions = new Dictionary<string, object?> { ["errors"] = result.Errors };
+        var detail = string.Join(" ", result.Errors);
+
+        return result.Status switch
+        {
+            AdminStatus.Ok => Results.Ok(new AdminResponse<T>(result.Value!, result.Regenerated)),
+            AdminStatus.Created => Results.Created(location?.Invoke(result.Value!), new AdminResponse<T>(result.Value!, result.Regenerated)),
+            AdminStatus.NotFound => Problem(StatusCodes.Status404NotFound, detail, extensions),
+            AdminStatus.Conflict => Problem(StatusCodes.Status409Conflict, detail, extensions),
+            AdminStatus.Forbidden => Problem(StatusCodes.Status403Forbidden, detail, extensions),
+            _ => Problem(StatusCodes.Status400BadRequest, detail, extensions),
+        };
+    }
 
     public static IResult ToResult(BookingOutcome outcome, string? createdBase = null)
     {

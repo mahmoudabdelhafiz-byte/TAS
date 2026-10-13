@@ -226,6 +226,10 @@ appointments.MapPut("/{appointmentNo}/assignment", async (
     int terminalId, string appointmentNo, AssignBody body, HttpContext http, BookingService service, CancellationToken ct) =>
     TasApi.ToResult(await service.AssignAsync(terminalId, appointmentNo, TasApi.User(http)!.UserId, body.TruckId, body.DriverId, ct)));
 
+// ================================================================ master data
+
+app.MapMasterData();
+
 // ================================================================ development helpers
 
 if (app.Environment.IsDevelopment())

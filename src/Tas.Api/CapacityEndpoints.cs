@@ -122,18 +122,5 @@ public static class CapacityEndpoints
             ? null
             : TasApi.Forbidden("Only planners and terminal admins of this terminal can change capacity.");
 
-    private static IResult ToResult<T>(AdminResult<T> result, Func<T, string>? location = null)
-    {
-        var extensions = new Dictionary<string, object?> { ["errors"] = result.Errors };
-        var detail = string.Join(" ", result.Errors);
-
-        return result.Status switch
-        {
-            AdminStatus.Ok => Results.Ok(new AdminResponse<T>(result.Value!, result.Regenerated)),
-            AdminStatus.Created => Results.Created(location?.Invoke(result.Value!), new AdminResponse<T>(result.Value!, result.Regenerated)),
-            AdminStatus.NotFound => TasApi.Problem(StatusCodes.Status404NotFound, detail, extensions),
-            AdminStatus.Conflict => TasApi.Problem(StatusCodes.Status409Conflict, detail, extensions),
-            _ => TasApi.Problem(StatusCodes.Status400BadRequest, detail, extensions),
-        };
-    }
+    private static IResult ToResult<T>(AdminResult<T> result, Func<T, string>? location = null) => TasApi.Admin(result, location);
 }

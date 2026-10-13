@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Tas.Application.Auth;
+using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.Auth;
 
@@ -38,6 +40,31 @@ public static class AuthSetup
                     ClockSkew = TimeSpan.FromSeconds(30),
                     NameClaimType = TasClaims.Name,
                     RoleClaimType = TasClaims.Role,
+                };
+
+                // A valid signature is not enough: the account must still be active with the same role
+                // and company/terminal. Deactivating a user or changing their role takes effect at once.
+                bearer.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var claimed = CurrentUser.FromClaims(context.Principal!);
+                        if (claimed is null)
+                        {
+                            context.Fail("Malformed token.");
+                            return;
+                        }
+
+                        var db = context.HttpContext.RequestServices.GetRequiredService<TasDbContext>();
+                        var actual = await db.AppUsers.AsNoTracking()
+                            .Where(u => u.UserId == claimed.UserId)
+                            .Select(u => new { u.IsActive, u.Role, u.CompanyId, u.TerminalId })
+                            .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+
+                        if (actual is null || !actual.IsActive || actual.Role != claimed.Role
+                            || actual.CompanyId != claimed.CompanyId || actual.TerminalId != claimed.TerminalId)
+                            context.Fail("The account was changed or deactivated. Please sign in again.");
+                    },
                 };
             });
 
