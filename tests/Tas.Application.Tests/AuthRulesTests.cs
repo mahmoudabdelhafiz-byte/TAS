@@ -35,6 +35,16 @@ public class AccessRulesTests
     }
 
     [Fact]
+    public void Only_staff_of_the_terminal_see_capacity_configuration()
+    {
+        Assert.True(AccessRules.CanViewCapacity(GateClerk, 5));
+        Assert.True(AccessRules.CanViewCapacity(Planner, 5));
+        Assert.True(AccessRules.CanViewCapacity(SysAdmin, 5));
+        Assert.False(AccessRules.CanViewCapacity(Planner, 99));
+        Assert.False(AccessRules.CanViewCapacity(Dispatcher, 5));
+    }
+
+    [Fact]
     public void Company_users_always_act_for_their_own_company()
     {
         AssertResolved(AccessRules.ResolveCompany(Dispatcher, null, required: true), 10);

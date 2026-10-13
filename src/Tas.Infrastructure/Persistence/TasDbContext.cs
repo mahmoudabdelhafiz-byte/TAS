@@ -29,6 +29,7 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Truck> Trucks => Set<Truck>();
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<CargoAllocation> CargoAllocations => Set<CargoAllocation>();
@@ -95,6 +96,15 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
         b.Entity<SlotCategoryCapacity>(e => e.HasKey(x => new { x.SlotId, x.CategoryId }));
 
         b.Entity<TerminalSetting>(e => e.HasKey(x => new { x.TerminalId, x.SettingKey }));
+
+        b.Entity<AuditLog>(e =>
+        {
+            e.HasKey(x => x.AuditId);
+            e.Property(x => x.Action).HasUpperCaseConversion();
+            e.Property(x => x.OldValues).HasColumnType("jsonb");
+            e.Property(x => x.NewValues).HasColumnType("jsonb");
+            e.Property(x => x.ChangedAt).HasDefaultValueSql("now()");
+        });
 
         // ---------- Parties ----------
 

@@ -16,6 +16,10 @@ public static class AccessRules
     public static bool CanAccessTerminal(CurrentUser user, int terminalId) =>
         user.IsSysAdmin || user.IsCompanyUser || (user.IsTerminalStaff && user.TerminalId == terminalId);
 
+    /// <summary>Can see capacity configuration, the slot board and the audit log (terminal staff, not companies).</summary>
+    public static bool CanViewCapacity(CurrentUser user, int terminalId) =>
+        user.IsSysAdmin || (user.IsTerminalStaff && user.TerminalId == terminalId);
+
     /// <summary>Can change templates, overrides and regenerate slots.</summary>
     public static bool CanManageCapacity(CurrentUser user, int terminalId) =>
         user.IsSysAdmin

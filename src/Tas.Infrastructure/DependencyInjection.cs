@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<SlotGenerationService>();
         services.AddScoped<AvailabilityQueryService>();
         services.AddScoped<BookingCounterStore>();
+        services.AddScoped<CapacityAdminService>();
         services.AddHostedService<SlotGenerationWorker>();
 
         // Booking

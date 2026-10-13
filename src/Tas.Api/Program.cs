@@ -108,6 +108,9 @@ app.MapPost("/api/users", async (CreateUserRequest body, HttpContext http, UserA
 
 var terminal = app.MapGroup("/api/terminals/{terminalId:int}").RequireAuthorization();
 
+// Planner configuration: templates, overrides, reservations, release rules, settings, slot board, audit.
+terminal.MapCapacityAdmin();
+
 // Regenerate slots for a date range (local dates, inclusive) after changing templates or overrides.
 terminal.MapPost("/slots/generate", async (
     int terminalId, DateOnly from, DateOnly to, HttpContext http, SlotGenerationService service, CancellationToken ct) =>
