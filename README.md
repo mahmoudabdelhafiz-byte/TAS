@@ -33,6 +33,8 @@ src/Tas.Infrastructure        EF Core + Npgsql, slot generation, availability qu
 src/Tas.Api                   ASP.NET Core minimal API
 tests/Tas.Application.Tests   unit tests for the capacity rules
 tests/Tas.Infrastructure.Tests integration tests against PostgreSQL (run when TAS_TEST_DB is set)
+tests/Tas.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)
+db/migrations/                scripts to upgrade an existing database
 ```
 
 ## Running locally
@@ -47,22 +49,42 @@ psql -d tas -f db/schema.sql
 dotnet run --project src/Tas.Api
 ```
 
+Production settings (environment variables):
+
+| Setting | Purpose |
+|---|---|
+| `ConnectionStrings__Tas` | PostgreSQL connection string |
+| `Jwt__SigningKey` | **Required.** Random secret, at least 32 characters. The API refuses to start without it |
+| `Bootstrap__AdminEmail`, `Bootstrap__AdminPassword` | Creates the first SysAdmin on start if none exists; remove afterwards |
+
+Upgrading an existing database: run the scripts in `db/migrations/` in order.
+
 Tests:
 
 ```bash
 dotnet test tests/Tas.Application.Tests
 
-# integration tests need a database created from db/schema.sql
+# integration and API tests each need their own database created from db/schema.sql
 export TAS_TEST_DB="Host=localhost;Database=tas_test;Username=postgres;Password=postgres"
+export TAS_API_TEST_DB="Host=localhost;Database=tas_api_test;Username=postgres;Password=postgres"
 dotnet test tests/Tas.Infrastructure.Tests
+dotnet test tests/Tas.Api.Tests
 ```
 
 CI (GitHub Actions) builds the solution and runs both test projects against a PostGIS container on every push.
 
 ## API (so far)
 
+All endpoints except `/health` and login/refresh/logout need `Authorization: Bearer <accessToken>`.
+
 | Method | Path | Purpose |
 |---|---|---|
+| `POST` | `/api/auth/login` | Email + password → access token (30 min), refresh token (14 days), profile |
+| `POST` | `/api/auth/refresh` | New token pair; the old refresh token stops working |
+| `POST` | `/api/auth/logout` | Revoke a refresh token |
+| `GET` | `/api/auth/me` | Signed-in user's profile |
+| `POST` | `/api/auth/change-password` | Change password; signs out all other sessions |
+| `POST` | `/api/users` | Create a user (within the admin's scope) |
 | `POST` | `/api/terminals/{id}/slots/generate?from=2026-10-20&to=2026-10-27` | Regenerate slots after changing templates or overrides (local dates) |
 | `GET` | `/api/terminals/{id}/availability?date=2026-10-20&category=IMP_PICKUP&companyId=1` | Slots of a day with remaining capacity for a category |
 | `POST` | `/api/terminals/{id}/appointments` | Book a truck visit (1–4 moves; 2+ = dual transaction) |
@@ -78,7 +100,20 @@ Background workers: slot generation (every 6 h) and no-show marking (every 10 mi
 Booking responses: `201` booked · `400` invalid request · `404` not found · `409` no capacity / conflict ·
 `422` not cleared (a TOS or internal check failed — the response lists every check and why).
 
-> `userId` is passed in request bodies for now; it will come from authentication.
+### Who can do what
+
+| Role | Scope | Can |
+|---|---|---|
+| CompanyAdmin | own company, any terminal | book / change own company's appointments, create users of own company |
+| CompanyUser | own company, any terminal | book / change own company's appointments |
+| Planner | own terminal | everything a company can, for any company (on behalf); regenerate slots |
+| GateClerk | own terminal | see and change appointments at the terminal |
+| TerminalAdmin | own terminal | as Planner, plus create terminal staff and company users |
+| SysAdmin | everything | everything |
+
+Company users never see other companies' appointments (they get *not found*). Terminal staff booking on behalf of a company must send `companyId`.
+
+Security: passwords hashed with ASP.NET Core Identity (PBKDF2); 5 wrong passwords lock the account for 15 minutes; login is rate-limited per IP; refresh tokens are stored only as SHA-256 hashes and rotate on every use — re-using an old one signs the user out everywhere.
 
 ### Booking rules
 
@@ -96,12 +131,24 @@ In Development the API runs with a fake TOS (`FakeTos` in `appsettings.Developme
 curl -X POST localhost:5000/api/dev/seed      # demo terminal, company, users, trucks, drivers, cargo + slots
 ```
 
-Then book with the ids it returns, e.g.:
+Demo logins (password `Demo-Pass-2026`, Development only):
+
+| Email | Role |
+|---|---|
+| `dispatcher@alnoor.example` | CompanyAdmin, Al Noor Transport |
+| `dispatcher@gulfhaulage.example` | CompanyAdmin, Gulf Haulage |
+| `planner@demo-terminal.example` | Planner |
+| `admin@demo-terminal.example` | TerminalAdmin |
+
+Sign in, then book with the ids the seed returned, e.g.:
 
 ```json
-POST /api/terminals/1/appointments
+POST /api/auth/login
+{ "email": "dispatcher@alnoor.example", "password": "Demo-Pass-2026" }
+
+POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>)
 {
-  "companyId": 1, "userId": 1, "slotId": 10, "truckId": 1, "driverId": 1,
+  "slotId": 10, "truckId": 1, "driverId": 1,
   "items": [
     { "category": "EXP_DROP",   "containerNo": "HLXU8700018", "bookingRef": "BKG1001" },
     { "category": "IMP_PICKUP", "containerNo": "MSCU1234566" }
@@ -132,7 +179,7 @@ POST /api/terminals/1/appointments
 - [x] Booking API: book, cancel, reschedule, assign truck/driver, dual transactions, multipurpose cargo
 - [x] TOS validation through an adapter interface, with a configurable fake
 - [x] Driver traffic light and automatic no-shows
-- [ ] Authentication and roles
+- [x] Authentication and roles: login, lockout, rotating refresh tokens, company isolation, terminal scope, user creation
 - [ ] Navis N4 adapter
 - [ ] Operator portal (React)
 - [ ] Driver app (Flutter)

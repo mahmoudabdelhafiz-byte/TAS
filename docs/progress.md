@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14
+Last updated: 2026-10-14 (after authentication)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -48,6 +48,21 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Demo terminal seeder + demo containers for each scenario (Development only) |
 | ✅ | Tests: 50 unit + 16 database integration, all passing in CI |
 
+### 5. Authentication & roles (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Login with email + password (PBKDF2 hashing), 30-min access tokens, 14-day refresh tokens |
+| ✅ | Refresh tokens rotate on each use; re-using an old one signs the user out everywhere |
+| ✅ | Lockout after 5 wrong passwords (15 min); login rate limit per IP; unknown emails indistinguishable from wrong passwords |
+| ✅ | Logout; password change ends all other sessions; password policy |
+| ✅ | Roles: CompanyAdmin, CompanyUser, Planner, GateClerk, TerminalAdmin, SysAdmin |
+| ✅ | Company isolation: company users only see / book / change their own company's appointments |
+| ✅ | Terminal scope: staff only at their own terminal; book on behalf of companies; planners/admins regenerate slots |
+| ✅ | User creation within the admin's scope; first SysAdmin created from configuration |
+| ✅ | API takes the user from the token (`userId` removed from request bodies) |
+| ✅ | Database: auth columns, refresh token table, upgrade script `db/migrations/002_auth.sql` |
+| ✅ | Tests: 79 unit + 16 database + 9 end-to-end API, all passing in CI |
+
 ---
 
 ## Remaining
@@ -55,9 +70,9 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase A — Backend MVP (make it usable by real customers)
 | | Item | Notes |
 |---|---|---|
-| 🔜 | **Authentication & roles** | Company users see/book only their own appointments; terminal staff roles (planner, gate clerk, admin). Replaces `userId` in request bodies |
-| ⬜ | Capacity admin API | Templates, seasonal templates, overrides (with reason + audit log), reservations, quota release rules, terminal settings |
-| ⬜ | Master data API | Companies, users, trucks, drivers, categories, cargo allocations |
+| 🔜 | **Capacity admin API** | Templates, seasonal templates, overrides (with reason + audit log), reservations, quota release rules, terminal settings |
+| ⬜ | Master data API | Companies, trucks, drivers, categories, cargo allocations; list / edit / deactivate users |
+| ⬜ | Password reset | Forgotten-password flow (email or SMS), invited users set their own password |
 | ⬜ | Audit log | Every capacity/settings change: who, when, old/new values, reason |
 | ⬜ | Bulk booking | CSV/Excel upload for dispatchers |
 | ⬜ | Re-validation before arrival | Re-check TOS status of booked items periodically and when the driver starts the trip; update traffic light |
