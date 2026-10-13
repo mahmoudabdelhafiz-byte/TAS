@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after re-validation)
+Last updated: 2026-10-14 (after the gate)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -116,6 +116,20 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Database: `appointment.last_validated_at`, upgrade script `db/migrations/003_revalidation.sql` |
 | ✅ | Tests: 129 unit + 20 database + 27 end-to-end API, all passing in CI |
 
+### 10. Gate (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Generic lane API for Autogate / OCR / clerk screens: plate, container, QR and appointment-number reads |
+| ✅ | Matching: QR / number first, then plate (Arabic or Latin) nearest to now, then container; warnings for reads that don't fit |
+| ✅ | Re-check against the TOS at the gate; admit or refer (early, late, not cleared, blocked, already in, cancelled, no appointment) |
+| ✅ | Trouble desk: admit with note, reject with note (capacity released), walk-in booking into the current slot using the walk-in reserve, dismiss |
+| ✅ | Statuses ARRIVED → GATE_IN → COMPLETED / REJECTED_AT_GATE; check-in method recorded (OCR, QR, clerk) |
+| ✅ | Gate event log; turn time (arrival → exit) and time inside (gate-in → exit) |
+| ✅ | Gate board: trucks at the gate and inside with minutes, open troubles, completed today, average turn time |
+| ✅ | Lanes per terminal (demo: IN-1, IN-2, OUT-1) |
+| ✅ | Database: `gate_trouble`, upgrade script `db/migrations/004_gate.sql` |
+| ✅ | Tests: 139 unit + 26 database + 28 end-to-end API, all passing in CI |
+
 ---
 
 ## Remaining
@@ -129,15 +143,13 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase B — Gate
 | | Item | Notes |
 |---|---|---|
-| 🔜 | **Gate-in matching** | OCR plate / container read → appointment; early / late / no appointment handling |
-| ⬜ | Gate events & statuses | ARRIVED → GATE_IN → COMPLETED, REJECTED_AT_GATE; turn time |
-| ⬜ | Trouble desk | Exceptions queue with the reason already shown |
-| ⬜ | Walk-in handling | Book on the spot into reserved capacity |
+| ⬜ | Autogate / OCR adapter | Connect the customer's specific lane system to the gate API (push from lanes or polling) ❓ which system |
+| ⬜ | Gate pass for drivers | Rotating QR in the driver app instead of the static appointment QR (Phase E) |
 
 ### Phase C — Integrations
 | | Item | Notes |
 |---|---|---|
-| ⬜ | **Navis N4 adapter** | Validation (holds, availability, releases), pre-advice / truck visit creation, gate events. Web services or EDI ❓ |
+| 🔜 | **Navis N4 adapter** | Validation (holds, availability, releases), pre-advice / truck visit creation, gate events. Web services or EDI ❓ |
 | ⬜ | FASAH customs release | If not already reflected in N4 |
 | ⬜ | National appointment platform | Check whether Mawani / FASAH requires integration at the customer's port ❓ |
 | ⬜ | Notification sender | Deliver the queued outbox (SMS / WhatsApp / email / push) in the recipient's language; reminders, slot closed |

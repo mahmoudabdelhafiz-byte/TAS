@@ -131,6 +131,24 @@ Example — a weekly template window (times are local; `24:00` = midnight):
   "quotas": { "IMP_PICKUP": 15, "EXP_DROP": 12 } }
 ```
 
+**Gate** (any terminal staff of the terminal; connect an Autogate / OCR system as a `GateClerk` account):
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/terminals/{id}/gate/arrivals` | Truck at an entry lane: `{ laneCode, plateRead?, containerReads?, qrToken?, appointmentNo? }` → **Admit** or **Refer** to the trouble desk |
+| `POST` | `/api/terminals/{id}/gate/in` | Barrier opened for an arrived truck → `GATE_IN` |
+| `POST` | `/api/terminals/{id}/gate/out` | Truck leaves (by appointment no. or plate) → `COMPLETED`, returns turn time |
+| `GET` | `/api/terminals/{id}/gate/troubles?openOnly=true` | Trouble desk queue with the reason already shown |
+| `POST` | `/api/terminals/{id}/gate/troubles/{troubleId}/resolve` | `Admit` (note) · `Reject` (note; capacity released) · `WalkIn` (book into the current slot) · `Dismiss` |
+| `GET` | `/api/terminals/{id}/gate/board` | Trucks at the gate / inside with minutes, open troubles, completed today, average turn time |
+| `GET` / `POST` | `/api/terminals/{id}/gate/lanes` | Lanes (create: TerminalAdmin) |
+
+How an arrival is handled:
+1. **Match** — QR code from the driver app or a typed appointment number win; otherwise the plate read (Arabic or Latin) picks the truck's appointment nearest to now; otherwise a container read. Reads that don't fit the appointment are shown as warnings.
+2. **Re-check** against the TOS right there (holds can appear minutes before arrival).
+3. **Decide** — admit if live, inside its window (slot ± grace), nothing red and truck/driver not blocked. Otherwise refer: `EARLY`, `LATE`, `NOT_CLEARED`, `BLOCKED`, `ALREADY_IN`, `CANCELLED`, `NO_APPOINTMENT` — with local times in the message (e.g. "Early: the arrival window opens at 09:30").
+4. Every read, match, gate-in/out and trouble is written to the gate event log; arrival → gate-in → gate-out times give the turn time.
+
 **Master data:**
 
 | Method | Path | Who | Purpose |
@@ -262,6 +280,7 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Master data API: companies, trucks, drivers (Arabic plates, mobile normalization, blocking), categories, cargo releases, user management
 - [x] Bulk booking: Excel / CSV upload with dry-run preview, dual visits, per-row results, templates
 - [x] Re-checks before arrival: scheduled, on request and at trip start; history and notification outbox
+- [x] Gate: lane arrivals (QR / number / plate / container), re-check, admit or trouble desk, walk-ins, gate in/out, turn time, gate board
 - [ ] Navis N4 adapter
 - [ ] Operator portal (React)
 - [ ] Driver app (Flutter)
