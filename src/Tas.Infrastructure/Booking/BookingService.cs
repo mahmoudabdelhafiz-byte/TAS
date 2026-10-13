@@ -32,33 +32,87 @@ public sealed class BookingService(
 
     // ------------------------------------------------------------------ create
 
+    /// <summary>Everything a booking needs, gathered and checked before any capacity is used.</summary>
+    private sealed record Prepared(
+        Terminal Terminal,
+        Company Company,
+        AppUser User,
+        Slot Slot,
+        IReadOnlyList<ValidatedItem> Items,
+        IReadOnlyDictionary<string, CargoAllocation> Cargo,
+        IReadOnlyList<(int Index, CheckType Type, CheckResult Result, string? Message, string Source, string? TosRef)> Checks,
+        IReadOnlyList<CheckDto> CheckDtos,
+        TerminalSettings Settings,
+        TimeZoneInfo TimeZone);
+
     public async Task<BookingOutcome> CreateAsync(int terminalId, BookingRequest request, CancellationToken ct = default)
+    {
+        var (prepared, error) = await PrepareAsync(terminalId, request, ct);
+        return error ?? await CommitAsync(prepared!, request, ct);
+    }
+
+    /// <summary>
+    /// Runs every check CreateAsync runs (request, company, truck, driver, containers, cargo, TOS) and reports
+    /// the capacity still free in the slot — without booking anything. Used by bulk upload previews.
+    /// </summary>
+    public async Task<BookingPreview> PreviewAsync(int terminalId, BookingRequest request, CancellationToken ct = default)
+    {
+        var (p, error) = await PrepareAsync(terminalId, request, ct);
+        if (error is not null)
+            return new BookingPreview(error, null, new Dictionary<int, int>(), 0, new Dictionary<int, int>(), new Dictionary<int, int>(), new Dictionary<int, int?>());
+
+        var now = clock.GetUtcNow();
+        var units = UnitsByCategory(p!.Items);
+        var slot = await db.Slots.AsNoTracking().Include(s => s.Categories).SingleAsync(s => s.SlotId == p.Slot.SlotId, ct);
+        var (reserved, releaseHours) = await ReservedAndReleaseAsync(slot, p.Company.CompanyId, units.Keys, now, ct);
+
+        var freeByCategory = new Dictionary<int, int>();
+        foreach (var categoryId in units.Keys)
+        {
+            var row = slot.Categories.FirstOrDefault(c => c.CategoryId == categoryId);
+            var counters = new SlotCounters(slot.StartAt, slot.EndAt, slot.TotalCapacity, slot.TotalBooked, slot.IsClosed,
+                row?.QuotaCapacity ?? 0, row?.Booked ?? 0);
+            freeByCategory[categoryId] = AvailabilityCalculator.Available(counters, now, reserved, releaseHours.GetValueOrDefault(categoryId));
+        }
+        var freeTotal = slot.IsClosed || now >= slot.EndAt ? 0 : Math.Max(0, slot.TotalCapacity - slot.TotalBooked - reserved);
+
+        var cargoTrips = p.Items.Where(i => i.CargoRef is not null)
+            .GroupBy(i => p.Cargo[i.CargoRef!].CargoAllocationId)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var cargoLeft = p.Cargo.Values.ToDictionary(
+            c => c.CargoAllocationId,
+            c => c.TotalTrips is { } total ? total - c.BookedTrips : (int?)null);
+
+        return new BookingPreview(BookingOutcome.Valid(p.CheckDtos), slot.SlotId, units, freeTotal, freeByCategory, cargoTrips, cargoLeft);
+    }
+
+    private async Task<(Prepared? Prepared, BookingOutcome? Error)> PrepareAsync(int terminalId, BookingRequest request, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
 
         var terminal = await db.Terminals.AsNoTracking().SingleOrDefaultAsync(t => t.TerminalId == terminalId && t.IsActive, ct);
         if (terminal is null)
-            return BookingOutcome.NotFound($"Terminal {terminalId} not found.");
+            return (null, BookingOutcome.NotFound($"Terminal {terminalId} not found."));
 
         var company = await db.Companies.AsNoTracking().SingleOrDefaultAsync(c => c.CompanyId == request.CompanyId, ct);
         if (company is null)
-            return BookingOutcome.NotFound($"Company {request.CompanyId} not found.");
+            return (null, BookingOutcome.NotFound($"Company {request.CompanyId} not found."));
         if (company.Status != CompanyStatus.Active)
-            return BookingOutcome.Rejected($"Company {company.Name} is {company.Status.ToString().ToLowerInvariant()} and cannot book.");
+            return (null, BookingOutcome.Rejected($"Company {company.Name} is {company.Status.ToString().ToLowerInvariant()} and cannot book."));
 
         var user = await db.AppUsers.AsNoTracking().SingleOrDefaultAsync(u => u.UserId == request.UserId, ct);
         if (user is null || !CanActFor(user, company.CompanyId, terminalId))
-            return BookingOutcome.Invalid("This user cannot book for this company.");
+            return (null, BookingOutcome.Invalid("This user cannot book for this company."));
 
         var slot = await db.Slots.AsNoTracking().SingleOrDefaultAsync(s => s.SlotId == request.SlotId && s.TerminalId == terminalId, ct);
         if (slot is null)
-            return BookingOutcome.NotFound($"Slot {request.SlotId} not found at this terminal.");
+            return (null, BookingOutcome.NotFound($"Slot {request.SlotId} not found at this terminal."));
         if (slot.IsClosed || now >= slot.EndAt)
-            return BookingOutcome.NoCapacity("This slot is closed or has already ended.");
+            return (null, BookingOutcome.NoCapacity("This slot is closed or has already ended."));
 
         var vehicleError = await CheckTruckAndDriverAsync(company.CompanyId, request.TruckId, request.DriverId, ct);
         if (vehicleError is not null)
-            return BookingOutcome.Invalid(vehicleError);
+            return (null, BookingOutcome.Invalid(vehicleError));
 
         var categories = await db.TransactionCategories.AsNoTracking()
             .Where(c => c.TerminalId == terminalId && c.IsActive)
@@ -66,7 +120,7 @@ public sealed class BookingService(
 
         var (items, errors) = BookingRequestValidator.Validate(request, categories);
         if (errors.Count > 0)
-            return BookingOutcome.Invalid(errors);
+            return (null, BookingOutcome.Invalid(errors));
 
         var settings = TerminalSettings.From(
             await db.TerminalSettings.AsNoTracking().Where(s => s.TerminalId == terminalId).ToListAsync(ct));
@@ -78,7 +132,7 @@ public sealed class BookingService(
             var truckCount = await LiveAppointments(terminalId)
                 .CountAsync(a => a.TruckId == truckId && a.Slot.StartAt >= dayStart && a.Slot.StartAt < dayEnd, ct);
             if (truckCount >= settings.MaxAppointmentsPerTruckPerDay)
-                return BookingOutcome.Conflict($"This truck already has {truckCount} appointment(s) that day (limit {settings.MaxAppointmentsPerTruckPerDay}).");
+                return (null, BookingOutcome.Conflict($"This truck already has {truckCount} appointment(s) that day (limit {settings.MaxAppointmentsPerTruckPerDay})."));
         }
 
         var containers = items.Where(i => i.ContainerNo is not null).Select(i => i.ContainerNo!).ToList();
@@ -90,7 +144,7 @@ public sealed class BookingService(
                 .Select(i => i.ContainerNo!)
                 .ToListAsync(ct);
             if (taken.Count > 0)
-                return BookingOutcome.Conflict($"Container {string.Join(", ", taken.Distinct())} already has a live appointment.");
+                return (null, BookingOutcome.Conflict($"Container {string.Join(", ", taken.Distinct())} already has a live appointment."));
         }
 
         // Multipurpose cargo references must exist, be open and belong to this company (if assigned).
@@ -101,11 +155,11 @@ public sealed class BookingService(
         foreach (var cargoRef in cargoRefs)
         {
             if (!cargo.TryGetValue(cargoRef, out var allocation))
-                return BookingOutcome.Invalid($"Cargo reference {cargoRef} is not known at this terminal.");
+                return (null, BookingOutcome.Invalid($"Cargo reference {cargoRef} is not known at this terminal."));
             if (allocation.Status != CargoStatus.Open)
-                return BookingOutcome.Rejected($"Cargo {cargoRef} is {allocation.Status.ToString().ToLowerInvariant()}.");
+                return (null, BookingOutcome.Rejected($"Cargo {cargoRef} is {allocation.Status.ToString().ToLowerInvariant()}."));
             if (allocation.CompanyId is { } owner && owner != company.CompanyId)
-                return BookingOutcome.Rejected($"Cargo {cargoRef} is assigned to another company.");
+                return (null, BookingOutcome.Rejected($"Cargo {cargoRef} is assigned to another company."));
         }
 
         // Checks: container check digit (internal) + TOS.
@@ -126,45 +180,52 @@ public sealed class BookingService(
         var checkDtos = checks.Select(c => new CheckDto(c.Index + 1, c.Type, c.Result, c.Message, c.Source)).ToList();
         var failures = checks.Where(c => c.Result == CheckResult.Fail).Select(c => $"Item {c.Index + 1}: {c.Message}").ToList();
         if (failures.Count > 0)
-            return BookingOutcome.Rejected(failures, checkDtos);
+            return (null, BookingOutcome.Rejected(failures, checkDtos));
+
+        return (new Prepared(terminal, company, user, slot, items, cargo, checks, checkDtos, settings, timeZone), null);
+    }
+
+    private async Task<BookingOutcome> CommitAsync(Prepared p, BookingRequest request, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow();
 
         // Consume capacity and save, atomically.
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        var unitsByCategory = items.GroupBy(i => i.Category.CategoryId).ToDictionary(g => g.Key, g => g.Count());
-        var capacityError = await TryConsumeSlotAsync(slot, company.CompanyId, unitsByCategory, now, ct);
+        var unitsByCategory = p.Items.GroupBy(i => i.Category.CategoryId).ToDictionary(g => g.Key, g => g.Count());
+        var capacityError = await TryConsumeSlotAsync(p.Slot, p.Company.CompanyId, unitsByCategory, now, ct);
         if (capacityError is not null)
         {
             await tx.RollbackAsync(ct);
             return BookingOutcome.NoCapacity(capacityError);
         }
 
-        foreach (var group in items.Where(i => i.CargoRef is not null).GroupBy(i => i.CargoRef!))
+        foreach (var group in p.Items.Where(i => i.CargoRef is not null).GroupBy(i => i.CargoRef!))
         {
-            if (!await counters.TryConsumeCargoTripsAsync(cargo[group.Key].CargoAllocationId, group.Count(), ct))
+            if (!await counters.TryConsumeCargoTripsAsync(p.Cargo[group.Key].CargoAllocationId, group.Count(), ct))
             {
                 await tx.RollbackAsync(ct);
                 return BookingOutcome.Rejected($"No trips left to book on cargo {group.Key}.");
             }
         }
 
-        var localSlotDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(slot.StartAt, timeZone).DateTime);
+        var localSlotDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(p.Slot.StartAt, p.TimeZone).DateTime);
         var appointment = new Appointment
         {
-            AppointmentNo = AppointmentNumbers.New(terminal.Code, localSlotDate),
-            TerminalId = terminalId,
-            SlotId = slot.SlotId,
-            CompanyId = company.CompanyId,
+            AppointmentNo = AppointmentNumbers.New(p.Terminal.Code, localSlotDate),
+            TerminalId = p.Terminal.TerminalId,
+            SlotId = p.Slot.SlotId,
+            CompanyId = p.Company.CompanyId,
             TruckId = request.TruckId,
             DriverId = request.DriverId,
             Status = AppointmentStatus.Confirmed,
-            IsDual = items.Count > 1,
+            IsDual = p.Items.Count > 1,
             QrToken = AppointmentNumbers.NewQrToken(),
-            CreatedBy = user.UserId,
+            CreatedBy = p.User.UserId,
             CreatedAt = now,
-            Items = items.Select(i =>
+            Items = p.Items.Select(i =>
             {
-                var itemChecks = checks.Where(c => c.Index == i.Index).ToList();
+                var itemChecks = p.Checks.Where(c => c.Index == i.Index).ToList();
                 return new AppointmentItem
                 {
                     CategoryId = i.Category.CategoryId,
@@ -172,7 +233,7 @@ public sealed class BookingService(
                     IsoType = i.IsoType,
                     BookingRef = i.BookingRef,
                     EdoRef = i.EdoRef,
-                    CargoAllocationId = i.CargoRef is null ? null : cargo[i.CargoRef].CargoAllocationId,
+                    CargoAllocationId = i.CargoRef is null ? null : p.Cargo[i.CargoRef].CargoAllocationId,
                     Trips = i.CargoRef is null ? null : 1,
                     PlannedTonnage = i.PlannedTonnage,
                     ValidationStatus = TrafficLightCalculator.Summarize(itemChecks.Select(c => c.Result)),
@@ -191,7 +252,7 @@ public sealed class BookingService(
             [
                 new AppointmentStatusHistory
                 {
-                    ToStatus = AppointmentStatus.Confirmed, ChangedBy = user.UserId, Reason = "Booked", ChangedAt = now,
+                    ToStatus = AppointmentStatus.Confirmed, ChangedBy = p.User.UserId, Reason = "Booked", ChangedAt = now,
                 },
             ],
         };
@@ -200,7 +261,7 @@ public sealed class BookingService(
             appointment.Status,
             appointment.Items.Select((i, n) => new ItemCheckState($"Item {n + 1}", i.ValidationStatus,
                 i.ValidationResults.Where(v => v.Result != CheckResult.Pass).Select(v => v.Message).FirstOrDefault())).ToList(),
-            slot.StartAt, slot.EndAt, now, settings, timeZone);
+            p.Slot.StartAt, p.Slot.EndAt, now, p.Settings, p.TimeZone);
         appointment.TrafficLight = light;
         appointment.TrafficReason = Truncate(reason, 200);
 
@@ -208,8 +269,8 @@ public sealed class BookingService(
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
-        logger.LogInformation("Booked {AppointmentNo} for company {CompanyId} in slot {SlotId}", appointment.AppointmentNo, company.CompanyId, slot.SlotId);
-        return BookingOutcome.Created((await queries.GetAsync(terminalId, appointment.AppointmentNo, ct))!);
+        logger.LogInformation("Booked {AppointmentNo} for company {CompanyId} in slot {SlotId}", appointment.AppointmentNo, p.Company.CompanyId, p.Slot.SlotId);
+        return BookingOutcome.Created((await queries.GetAsync(p.Terminal.TerminalId, appointment.AppointmentNo, ct))!);
     }
 
     // ------------------------------------------------------------------ cancel
@@ -388,22 +449,33 @@ public sealed class BookingService(
         return null;
     }
 
-    /// <summary>Consumes slot capacity for a company; returns an error message when there is no room.</summary>
-    private async Task<string?> TryConsumeSlotAsync(
-        Slot slot, int companyId, IReadOnlyDictionary<int, int> unitsByCategory, DateTimeOffset now, CancellationToken ct)
+    private static IReadOnlyDictionary<int, int> UnitsByCategory(IEnumerable<ValidatedItem> items) =>
+        items.GroupBy(i => i.Category.CategoryId).ToDictionary(g => g.Key, g => g.Count());
+
+    /// <summary>Units held back from this company in the slot, and release hours per category (if a rule exists).</summary>
+    private async Task<(int Reserved, IReadOnlyDictionary<int, int?> ReleaseHours)> ReservedAndReleaseAsync(
+        Slot slot, int companyId, IEnumerable<int> categoryIds, DateTimeOffset now, CancellationToken ct)
     {
         var reservations = await db.CapacityReservations.AsNoTracking()
             .Where(r => r.TerminalId == slot.TerminalId && r.IsActive && r.StartAt <= slot.StartAt && r.EndAt > slot.StartAt)
             .ToListAsync(ct);
         var reserved = AvailabilityCalculator.ReservedUnits(reservations, slot.StartAt, now, companyId);
 
-        var categoryIds = unitsByCategory.Keys.ToList();
-        var releaseRules = await db.QuotaReleaseRules.AsNoTracking()
-            .Where(r => r.TerminalId == slot.TerminalId && categoryIds.Contains(r.CategoryId))
+        var ids = categoryIds.ToList();
+        var rules = await db.QuotaReleaseRules.AsNoTracking()
+            .Where(r => r.TerminalId == slot.TerminalId && ids.Contains(r.CategoryId))
             .ToListAsync(ct);
-        var released = releaseRules
-            .Where(r => AvailabilityCalculator.IsQuotaReleased(slot.StartAt, now, r.HoursBefore))
-            .Select(r => r.CategoryId)
+        return (reserved, ids.ToDictionary(id => id, id => rules.FirstOrDefault(r => r.CategoryId == id)?.HoursBefore));
+    }
+
+    /// <summary>Consumes slot capacity for a company; returns an error message when there is no room.</summary>
+    private async Task<string?> TryConsumeSlotAsync(
+        Slot slot, int companyId, IReadOnlyDictionary<int, int> unitsByCategory, DateTimeOffset now, CancellationToken ct)
+    {
+        var (reserved, releaseHours) = await ReservedAndReleaseAsync(slot, companyId, unitsByCategory.Keys, now, ct);
+        var released = releaseHours
+            .Where(r => AvailabilityCalculator.IsQuotaReleased(slot.StartAt, now, r.Value))
+            .Select(r => r.Key)
             .ToHashSet();
 
         return await counters.TryConsumeAsync(slot.SlotId, unitsByCategory, reserved, released, ct)

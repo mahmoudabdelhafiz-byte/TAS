@@ -45,6 +45,9 @@ public enum BookingOutcomeKind
     Rejected,
     NoCapacity,
     Conflict,
+
+    /// <summary>Preview only: every check passed; the booking would go through if capacity allows.</summary>
+    Valid,
 }
 
 /// <summary>Result of a booking command; the API maps <see cref="Kind"/> to an HTTP status.</summary>
@@ -66,4 +69,21 @@ public sealed record BookingOutcome(
         new(BookingOutcomeKind.Rejected, null, errors, checks);
 
     public static BookingOutcome Rejected(string error) => Rejected(new[] { error }, []);
+    public static BookingOutcome Valid(IReadOnlyList<CheckDto> checks) => new(BookingOutcomeKind.Valid, null, [], checks);
 }
+
+/// <summary>
+/// Result of checking a booking without making it: the outcome (Valid or the reason it would fail),
+/// what it would consume, and what is still free.
+/// </summary>
+/// <param name="FreeByCategory">Units still bookable per category in the slot for this company.</param>
+/// <param name="CargoTrips">Trips the booking needs per cargo allocation.</param>
+/// <param name="CargoTripsLeft">Trips left per cargo allocation (null = unlimited).</param>
+public sealed record BookingPreview(
+    BookingOutcome Outcome,
+    long? SlotId,
+    IReadOnlyDictionary<int, int> UnitsByCategory,
+    int FreeTotal,
+    IReadOnlyDictionary<int, int> FreeByCategory,
+    IReadOnlyDictionary<int, int> CargoTrips,
+    IReadOnlyDictionary<int, int?> CargoTripsLeft);

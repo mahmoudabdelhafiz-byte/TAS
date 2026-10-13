@@ -172,6 +172,61 @@ appointments.MapPost("/", async (int terminalId, CreateAppointmentBody body, Htt
     return TasApi.ToResult(await service.CreateAsync(terminalId, request, ct), $"/api/terminals/{terminalId}/appointments");
 });
 
+// Bulk booking: upload a .csv or .xlsx of truck visits. dryRun (default true) checks everything and books nothing.
+appointments.MapPost("/bulk", async (
+    int terminalId, IFormFile? file, bool? dryRun, int? companyId, HttpContext http, BulkBookingService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    if (!AccessRules.CanAccessTerminal(user, terminalId))
+        return TasApi.Forbidden("You have no access to this terminal.");
+
+    var (company, error) = AccessRules.ResolveCompany(user, companyId, required: true);
+    if (error is not null)
+        return user.IsCompanyUser ? TasApi.Forbidden(error) : TasApi.Problem(StatusCodes.Status400BadRequest, error);
+
+    if (file is null || file.Length == 0)
+        return TasApi.Problem(StatusCodes.Status400BadRequest, "Attach a .csv or .xlsx file in the 'file' field.");
+    if (file.Length > BulkFiles.MaxUploadBytes)
+        return TasApi.Problem(StatusCodes.Status413PayloadTooLarge, "The file is larger than 2 MB; split it.");
+
+    IReadOnlyList<IReadOnlyList<string>> table;
+    var name = file.FileName.ToLowerInvariant();
+    try
+    {
+        await using var stream = file.OpenReadStream();
+        if (name.EndsWith(".xlsx"))
+            table = BulkFiles.ReadExcel(stream);
+        else if (name.EndsWith(".csv") || name.EndsWith(".txt"))
+            table = BulkFiles.ReadCsv(stream);
+        else
+            return TasApi.Problem(StatusCodes.Status400BadRequest, "Upload a .csv or .xlsx file.");
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+        return TasApi.Problem(StatusCodes.Status400BadRequest, "The file could not be read. Save it as .xlsx or CSV UTF-8 and try again.");
+    }
+
+    try
+    {
+        return Results.Ok(await service.ImportAsync(terminalId, company!.Value, user.UserId, table, dryRun ?? true, ct));
+    }
+    catch (KeyNotFoundException ex)
+    {
+        return TasApi.Problem(StatusCodes.Status404NotFound, ex.Message);
+    }
+}).DisableAntiforgery();
+
+appointments.MapGet("/bulk/template", (int terminalId, string? format, HttpContext http, TimeProvider clock) =>
+{
+    if (!AccessRules.CanAccessTerminal(TasApi.User(http)!, terminalId))
+        return TasApi.Forbidden("You have no access to this terminal.");
+
+    var tomorrow = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime).AddDays(1);
+    return string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase)
+        ? Results.File(BulkFiles.CsvTemplate(tomorrow), "text/csv", "tas-bulk-booking-template.csv")
+        : Results.File(BulkFiles.ExcelTemplate(tomorrow), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "tas-bulk-booking-template.xlsx");
+});
+
 appointments.MapGet("/{appointmentNo}", async (
     int terminalId, string appointmentNo, HttpContext http, AppointmentQueryService service, CancellationToken ct) =>
 {

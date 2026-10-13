@@ -36,6 +36,7 @@ public static class DependencyInjection
         // Booking
         services.AddScoped<AppointmentQueryService>();
         services.AddScoped<BookingService>();
+        services.AddScoped<BulkBookingService>();
         services.AddScoped<NoShowService>();
         services.AddHostedService<NoShowWorker>();
         services.AddScoped<DemoDataSeeder>();
