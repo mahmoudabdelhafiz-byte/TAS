@@ -1,7 +1,11 @@
 # Truck Appointment System (TAS) — Data Model & Capacity Logic
 
-Status: draft v0.1
-Target stack: ASP.NET Core API + React portal, SQL Server, multi-terminal (one deployment serves many terminals).
+Status: draft v0.2
+Target stack: ASP.NET Core API + React portal, PostgreSQL + PostGIS, multi-terminal (one deployment serves many terminals).
+
+> **Naming:** this document uses PascalCase entity names (as in the C# model). In the database (`db/schema.sql`) the same tables and columns are snake_case — e.g. `CapacityTemplateSlot.TotalCapacity` → `capacity_template_slot.total_capacity`. All instants are stored as UTC `timestamptz`; the terminal's IANA time zone is applied when generating slots and displaying times.
+>
+> **Database portability:** all data access goes through EF Core. Only the booking-counter updates (section 4.5) are hand-written SQL, kept in one class, so a SQL Server provider can be added for on-premise customers who require it.
 
 ---
 
@@ -79,7 +83,7 @@ erDiagram
 
 | Table | Purpose |
 |---|---|
-| `Slot` | Concrete time window for a terminal: `StartAt`, `EndAt`, `TotalCapacity` (effective, incl. overbook), `TotalBooked`, `IsClosed`, `RowVer`. |
+| `Slot` | Concrete time window for a terminal: `StartAt`, `EndAt`, `TotalCapacity` (effective, incl. overbook), `TotalBooked`, `IsClosed`, `OverCapacity`. Optimistic concurrency uses PostgreSQL's `xmin`. |
 | `SlotCategoryCapacity` | Per slot per category: `QuotaCapacity`, `Booked`. |
 
 ### 3.4 Parties
@@ -218,18 +222,20 @@ available = s.IsClosed ? 0 : max(0, freeCategory)
 Inside one DB transaction:
 
 ```sql
-UPDATE Slot
-   SET TotalBooked = TotalBooked + 1
- WHERE SlotId = @SlotId AND IsClosed = 0
-   AND TotalBooked + 1 <= TotalCapacity - @Reserved;
--- @@ROWCOUNT = 0 -> slot full, rollback
+UPDATE slot
+   SET total_booked = total_booked + 1
+ WHERE slot_id = @slot_id AND NOT is_closed
+   AND total_booked + 1 <= total_capacity - @reserved;
+-- 0 rows affected -> slot full, rollback
 
-UPDATE SlotCategoryCapacity
-   SET Booked = Booked + 1
- WHERE SlotId = @SlotId AND CategoryId = @CategoryId
-   AND (@QuotaReleased = 1 OR Booked + 1 <= QuotaCapacity);
--- repeat per category in the appointment; any 0 rowcount -> rollback
+UPDATE slot_category_capacity
+   SET booked = booked + 1
+ WHERE slot_id = @slot_id AND category_id = @category_id
+   AND (@quota_released OR booked + 1 <= quota_capacity);
+-- repeat per category in the appointment; any 0 rows affected -> rollback
 ```
+
+Each statement is atomic on its row, so two users racing for the last unit cannot both succeed — no explicit locks needed.
 
 Cancellation / no-show reverses the counters in the same way (no-show only after the late-grace window passes).
 

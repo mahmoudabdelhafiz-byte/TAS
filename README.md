@@ -20,7 +20,7 @@ Multi-terminal by design: one deployment serves many terminals.
 | API & background jobs | ASP.NET Core |
 | Web portal (terminal + trucking companies) | React |
 | Driver app | Flutter (Android / iOS) |
-| Database | SQL Server |
+| Database | PostgreSQL + PostGIS (via EF Core; SQL Server provider possible for on-premise) |
 
 ## Repository layout
 
