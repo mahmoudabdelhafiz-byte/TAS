@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Tas.Application.Booking;
 using Tas.Domain.Booking;
+using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
 using Tas.Infrastructure.Persistence;
@@ -75,7 +76,7 @@ public sealed class BookingDatabaseTests : IAsyncLifetime
         await using (var db = NewContext())
         {
             var generator = new SlotGenerationService(db, Monday, NullLogger<SlotGenerationService>.Instance);
-            _demo = await new DemoDataSeeder(db, generator, Monday).SeedAsync();
+            _demo = await new DemoDataSeeder(db, generator, new PasswordService(), Monday).SeedAsync();
         }
     }
 
@@ -116,7 +117,7 @@ public sealed class BookingDatabaseTests : IAsyncLifetime
 
         await using var db = NewContext();
         var generator = new SlotGenerationService(db, Monday, NullLogger<SlotGenerationService>.Instance);
-        var again = await new DemoDataSeeder(db, generator, Monday).SeedAsync();
+        var again = await new DemoDataSeeder(db, generator, new PasswordService(), Monday).SeedAsync();
 
         Assert.False(again.Created);
         Assert.Equal(_demo.TerminalId, again.TerminalId);

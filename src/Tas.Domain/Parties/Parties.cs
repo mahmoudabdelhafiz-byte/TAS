@@ -52,7 +52,28 @@ public sealed class AppUser
     public string PreferredLanguage { get; set; } = "en";
     public bool IsActive { get; set; } = true;
 
+    /// <summary>ASP.NET Core Identity password hash; null until a password is set.</summary>
+    public string? PasswordHash { get; set; }
+
+    public int FailedLoginCount { get; set; }
+    public DateTimeOffset? LockedUntil { get; set; }
+    public DateTimeOffset? LastLoginAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+
     public bool IsTerminalStaff => Role is UserRole.GateClerk or UserRole.Planner or UserRole.TerminalAdmin or UserRole.SysAdmin;
+}
+
+/// <summary>A rotating refresh token. Only the SHA-256 hash of the token is stored.</summary>
+public sealed class RefreshToken
+{
+    public long RefreshTokenId { get; set; }
+    public int UserId { get; set; }
+    public byte[] TokenHash { get; set; } = [];
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public byte[]? ReplacedByHash { get; set; }
+    public string? CreatedIp { get; set; }
 }
 
 public sealed class Truck

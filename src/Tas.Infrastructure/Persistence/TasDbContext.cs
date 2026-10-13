@@ -28,6 +28,7 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<TerminalSetting> TerminalSettings => Set<TerminalSetting>();
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Truck> Trucks => Set<Truck>();
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<CargoAllocation> CargoAllocations => Set<CargoAllocation>();
@@ -109,6 +110,13 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
         {
             e.HasKey(x => x.UserId);
             e.Property(x => x.Role).HasUpperCaseConversion();
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<RefreshToken>(e =>
+        {
+            e.HasKey(x => x.RefreshTokenId);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<Truck>(e => e.HasKey(x => x.TruckId));

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Tas.Application.Tos;
+using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
 using Tas.Infrastructure.Persistence;
@@ -13,11 +14,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddTasInfrastructure(this IServiceCollection services, IConfiguration config)
     {
-        var connectionString = config.GetConnectionString("Tas")
-                               ?? throw new InvalidOperationException("Connection string 'Tas' is not configured.");
-
-        services.AddDbContext<TasDbContext>(o => o.UseNpgsql(connectionString));
+        // Read when the context is created, so hosts and tests can supply it late.
+        services.AddDbContext<TasDbContext>((sp, o) => o.UseNpgsql(
+            sp.GetRequiredService<IConfiguration>().GetConnectionString("Tas")
+            ?? throw new InvalidOperationException("Connection string 'Tas' is not configured.")));
         services.AddSingleton(TimeProvider.System);
+        services.AddTasAuthentication(config);
 
         // Capacity
         services.AddScoped<SlotGenerationService>();

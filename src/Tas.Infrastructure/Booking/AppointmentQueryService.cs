@@ -9,10 +9,18 @@ namespace Tas.Infrastructure.Booking;
 /// <summary>Reads appointments with their live traffic light.</summary>
 public sealed class AppointmentQueryService(TasDbContext db, TimeProvider clock)
 {
-    public async Task<AppointmentDto?> GetAsync(int terminalId, string appointmentNo, CancellationToken ct = default)
+    public Task<AppointmentDto?> GetAsync(int terminalId, string appointmentNo, CancellationToken ct = default) =>
+        GetAsync(terminalId, appointmentNo, companyId: null, ct);
+
+    /// <param name="companyId">When set, appointments of other companies are treated as not found.</param>
+    public async Task<AppointmentDto?> GetAsync(int terminalId, string appointmentNo, int? companyId, CancellationToken ct = default)
     {
-        var appointment = await WithDetails()
-            .SingleOrDefaultAsync(a => a.TerminalId == terminalId && a.AppointmentNo == appointmentNo.ToUpper(), ct);
+        var number = appointmentNo.Trim().ToUpperInvariant();
+        var query = WithDetails().Where(a => a.TerminalId == terminalId && a.AppointmentNo == number);
+        if (companyId is not null)
+            query = query.Where(a => a.CompanyId == companyId);
+
+        var appointment = await query.SingleOrDefaultAsync(ct);
         if (appointment is null)
             return null;
 

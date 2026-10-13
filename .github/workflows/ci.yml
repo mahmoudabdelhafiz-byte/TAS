@@ -26,6 +26,7 @@ jobs:
 
     env:
       TAS_TEST_DB: Host=localhost;Port=5432;Database=tas_test;Username=postgres;Password=postgres
+      TAS_API_TEST_DB: Host=localhost;Port=5432;Database=tas_api_test;Username=postgres;Password=postgres
       DOTNET_NOLOGO: true
 
     steps:
@@ -38,7 +39,10 @@ jobs:
       - name: Create database schema
         env:
           PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d tas_test -v ON_ERROR_STOP=1 -q -f db/schema.sql
+        run: |
+          psql -h localhost -U postgres -d tas_test -v ON_ERROR_STOP=1 -q -f db/schema.sql
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -q -c "CREATE DATABASE tas_api_test"
+          psql -h localhost -U postgres -d tas_api_test -v ON_ERROR_STOP=1 -q -f db/schema.sql
 
       - name: Restore
         run: dotnet restore TAS.slnx
@@ -56,15 +60,33 @@ jobs:
           dotnet test tests/Tas.Infrastructure.Tests --no-build -c Release
           --logger "console;verbosity=normal" --logger "trx;LogFileName=integration.trx" --results-directory TestResults
 
-      - name: Publish test counts
+      - name: API tests
+        run: >-
+          dotnet test tests/Tas.Api.Tests --no-build -c Release
+          --logger "console;verbosity=normal" --logger "trx;LogFileName=api.trx" --results-directory TestResults
+
+      - name: Publish test results
         if: always()
+        shell: python
         run: |
-          for f in TestResults/*.trx; do
-            [ -f "$f" ] || continue
-            counters=$(grep -o '<Counters [^/]*' "$f" | sed 's/<Counters //')
-            echo "::notice title=$(basename "$f")::$counters"
-            # failed test names, if any
-            grep -o 'testName="[^"]*" [^>]*outcome="Failed"' "$f" | sed 's/" .*//; s/testName="//' | while read -r name; do
-              echo "::error title=Failed test::$name"
-            done
+          import glob, os, xml.etree.ElementTree as ET
+          ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
+          for path in sorted(glob.glob("TestResults/*.trx")):
+              root = ET.parse(path).getroot()
+              c = root.find(".//t:Counters", ns).attrib
+              name = os.path.basename(path)
+              print(f"::notice title={name}::total={c['total']} passed={c['passed']} failed={c['failed']}")
+              for r in root.findall(".//t:UnitTestResult", ns):
+                  if r.get("outcome") != "Failed":
+                      continue
+                  msg = r.findtext(".//t:ErrorInfo/t:Message", default="", namespaces=ns)
+                  trace = r.findtext(".//t:ErrorInfo/t:StackTrace", default="", namespaces=ns)
+                  first_frame = next((l.strip() for l in trace.splitlines() if " in " in l), "")
+                  text = f"{msg} | {first_frame}".replace("%", "%25").replace("\r", "").replace("\n", "%0A")[:1500]
+                  print(f"::error title={r.get('testName')}::{text}")
+      - name: Publish build errors
+        if: failure()
+        run: |
+          dotnet build TAS.slnx --no-restore -c Release 2>&1 | grep -E "error [A-Z]+[0-9]+" | sort -u | head -30 | while read -r line; do
+            echo "::error title=Build::$line"
           done

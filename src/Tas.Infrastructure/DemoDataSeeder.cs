@@ -3,6 +3,7 @@ using Tas.Domain;
 using Tas.Domain.Booking;
 using Tas.Domain.Capacity;
 using Tas.Domain.Parties;
+using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Capacity;
 using Tas.Infrastructure.Persistence;
 
@@ -16,18 +17,28 @@ public sealed record DemoSeedResult(
     int DispatcherUserId,
     int PlannerUserId,
     IReadOnlyList<int> TruckIds,
-    IReadOnlyList<int> DriverIds);
+    IReadOnlyList<int> DriverIds,
+    int OtherCompanyId,
+    int OtherDispatcherUserId,
+    int TerminalAdminUserId,
+    IReadOnlyDictionary<string, string> Logins);
 
 /// <summary>
 /// A ready-to-demo multipurpose terminal: categories, a 24/7 weekday template, Fri/Sat hours,
 /// quotas, a walk-in reserve, a trucking company with users/trucks/drivers and two cargo releases.
 /// Pair with the FakeTos section of appsettings.Development.json. Development only.
 /// </summary>
-public sealed class DemoDataSeeder(TasDbContext db, SlotGenerationService slotGeneration, TimeProvider clock)
+public sealed class DemoDataSeeder(TasDbContext db, SlotGenerationService slotGeneration, PasswordService passwords, TimeProvider clock)
 {
     public const string TerminalCode = "DEMO";
-    private const string DispatcherEmail = "dispatcher@alnoor.example";
-    private const string PlannerEmail = "planner@demo-terminal.example";
+
+    /// <summary>Password of every demo user. Development only.</summary>
+    public const string DemoPassword = "Demo-Pass-2026";
+
+    public const string DispatcherEmail = "dispatcher@alnoor.example";
+    public const string PlannerEmail = "planner@demo-terminal.example";
+    public const string TerminalAdminEmail = "admin@demo-terminal.example";
+    public const string OtherDispatcherEmail = "dispatcher@gulfhaulage.example";
 
     public async Task<DemoSeedResult> SeedAsync(CancellationToken ct = default)
     {
@@ -103,18 +114,33 @@ public sealed class DemoDataSeeder(TasDbContext db, SlotGenerationService slotGe
         });
 
         var company = new Company { Name = "Al Noor Transport", CrNumber = "4030123456", CompanyType = CompanyType.Trucking };
-        db.Companies.Add(company);
+        var otherCompany = new Company { Name = "Gulf Haulage", CrNumber = "4030654321", CompanyType = CompanyType.Trucking };
+        db.Companies.AddRange(company, otherCompany);
         await db.SaveChangesAsync(ct);
 
+        AppUser WithPassword(AppUser user)
+        {
+            user.PasswordHash = passwords.Hash(user, DemoPassword);
+            return user;
+        }
+
         db.AppUsers.AddRange(
-            new AppUser
+            WithPassword(new AppUser
             {
-                CompanyId = company.CompanyId, Email = DispatcherEmail, FullName = "Khalid (Dispatcher)", Role = UserRole.CompanyAdmin,
-            },
-            new AppUser
+                CompanyId = company.CompanyId, Email = DispatcherEmail, FullName = "Khalid (Al Noor dispatcher)", Role = UserRole.CompanyAdmin,
+            }),
+            WithPassword(new AppUser
+            {
+                CompanyId = otherCompany.CompanyId, Email = OtherDispatcherEmail, FullName = "Faisal (Gulf Haulage dispatcher)", Role = UserRole.CompanyAdmin,
+            }),
+            WithPassword(new AppUser
             {
                 TerminalId = tid, Email = PlannerEmail, FullName = "Terminal Planner", Role = UserRole.Planner,
-            });
+            }),
+            WithPassword(new AppUser
+            {
+                TerminalId = tid, Email = TerminalAdminEmail, FullName = "Terminal Administrator", Role = UserRole.TerminalAdmin,
+            }));
 
         db.Trucks.AddRange(
             new Truck { CompanyId = company.CompanyId, PlateNumber = "1234 ABJ", PlateNormalized = "1234ABJ" },
@@ -145,11 +171,24 @@ public sealed class DemoDataSeeder(TasDbContext db, SlotGenerationService slotGe
     private async Task<DemoSeedResult> DescribeAsync(int terminalId, bool created, CancellationToken ct)
     {
         var dispatcher = await db.AppUsers.AsNoTracking().SingleAsync(u => u.Email == DispatcherEmail, ct);
+        var other = await db.AppUsers.AsNoTracking().SingleAsync(u => u.Email == OtherDispatcherEmail, ct);
         var planner = await db.AppUsers.AsNoTracking().SingleAsync(u => u.Email == PlannerEmail, ct);
+        var admin = await db.AppUsers.AsNoTracking().SingleAsync(u => u.Email == TerminalAdminEmail, ct);
         var companyId = dispatcher.CompanyId!.Value;
         var trucks = await db.Trucks.AsNoTracking().Where(t => t.CompanyId == companyId).OrderBy(t => t.TruckId).Select(t => t.TruckId).ToListAsync(ct);
         var drivers = await db.Drivers.AsNoTracking().Where(d => d.CompanyId == companyId).OrderBy(d => d.DriverId).Select(d => d.DriverId).ToListAsync(ct);
-        return new DemoSeedResult(created, terminalId, TerminalCode, companyId, dispatcher.UserId, planner.UserId, trucks, drivers);
+
+        var logins = new Dictionary<string, string>
+        {
+            [DispatcherEmail] = DemoPassword,
+            [OtherDispatcherEmail] = DemoPassword,
+            [PlannerEmail] = DemoPassword,
+            [TerminalAdminEmail] = DemoPassword,
+        };
+
+        return new DemoSeedResult(
+            created, terminalId, TerminalCode, companyId, dispatcher.UserId, planner.UserId, trucks, drivers,
+            other.CompanyId!.Value, other.UserId, admin.UserId, logins);
     }
 
     private static TransactionCategory Category(

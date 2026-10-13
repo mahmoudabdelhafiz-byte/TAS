@@ -1,6 +1,10 @@
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
+using Tas.Api;
+using Tas.Application.Auth;
 using Tas.Application.Booking;
 using Tas.Infrastructure;
+using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
 
@@ -11,26 +15,109 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+// Login / refresh: N attempts per minute per client IP (RateLimit:AuthPerMinute, default 10).
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimit:AuthPerMinute", 10),
+            Window = TimeSpan.FromMinutes(1),
+        }));
+});
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
+
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
+using (var scope = app.Services.CreateScope())
+    await scope.ServiceProvider.GetRequiredService<AdminBootstrapper>().EnsureAsync();
+
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-var terminal = app.MapGroup("/api/terminals/{terminalId:int}");
+// ================================================================ auth
 
-// ---------------------------------------------------------------- capacity
+var auth = app.MapGroup("/api/auth");
+
+auth.MapPost("/login", async (LoginBody body, AuthService service, HttpContext http, CancellationToken ct) =>
+{
+    var result = await service.LoginAsync(body.Email, body.Password, http.Connection.RemoteIpAddress?.ToString(), ct);
+    return result.Status switch
+    {
+        AuthStatus.Ok => Results.Ok(TokenResponse.From(result)),
+        AuthStatus.LockedOut => TasApi.Problem(StatusCodes.Status423Locked, result.Error!),
+        _ => TasApi.Problem(StatusCodes.Status401Unauthorized, "Wrong email or password."),
+    };
+}).RequireRateLimiting("auth");
+
+auth.MapPost("/refresh", async (RefreshBody body, AuthService service, HttpContext http, CancellationToken ct) =>
+{
+    var result = await service.RefreshAsync(body.RefreshToken, http.Connection.RemoteIpAddress?.ToString(), ct);
+    return result.Status == AuthStatus.Ok
+        ? Results.Ok(TokenResponse.From(result))
+        : TasApi.Problem(StatusCodes.Status401Unauthorized, "Session expired. Please sign in again.");
+}).RequireRateLimiting("auth");
+
+auth.MapPost("/logout", async (RefreshBody body, AuthService service, CancellationToken ct) =>
+{
+    await service.LogoutAsync(body.RefreshToken, ct);
+    return Results.NoContent();
+});
+
+auth.MapGet("/me", async (HttpContext http, AuthService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http);
+    var profile = user is null ? null : await service.GetProfileAsync(user.UserId, ct);
+    return profile is null ? Results.Unauthorized() : Results.Ok(profile);
+}).RequireAuthorization();
+
+auth.MapPost("/change-password", async (ChangePasswordBody body, HttpContext http, AuthService service, CancellationToken ct) =>
+{
+    var result = await service.ChangePasswordAsync(TasApi.User(http)!.UserId, body.CurrentPassword, body.NewPassword, ct);
+    return result.Status switch
+    {
+        AuthStatus.Ok => Results.NoContent(),
+        AuthStatus.Invalid => TasApi.Problem(StatusCodes.Status400BadRequest, result.Error!),
+        _ => TasApi.Problem(StatusCodes.Status403Forbidden, result.Error ?? "Current password is wrong."),
+    };
+}).RequireAuthorization().RequireRateLimiting("auth");
+
+// ================================================================ users
+
+app.MapPost("/api/users", async (CreateUserRequest body, HttpContext http, UserAdminService service, CancellationToken ct) =>
+{
+    var result = await service.CreateAsync(TasApi.User(http)!, body, ct);
+    return result.Status switch
+    {
+        UserAdminStatus.Created => Results.Created($"/api/users/{result.User!.UserId}", result.User),
+        UserAdminStatus.Forbidden => TasApi.Problem(StatusCodes.Status403Forbidden, result.Error!),
+        UserAdminStatus.Conflict => TasApi.Problem(StatusCodes.Status409Conflict, result.Error!),
+        _ => TasApi.Problem(StatusCodes.Status400BadRequest, result.Error!),
+    };
+}).RequireAuthorization();
+
+// ================================================================ terminal: capacity
+
+var terminal = app.MapGroup("/api/terminals/{terminalId:int}").RequireAuthorization();
 
 // Regenerate slots for a date range (local dates, inclusive) after changing templates or overrides.
 terminal.MapPost("/slots/generate", async (
-    int terminalId, DateOnly from, DateOnly to, SlotGenerationService service, CancellationToken ct) =>
+    int terminalId, DateOnly from, DateOnly to, HttpContext http, SlotGenerationService service, CancellationToken ct) =>
 {
+    if (!AccessRules.CanManageCapacity(TasApi.User(http)!, terminalId))
+        return TasApi.Forbidden("Only planners and terminal admins of this terminal can regenerate slots.");
     if (to < from)
-        return Results.Problem("'to' must be on or after 'from'.", statusCode: StatusCodes.Status400BadRequest);
+        return TasApi.Problem(StatusCodes.Status400BadRequest, "'to' must be on or after 'from'.");
     if (to.DayNumber - from.DayNumber > 90)
-        return Results.Problem("The range can be at most 90 days.", statusCode: StatusCodes.Status400BadRequest);
+        return TasApi.Problem(StatusCodes.Status400BadRequest, "The range can be at most 90 days.");
 
     try
     {
@@ -38,72 +125,105 @@ terminal.MapPost("/slots/generate", async (
     }
     catch (KeyNotFoundException ex)
     {
-        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+        return TasApi.Problem(StatusCodes.Status404NotFound, ex.Message);
     }
 });
 
 // Slots of one local day with how many more trucks of a category can still book each one.
 terminal.MapGet("/availability", async (
-    int terminalId, DateOnly date, string category, int? companyId, AvailabilityQueryService service, CancellationToken ct) =>
+    int terminalId, DateOnly date, string category, int? companyId, HttpContext http, AvailabilityQueryService service, CancellationToken ct) =>
 {
+    var user = TasApi.User(http)!;
+    if (!AccessRules.CanAccessTerminal(user, terminalId))
+        return TasApi.Forbidden("You have no access to this terminal.");
+
+    var (company, error) = AccessRules.ResolveCompany(user, companyId, required: false);
+    if (error is not null)
+        return TasApi.Forbidden(error);
+
     try
     {
-        return Results.Ok(await service.GetAsync(terminalId, date, category, companyId, ct));
+        return Results.Ok(await service.GetAsync(terminalId, date, category, company, ct));
     }
     catch (KeyNotFoundException ex)
     {
-        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+        return TasApi.Problem(StatusCodes.Status404NotFound, ex.Message);
     }
 });
 
-// ---------------------------------------------------------------- appointments
-// NOTE: userId in the body is temporary — it will come from authentication.
+// ================================================================ terminal: appointments
 
 var appointments = terminal.MapGroup("/appointments");
 
-appointments.MapPost("/", async (int terminalId, BookingRequest request, BookingService service, CancellationToken ct) =>
-    ToResult(await service.CreateAsync(terminalId, request, ct), $"/api/terminals/{terminalId}/appointments"));
-
-appointments.MapGet("/{appointmentNo}", async (int terminalId, string appointmentNo, AppointmentQueryService service, CancellationToken ct) =>
+appointments.MapPost("/", async (int terminalId, CreateAppointmentBody body, HttpContext http, BookingService service, CancellationToken ct) =>
 {
+    var user = TasApi.User(http)!;
+    if (!AccessRules.CanAccessTerminal(user, terminalId))
+        return TasApi.Forbidden("You have no access to this terminal.");
+
+    var (companyId, error) = AccessRules.ResolveCompany(user, body.CompanyId, required: true);
+    if (error is not null)
+        return user.IsCompanyUser ? TasApi.Forbidden(error) : TasApi.Problem(StatusCodes.Status400BadRequest, error);
+
+    var request = new BookingRequest(companyId!.Value, user.UserId, body.SlotId, body.TruckId, body.DriverId, body.Items ?? Array.Empty<BookingItemRequest>());
+    return TasApi.ToResult(await service.CreateAsync(terminalId, request, ct), $"/api/terminals/{terminalId}/appointments");
+});
+
+appointments.MapGet("/{appointmentNo}", async (
+    int terminalId, string appointmentNo, HttpContext http, AppointmentQueryService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    if (!AccessRules.CanAccessTerminal(user, terminalId))
+        return TasApi.Forbidden("You have no access to this terminal.");
+
     try
     {
-        var appointment = await service.GetAsync(terminalId, appointmentNo, ct);
+        // Company users only ever see their own company's appointments; others look like "not found".
+        var appointment = await service.GetAsync(terminalId, appointmentNo, user.IsCompanyUser ? user.CompanyId : null, ct);
         return appointment is null
-            ? Results.Problem($"Appointment {appointmentNo} not found.", statusCode: StatusCodes.Status404NotFound)
+            ? TasApi.Problem(StatusCodes.Status404NotFound, $"Appointment {appointmentNo} not found.")
             : Results.Ok(appointment);
     }
     catch (KeyNotFoundException ex)
     {
-        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+        return TasApi.Problem(StatusCodes.Status404NotFound, ex.Message);
     }
 });
 
-appointments.MapGet("/", async (int terminalId, DateOnly date, int? companyId, AppointmentQueryService service, CancellationToken ct) =>
+appointments.MapGet("/", async (
+    int terminalId, DateOnly date, int? companyId, HttpContext http, AppointmentQueryService service, CancellationToken ct) =>
 {
+    var user = TasApi.User(http)!;
+    if (!AccessRules.CanAccessTerminal(user, terminalId))
+        return TasApi.Forbidden("You have no access to this terminal.");
+
+    var (company, error) = AccessRules.ResolveCompany(user, companyId, required: false);
+    if (error is not null)
+        return TasApi.Forbidden(error);
+
     try
     {
-        return Results.Ok(await service.ListAsync(terminalId, date, companyId, ct));
+        return Results.Ok(await service.ListAsync(terminalId, date, company, ct));
     }
     catch (KeyNotFoundException ex)
     {
-        return Results.Problem(ex.Message, statusCode: StatusCodes.Status404NotFound);
+        return TasApi.Problem(StatusCodes.Status404NotFound, ex.Message);
     }
 });
 
 appointments.MapPost("/{appointmentNo}/cancel", async (
-    int terminalId, string appointmentNo, CancelRequest body, BookingService service, CancellationToken ct) =>
-    ToResult(await service.CancelAsync(terminalId, appointmentNo, body.UserId, body.Reason, ct)));
+    int terminalId, string appointmentNo, CancelBody? body, HttpContext http, BookingService service, CancellationToken ct) =>
+    TasApi.ToResult(await service.CancelAsync(terminalId, appointmentNo, TasApi.User(http)!.UserId, body?.Reason, ct)));
 
 appointments.MapPost("/{appointmentNo}/reschedule", async (
-    int terminalId, string appointmentNo, RescheduleRequest body, BookingService service, CancellationToken ct) =>
-    ToResult(await service.RescheduleAsync(terminalId, appointmentNo, body.UserId, body.SlotId, ct)));
+    int terminalId, string appointmentNo, RescheduleBody body, HttpContext http, BookingService service, CancellationToken ct) =>
+    TasApi.ToResult(await service.RescheduleAsync(terminalId, appointmentNo, TasApi.User(http)!.UserId, body.SlotId, ct)));
 
 appointments.MapPut("/{appointmentNo}/assignment", async (
-    int terminalId, string appointmentNo, AssignRequest body, BookingService service, CancellationToken ct) =>
-    ToResult(await service.AssignAsync(terminalId, appointmentNo, body.UserId, body.TruckId, body.DriverId, ct)));
+    int terminalId, string appointmentNo, AssignBody body, HttpContext http, BookingService service, CancellationToken ct) =>
+    TasApi.ToResult(await service.AssignAsync(terminalId, appointmentNo, TasApi.User(http)!.UserId, body.TruckId, body.DriverId, ct)));
 
-// ---------------------------------------------------------------- development helpers
+// ================================================================ development helpers
 
 if (app.Environment.IsDevelopment())
 {
@@ -113,31 +233,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
-
-static IResult ToResult(BookingOutcome outcome, string? createdBase = null)
-{
-    var extensions = new Dictionary<string, object?> { ["errors"] = outcome.Errors };
-    if (outcome.Checks.Count > 0)
-        extensions["checks"] = outcome.Checks;
-    var detail = string.Join(" ", outcome.Errors);
-
-    return outcome.Kind switch
-    {
-        BookingOutcomeKind.Created => Results.Created($"{createdBase}/{outcome.Appointment!.AppointmentNo}", outcome.Appointment),
-        BookingOutcomeKind.Updated => Results.Ok(outcome.Appointment),
-        BookingOutcomeKind.Invalid => Results.Problem(detail, statusCode: StatusCodes.Status400BadRequest, title: "Invalid request", extensions: extensions),
-        BookingOutcomeKind.NotFound => Results.Problem(detail, statusCode: StatusCodes.Status404NotFound, title: "Not found", extensions: extensions),
-        BookingOutcomeKind.Rejected => Results.Problem(detail, statusCode: StatusCodes.Status422UnprocessableEntity, title: "Not cleared for booking", extensions: extensions),
-        BookingOutcomeKind.NoCapacity => Results.Problem(detail, statusCode: StatusCodes.Status409Conflict, title: "No capacity", extensions: extensions),
-        _ => Results.Problem(detail, statusCode: StatusCodes.Status409Conflict, title: "Conflict", extensions: extensions),
-    };
-}
-
-public sealed record CancelRequest(int UserId, string? Reason);
-
-public sealed record RescheduleRequest(int UserId, long SlotId);
-
-public sealed record AssignRequest(int UserId, int? TruckId, int? DriverId);
 
 public partial class Program
 {
