@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after master data API)
+Last updated: 2026-10-14 (after bulk booking)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -90,6 +90,20 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | All changes audited |
 | ✅ | Tests: 121 unit + 16 database + 21 end-to-end API, all passing in CI |
 
+### 8. Bulk booking (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Upload `.xlsx` or `.csv` (comma / semicolon / tab, UTF-8, BOM); columns by name or alias in any order |
+| ✅ | Dates and times as text, real Excel date/time cells, or raw Excel numbers |
+| ✅ | Rows sharing a `visit` become one appointment (dual transactions, up to 4 moves) |
+| ✅ | File checks: required columns, dates / times, one date-time-truck-driver per visit, container not twice in the file, 500-row limit |
+| ✅ | Dry run (default): every booking check incl. TOS, plus capacity counted across earlier rows of the file; nothing booked |
+| ✅ | Real run: visit-by-visit booking, partial success, per-row results with appointment numbers and reasons |
+| ✅ | Trucks by plate (Arabic or Latin) and drivers by ID / Iqama, resolved for the company |
+| ✅ | Downloadable Excel template (with instructions sheet) and CSV template |
+| ✅ | Booking service split into prepare / commit so previews run exactly the same checks as bookings |
+| ✅ | Tests: 129 unit + 16 database + 26 end-to-end API, all passing in CI |
+
 ---
 
 ## Remaining
@@ -98,8 +112,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | | Item | Notes |
 |---|---|---|
 | ⬜ | Password reset | Forgotten-password flow (email or SMS), invited users set their own password |
-| 🔜 | **Bulk booking** | CSV/Excel upload for dispatchers |
-| ⬜ | Re-validation before arrival | Re-check TOS status of booked items periodically and when the driver starts the trip; update traffic light |
+| 🔜 | **Re-validation before arrival** | Re-check TOS status of booked items periodically and when the driver starts the trip; update traffic light |
 | ⬜ | EF Core migrations | Replace `db/schema.sql` as the source of truth |
 
 ### Phase B — Gate

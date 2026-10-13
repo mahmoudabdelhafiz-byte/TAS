@@ -93,6 +93,8 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | `POST` | `/api/terminals/{id}/appointments/{no}/cancel` | Cancel (until the cancellation cut-off; terminal staff any time) |
 | `POST` | `/api/terminals/{id}/appointments/{no}/reschedule` | Move to another slot (allowed until gate-in, e.g. for late trucks) |
 | `PUT` | `/api/terminals/{id}/appointments/{no}/assignment` | Assign / change truck and driver |
+| `POST` | `/api/terminals/{id}/appointments/bulk?dryRun=true` | Bulk booking from an uploaded `.xlsx` / `.csv` (form field `file`) |
+| `GET` | `/api/terminals/{id}/appointments/bulk/template?format=xlsx` | Download the bulk template (`xlsx` or `csv`) with instructions |
 | `GET` | `/health` | Health check |
 
 **Capacity configuration** (view: terminal staff of the terminal · change: Planner / TerminalAdmin):
@@ -176,6 +178,24 @@ Security: passwords hashed with ASP.NET Core Identity (PBKDF2); 5 wrong password
 - Driver traffic light: **red** (check failed / window passed), **amber** (warning), **green** (inside slot ± grace), **grey** (not yet time, or finished).
 - Trucks that have not arrived by slot end + late grace become **no-shows**: capacity is released and the company's no-show count goes up.
 
+### Bulk booking
+
+Dispatchers can upload a sheet of truck visits instead of booking one by one:
+
+```
+visit,date,time,category,container_no,booking_ref,truck_plate,driver_id
+V1,2026-10-20,10:00,EXP_DROP,HLXU8700018,BKG1001,1234 ABJ,1012345678
+V1,2026-10-20,10:00,IMP_PICKUP,MSCU1234566,,1234 ABJ,1012345678
+,2026-10-20,11:00,MTY_RETURN,MAEU4001110,,,
+,2026-10-20,12:00,BB_DELIVERY,,,,              (cargo_ref column: BL-STEEL-001)
+```
+
+- Columns can be in any order and have common alternative names (`container`, `plate`, `iqama`, `bl`…). Required: `date`, `time` (slot start), `category`.
+- Rows with the same `visit` are one truck visit (dual transaction, up to 4 moves).
+- `.xlsx` (dates and times may be real Excel cells) or CSV UTF-8 with comma, semicolon or tab. Max 500 rows / 2 MB.
+- **`dryRun=true` (the default)** runs every booking check — including TOS — and counts capacity taken by earlier rows of the same file; nothing is booked. Then send `dryRun=false` to book.
+- Each visit is booked on its own; failures don't stop the others. The response lists every visit with its rows, status (`Booked` / `WouldBook` / `Failed`), appointment number and reasons.
+
 ### Try it with the demo terminal
 
 In Development the API runs with a fake TOS (`FakeTos` in `appsettings.Development.json`) and offers:
@@ -235,6 +255,7 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Authentication and roles: login, lockout, rotating refresh tokens, company isolation, terminal scope, user creation
 - [x] Capacity admin API: templates, seasonal templates, overrides, reservations, release rules, settings, slot board, audit log
 - [x] Master data API: companies, trucks, drivers (Arabic plates, mobile normalization, blocking), categories, cargo releases, user management
+- [x] Bulk booking: Excel / CSV upload with dry-run preview, dual visits, per-row results, templates
 - [ ] Navis N4 adapter
 - [ ] Operator portal (React)
 - [ ] Driver app (Flutter)
