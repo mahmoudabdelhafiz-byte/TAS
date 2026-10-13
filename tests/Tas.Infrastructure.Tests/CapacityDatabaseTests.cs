@@ -40,7 +40,12 @@ public sealed class CapacityDatabaseTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         if (ConnectionString is null)
+        {
+            // In CI the database must be there; never let these tests pass silently.
+            if (Environment.GetEnvironmentVariable("CI") == "true")
+                throw new InvalidOperationException("TAS_TEST_DB is not set in CI.");
             return;
+        }
 
         await using var db = NewContext();
         await db.Database.ExecuteSqlRawAsync("TRUNCATE terminal, company RESTART IDENTITY CASCADE");
