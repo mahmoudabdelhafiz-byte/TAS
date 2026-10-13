@@ -25,7 +25,7 @@ Multi-terminal by design: one deployment serves many terminals.
 ## Repository layout
 
 ```
-docs/                         design documents (start with docs/data-model.md)
+docs/                         design documents (docs/data-model.md) and progress log (docs/progress.md)
 db/schema.sql                 PostgreSQL + PostGIS schema
 src/Tas.Domain                entities
 src/Tas.Application           capacity engine (pure logic: planning, availability, reconciliation)
