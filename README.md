@@ -127,6 +127,27 @@ Example — a weekly template window (times are local; `24:00` = midnight):
   "quotas": { "IMP_PICKUP": 15, "EXP_DROP": 12 } }
 ```
 
+**Master data:**
+
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| `GET` / `POST` | `/api/companies` | all (companies see only themselves) / TerminalAdmin | List & search / register a company |
+| `GET` / `PUT` | `/api/companies/{id}` | own company or staff / TerminalAdmin | View / edit |
+| `POST` | `/api/companies/{id}/status` | TerminalAdmin | Activate / suspend (reason required); suspended companies cannot book |
+| `GET` / `POST` | `/api/companies/{id}/trucks` | own company or staff / CompanyAdmin, TerminalAdmin | Fleet; plates normalized (`أ ب ح ١٢٣٤` = `1234 ABJ` = `1234ABJ`) and unique |
+| `PUT` | `/api/companies/{id}/trucks/{truckId}` | CompanyAdmin, TerminalAdmin | Edit plate |
+| `POST` | `/api/companies/{id}/trucks/{truckId}/block` | TerminalAdmin | Block / unblock (reason required) |
+| `GET` / `POST` / `PUT` | `/api/companies/{id}/drivers[/{driverId}]` | as trucks | Drivers; mobiles normalized to `+966…` |
+| `POST` | `/api/companies/{id}/drivers/{driverId}/block` | TerminalAdmin | Block / unblock |
+| `GET` / `POST` / `PUT` | `/api/terminals/{id}/categories[/{categoryId}]` | everyone at the terminal / TerminalAdmin | Transaction categories; new ones are bookable at once |
+| `GET` / `POST` / `PUT` | `/api/terminals/{id}/cargo[/{cargoId}]` | companies see own / Planner, TerminalAdmin | Multipurpose cargo releases (BL / DO) with trip and tonnage limits |
+| `GET` | `/api/users` | CompanyAdmin, TerminalAdmin, SysAdmin | Users within your scope |
+| `PUT` | `/api/users/{id}` | as above | Name, mobile, language, role (not your own role) |
+| `POST` | `/api/users/{id}/active` | as above | Deactivate (reason required) / reactivate |
+| `POST` | `/api/users/{id}/reset-password` | as above | Set a new password; ends the user's sessions |
+
+Every master data change is written to the audit log. Tokens are re-checked against the account on every request, so deactivating a user or changing their role takes effect immediately.
+
 Background workers: slot generation (every 6 h) and no-show marking (every 10 min).
 
 Booking responses: `201` booked · `400` invalid request · `404` not found · `409` no capacity / conflict ·
@@ -213,6 +234,7 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Driver traffic light and automatic no-shows
 - [x] Authentication and roles: login, lockout, rotating refresh tokens, company isolation, terminal scope, user creation
 - [x] Capacity admin API: templates, seasonal templates, overrides, reservations, release rules, settings, slot board, audit log
+- [x] Master data API: companies, trucks, drivers (Arabic plates, mobile normalization, blocking), categories, cargo releases, user management
 - [ ] Navis N4 adapter
 - [ ] Operator portal (React)
 - [ ] Driver app (Flutter)

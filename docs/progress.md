@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after capacity admin API)
+Last updated: 2026-10-14 (after master data API)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -76,6 +76,20 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Access: terminal staff view; planners and terminal admins change; companies have no access |
 | ✅ | Tests: 94 unit + 16 database + 16 end-to-end API, all passing in CI |
 
+### 7. Master data API (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Companies: list / search, register, edit, activate / suspend with reason (suspended companies cannot book) |
+| ✅ | Trucks: one plate form for Arabic and Latin input (Saudi letters mapped, Arabic-Indic digits), unique across companies |
+| ✅ | Drivers: ID / Iqama, mobile normalized to +966…, preferred language |
+| ✅ | Blocking trucks / drivers is a terminal decision (TerminalAdmin), with reason; blocked trucks can't be booked |
+| ✅ | Transaction categories per terminal; new or re-activated categories are bookable at once (slots regenerate) |
+| ✅ | Cargo releases (BL / DO) with trips / tonnage; trips can't drop below what's booked; companies see only their own |
+| ✅ | Users: list within scope, edit, change role, deactivate (reason), reactivate, admin password reset |
+| ✅ | Security: every request re-checks the account — deactivation and role changes take effect immediately |
+| ✅ | All changes audited |
+| ✅ | Tests: 121 unit + 16 database + 21 end-to-end API, all passing in CI |
+
 ---
 
 ## Remaining
@@ -83,9 +97,8 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase A — Backend MVP (make it usable by real customers)
 | | Item | Notes |
 |---|---|---|
-| 🔜 | **Master data API** | Companies, trucks, drivers, categories, cargo allocations; list / edit / deactivate users |
 | ⬜ | Password reset | Forgotten-password flow (email or SMS), invited users set their own password |
-| ⬜ | Bulk booking | CSV/Excel upload for dispatchers |
+| 🔜 | **Bulk booking** | CSV/Excel upload for dispatchers |
 | ⬜ | Re-validation before arrival | Re-check TOS status of booked items periodically and when the driver starts the trip; update traffic light |
 | ⬜ | EF Core migrations | Replace `db/schema.sql` as the source of truth |
 
