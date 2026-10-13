@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tas_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TAS_TEST_DB: Host=localhost;Port=5432;Database=tas_test;Username=postgres;Password=postgres
+      DOTNET_NOLOGO: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Create database schema
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d tas_test -v ON_ERROR_STOP=1 -q -f db/schema.sql
+
+      - name: Restore
+        run: dotnet restore TAS.slnx
+
+      - name: Build
+        run: dotnet build TAS.slnx --no-restore -c Release
+
+      - name: Unit tests
+        run: dotnet test tests/Tas.Application.Tests --no-build -c Release --logger "console;verbosity=normal"
+
+      - name: Database integration tests
+        run: dotnet test tests/Tas.Infrastructure.Tests --no-build -c Release --logger "console;verbosity=normal"
