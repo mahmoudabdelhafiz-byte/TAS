@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after bulk booking)
+Last updated: 2026-10-14 (after re-validation)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -104,6 +104,18 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Booking service split into prepare / commit so previews run exactly the same checks as bookings |
 | ✅ | Tests: 129 unit + 16 database + 26 end-to-end API, all passing in CI |
 
+### 9. Re-checks before arrival (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Scheduled re-checks of appointments starting within 24 h (at most every 60 min each); an unreachable TOS leaves them due for the next run |
+| ✅ | On-demand re-check by the company or terminal staff |
+| ✅ | Start trip: re-checks right before the truck leaves, refuses while anything is red (hold, unpaid, window passed), marks EN_ROUTE; at most 12 h before the slot |
+| ✅ | Item statuses, stored traffic light and last-checked time updated; changes written to the appointment history |
+| ✅ | Notification outbox: STATUS_RED / STATUS_CLEARED queued for the driver (SMS, driver's language) and the booker (email) |
+| ✅ | Booking and re-checks share one set of item checks (check digit + TOS) |
+| ✅ | Database: `appointment.last_validated_at`, upgrade script `db/migrations/003_revalidation.sql` |
+| ✅ | Tests: 129 unit + 20 database + 27 end-to-end API, all passing in CI |
+
 ---
 
 ## Remaining
@@ -112,13 +124,12 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | | Item | Notes |
 |---|---|---|
 | ⬜ | Password reset | Forgotten-password flow (email or SMS), invited users set their own password |
-| 🔜 | **Re-validation before arrival** | Re-check TOS status of booked items periodically and when the driver starts the trip; update traffic light |
 | ⬜ | EF Core migrations | Replace `db/schema.sql` as the source of truth |
 
 ### Phase B — Gate
 | | Item | Notes |
 |---|---|---|
-| ⬜ | Gate-in matching | OCR plate / container read → appointment; early / late / no appointment handling |
+| 🔜 | **Gate-in matching** | OCR plate / container read → appointment; early / late / no appointment handling |
 | ⬜ | Gate events & statuses | ARRIVED → GATE_IN → COMPLETED, REJECTED_AT_GATE; turn time |
 | ⬜ | Trouble desk | Exceptions queue with the reason already shown |
 | ⬜ | Walk-in handling | Book on the spot into reserved capacity |
@@ -129,7 +140,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | **Navis N4 adapter** | Validation (holds, availability, releases), pre-advice / truck visit creation, gate events. Web services or EDI ❓ |
 | ⬜ | FASAH customs release | If not already reflected in N4 |
 | ⬜ | National appointment platform | Check whether Mawani / FASAH requires integration at the customer's port ❓ |
-| ⬜ | Notifications | SMS / WhatsApp / push: reminders, container ready, status turned red, slot closed |
+| ⬜ | Notification sender | Deliver the queued outbox (SMS / WhatsApp / email / push) in the recipient's language; reminders, slot closed |
 | ⬜ | Trucking company API | Client credentials, scopes, rate limits for bookings from their own TMS |
 
 ### Phase D — Operator & company portal (React)

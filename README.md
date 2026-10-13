@@ -93,6 +93,8 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | `POST` | `/api/terminals/{id}/appointments/{no}/cancel` | Cancel (until the cancellation cut-off; terminal staff any time) |
 | `POST` | `/api/terminals/{id}/appointments/{no}/reschedule` | Move to another slot (allowed until gate-in, e.g. for late trucks) |
 | `PUT` | `/api/terminals/{id}/appointments/{no}/assignment` | Assign / change truck and driver |
+| `POST` | `/api/terminals/{id}/appointments/{no}/revalidate` | Re-check the appointment against the TOS now and refresh the traffic light |
+| `POST` | `/api/terminals/{id}/appointments/{no}/start-trip` | Truck is leaving: re-check now; refused (422) while anything is red, else `EN_ROUTE` |
 | `POST` | `/api/terminals/{id}/appointments/bulk?dryRun=true` | Bulk booking from an uploaded `.xlsx` / `.csv` (form field `file`) |
 | `GET` | `/api/terminals/{id}/appointments/bulk/template?format=xlsx` | Download the bulk template (`xlsx` or `csv`) with instructions |
 | `GET` | `/health` | Health check |
@@ -150,7 +152,10 @@ Example — a weekly template window (times are local; `24:00` = midnight):
 
 Every master data change is written to the audit log. Tokens are re-checked against the account on every request, so deactivating a user or changing their role takes effect immediately.
 
-Background workers: slot generation (every 6 h) and no-show marking (every 10 min).
+**Re-checks before arrival:** a container that was clear at booking can get a customs hold, a withdrawn release or unpaid charges later. Booked appointments starting within 24 h are re-checked against the TOS (at most every 60 min each), on request, and when the trip starts. If an item turns red or clears, the change is written to the appointment history and a notification (`STATUS_RED` / `STATUS_CLEARED`) is queued for the driver (SMS) and the person who booked (email) in the `notification_log` outbox.
+
+Background workers: slot generation (every 6 h), no-show marking (every 10 min), re-checks (every 15 min).
+Settings: `Revalidation:LookAheadHours` (24), `Revalidation:MinAgeMinutes` (60), `Revalidation:IntervalMinutes` (15), `Revalidation:Enabled`.
 
 Booking responses: `201` booked · `400` invalid request · `404` not found · `409` no capacity / conflict ·
 `422` not cleared (a TOS or internal check failed — the response lists every check and why).
@@ -256,6 +261,7 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Capacity admin API: templates, seasonal templates, overrides, reservations, release rules, settings, slot board, audit log
 - [x] Master data API: companies, trucks, drivers (Arabic plates, mobile normalization, blocking), categories, cargo releases, user management
 - [x] Bulk booking: Excel / CSV upload with dry-run preview, dual visits, per-row results, templates
+- [x] Re-checks before arrival: scheduled, on request and at trip start; history and notification outbox
 - [ ] Navis N4 adapter
 - [ ] Operator portal (React)
 - [ ] Driver app (Flutter)
