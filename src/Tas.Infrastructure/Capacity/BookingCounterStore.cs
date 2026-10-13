@@ -75,6 +75,34 @@ public sealed class BookingCounterStore(TasDbContext db)
         }
     }
 
+    /// <summary>Draws trips down from a multipurpose cargo allocation. False when it is not open or has no trips left.</summary>
+    public async Task<bool> TryConsumeCargoTripsAsync(int cargoAllocationId, int trips, CancellationToken ct = default)
+    {
+        EnsureTransaction();
+
+        var rows = await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE cargo_allocation
+                SET booked_trips = booked_trips + {trips}
+              WHERE cargo_allocation_id = {cargoAllocationId}
+                AND status = 'OPEN'
+                AND (total_trips IS NULL OR booked_trips + {trips} <= total_trips)
+             """, ct);
+        return rows > 0;
+    }
+
+    public async Task ReleaseCargoTripsAsync(int cargoAllocationId, int trips, CancellationToken ct = default)
+    {
+        EnsureTransaction();
+
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE cargo_allocation
+                SET booked_trips = GREATEST(0, booked_trips - {trips})
+              WHERE cargo_allocation_id = {cargoAllocationId}
+             """, ct);
+    }
+
     private void EnsureTransaction()
     {
         if (db.Database.CurrentTransaction is null)

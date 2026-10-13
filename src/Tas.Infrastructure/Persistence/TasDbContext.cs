@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Tas.Domain;
+using Tas.Domain.Booking;
 using Tas.Domain.Capacity;
+using Tas.Domain.Parties;
 
 namespace Tas.Infrastructure.Persistence;
 
@@ -23,6 +25,16 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<CapacityReservation> CapacityReservations => Set<CapacityReservation>();
     public DbSet<Slot> Slots => Set<Slot>();
     public DbSet<SlotCategoryCapacity> SlotCategoryCapacities => Set<SlotCategoryCapacity>();
+    public DbSet<TerminalSetting> TerminalSettings => Set<TerminalSetting>();
+    public DbSet<Company> Companies => Set<Company>();
+    public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<Truck> Trucks => Set<Truck>();
+    public DbSet<Driver> Drivers => Set<Driver>();
+    public DbSet<CargoAllocation> CargoAllocations => Set<CargoAllocation>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<AppointmentItem> AppointmentItems => Set<AppointmentItem>();
+    public DbSet<ValidationResult> ValidationResults => Set<ValidationResult>();
+    public DbSet<AppointmentStatusHistory> AppointmentStatusHistory => Set<AppointmentStatusHistory>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -81,6 +93,73 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
 
         b.Entity<SlotCategoryCapacity>(e => e.HasKey(x => new { x.SlotId, x.CategoryId }));
 
+        b.Entity<TerminalSetting>(e => e.HasKey(x => new { x.TerminalId, x.SettingKey }));
+
+        // ---------- Parties ----------
+
+        b.Entity<Company>(e =>
+        {
+            e.HasKey(x => x.CompanyId);
+            e.Property(x => x.CompanyType).HasUpperCaseConversion();
+            e.Property(x => x.Status).HasUpperCaseConversion();
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<AppUser>(e =>
+        {
+            e.HasKey(x => x.UserId);
+            e.Property(x => x.Role).HasUpperCaseConversion();
+        });
+
+        b.Entity<Truck>(e => e.HasKey(x => x.TruckId));
+        b.Entity<Driver>(e => e.HasKey(x => x.DriverId));
+
+        // ---------- Booking ----------
+
+        b.Entity<CargoAllocation>(e =>
+        {
+            e.HasKey(x => x.CargoAllocationId);
+            e.Property(x => x.CargoType).HasUpperCaseConversion();
+            e.Property(x => x.Status).HasUpperCaseConversion();
+        });
+
+        b.Entity<Appointment>(e =>
+        {
+            e.HasKey(x => x.AppointmentId);
+            e.Property(x => x.Status).HasUpperCaseConversion();
+            e.Property(x => x.TrafficLight).HasUpperCaseConversion();
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            e.HasOne(x => x.Slot).WithMany().HasForeignKey(x => x.SlotId);
+            e.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId);
+            e.HasOne(x => x.Truck).WithMany().HasForeignKey(x => x.TruckId);
+            e.HasOne(x => x.Driver).WithMany().HasForeignKey(x => x.DriverId);
+            e.HasMany(x => x.Items).WithOne().HasForeignKey(i => i.AppointmentId);
+            e.HasMany(x => x.History).WithOne().HasForeignKey(h => h.AppointmentId);
+        });
+
+        b.Entity<AppointmentItem>(e =>
+        {
+            e.HasKey(x => x.ItemId);
+            e.Property(x => x.ValidationStatus).HasUpperCaseConversion();
+            e.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId);
+            e.HasOne(x => x.CargoAllocation).WithMany().HasForeignKey(x => x.CargoAllocationId);
+            e.HasMany(x => x.ValidationResults).WithOne().HasForeignKey(v => v.ItemId);
+        });
+
+        b.Entity<ValidationResult>(e =>
+        {
+            e.HasKey(x => x.ValidationId);
+            e.Property(x => x.CheckType).HasUpperCaseConversion();
+            e.Property(x => x.Result).HasUpperCaseConversion();
+        });
+
+        b.Entity<AppointmentStatusHistory>(e =>
+        {
+            e.HasKey(x => x.HistoryId);
+            e.Property(x => x.FromStatus).HasConversion(new UpperSnakeEnumConverter<AppointmentStatus>());
+            e.Property(x => x.ToStatus).HasUpperCaseConversion();
+        });
+
         ApplySnakeCaseNames(b);
     }
 
@@ -104,14 +183,32 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
 }
 
 internal sealed class UtcDateTimeOffsetConverter()
-    : ValueConverter<DateTimeOffset, DateTimeOffset>(v => v.ToUniversalTime(), v => v);
+    : ValueConverter<DateTimeOffset, DateTimeOffset>(v => v.ToUniversalTime(), v => v)
+{
+}
+
+/// <summary>
+/// Stores enums as the upper-case strings used in the schema's CHECK constraints:
+/// Adjust → "ADJUST", EnRoute → "EN_ROUTE", RejectedAtGate → "REJECTED_AT_GATE".
+/// </summary>
+internal sealed class UpperSnakeEnumConverter<TEnum>()
+    : ValueConverter<TEnum, string>(v => EnumNames.ToDb(v), v => EnumNames.FromDb<TEnum>(v))
+    where TEnum : struct, Enum
+{
+}
+
+internal static class EnumNames
+{
+    public static string ToDb<TEnum>(TEnum value) where TEnum : struct, Enum =>
+        TasDbContext.ToSnakeCase(value.ToString()).ToUpperInvariant();
+
+    public static TEnum FromDb<TEnum>(string value) where TEnum : struct, Enum =>
+        Enum.Parse<TEnum>(value.Replace("_", ""), ignoreCase: true);
+}
 
 internal static class EnumConversionExtensions
 {
-    /// <summary>Stores enums as the upper-case strings used in the schema's CHECK constraints, e.g. "ADJUST".</summary>
     public static PropertyBuilder<TEnum> HasUpperCaseConversion<TEnum>(this PropertyBuilder<TEnum> property)
         where TEnum : struct, Enum =>
-        property.HasConversion(
-            v => v.ToString().ToUpperInvariant(),
-            v => Enum.Parse<TEnum>(v, true));
+        property.HasConversion(new UpperSnakeEnumConverter<TEnum>());
 }
