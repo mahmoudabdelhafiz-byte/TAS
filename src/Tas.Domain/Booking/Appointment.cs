@@ -75,6 +75,9 @@ public sealed class Appointment
     public DateTimeOffset? CurrentEta { get; set; }
     public DateTimeOffset? EtaUpdatedAt { get; set; }
     public string? CheckInMethod { get; set; }
+
+    /// <summary>Last time the items were (re-)checked against the TOS.</summary>
+    public DateTimeOffset? LastValidatedAt { get; set; }
     public DateTimeOffset? ArrivedAt { get; set; }
     public DateTimeOffset? GateInAt { get; set; }
     public DateTimeOffset? GateOutAt { get; set; }

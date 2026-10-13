@@ -67,19 +67,22 @@ public sealed class AppointmentQueryService(TasDbContext db, TimeProvider clock)
         return (terminal, settings);
     }
 
-    internal static AppointmentDto ToDto(Appointment a, Terminal terminal, TerminalSettings settings, DateTimeOffset now)
-    {
-        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(terminal.TimeZone);
-        var items = a.Items.OrderBy(i => i.ItemId).ToList();
-
-        var (light, reason) = TrafficLightCalculator.Calculate(
+    /// <summary>The driver's traffic light for an appointment loaded with its slot, items and validation results.</summary>
+    internal static (TrafficLight Light, string Reason) Traffic(Appointment a, TerminalSettings settings, TimeZoneInfo timeZone, DateTimeOffset now) =>
+        TrafficLightCalculator.Calculate(
             a.Status,
-            items.Select((i, n) => new ItemCheckState(
+            a.Items.OrderBy(i => i.ItemId).Select((i, n) => new ItemCheckState(
                     $"Item {n + 1}",
                     i.ValidationStatus,
                     i.ValidationResults.Where(v => v.Result != CheckResult.Pass).OrderByDescending(v => v.Result).Select(v => v.Message).FirstOrDefault()))
                 .ToList(),
             a.Slot.StartAt, a.Slot.EndAt, now, settings, timeZone);
+
+    internal static AppointmentDto ToDto(Appointment a, Terminal terminal, TerminalSettings settings, DateTimeOffset now)
+    {
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(terminal.TimeZone);
+        var items = a.Items.OrderBy(i => i.ItemId).ToList();
+        var (light, reason) = Traffic(a, settings, timeZone, now);
 
         var localStart = TimeZoneInfo.ConvertTime(a.Slot.StartAt, timeZone);
         var localEnd = TimeZoneInfo.ConvertTime(a.Slot.EndAt, timeZone);

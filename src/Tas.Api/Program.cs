@@ -277,6 +277,26 @@ appointments.MapPost("/{appointmentNo}/reschedule", async (
     int terminalId, string appointmentNo, RescheduleBody body, HttpContext http, BookingService service, CancellationToken ct) =>
     TasApi.ToResult(await service.RescheduleAsync(terminalId, appointmentNo, TasApi.User(http)!.UserId, body.SlotId, ct)));
 
+// Re-check the appointment against the TOS now (holds, releases, payment…) and refresh the traffic light.
+appointments.MapPost("/{appointmentNo}/revalidate", async (
+    int terminalId, string appointmentNo, HttpContext http, RevalidationService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    return !AccessRules.CanAccessTerminal(user, terminalId)
+        ? TasApi.Forbidden("You have no access to this terminal.")
+        : TasApi.ToResult(await service.RevalidateByNumberAsync(terminalId, appointmentNo, user, ct));
+});
+
+// The truck is leaving: re-check now; refused (422) while anything is red, otherwise the appointment becomes EN_ROUTE.
+appointments.MapPost("/{appointmentNo}/start-trip", async (
+    int terminalId, string appointmentNo, HttpContext http, RevalidationService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    return !AccessRules.CanAccessTerminal(user, terminalId)
+        ? TasApi.Forbidden("You have no access to this terminal.")
+        : TasApi.ToResult(await service.StartTripAsync(terminalId, appointmentNo, user, ct));
+});
+
 appointments.MapPut("/{appointmentNo}/assignment", async (
     int terminalId, string appointmentNo, AssignBody body, HttpContext http, BookingService service, CancellationToken ct) =>
     TasApi.ToResult(await service.AssignAsync(terminalId, appointmentNo, TasApi.User(http)!.UserId, body.TruckId, body.DriverId, ct)));

@@ -28,8 +28,6 @@ public sealed class BookingService(
     TimeProvider clock,
     ILogger<BookingService> logger)
 {
-    private const string InternalSource = "INTERNAL";
-
     // ------------------------------------------------------------------ create
 
     /// <summary>Everything a booking needs, gathered and checked before any capacity is used.</summary>
@@ -40,7 +38,7 @@ public sealed class BookingService(
         Slot Slot,
         IReadOnlyList<ValidatedItem> Items,
         IReadOnlyDictionary<string, CargoAllocation> Cargo,
-        IReadOnlyList<(int Index, CheckType Type, CheckResult Result, string? Message, string Source, string? TosRef)> Checks,
+        IReadOnlyList<ItemCheck> Checks,
         IReadOnlyList<CheckDto> CheckDtos,
         TerminalSettings Settings,
         TimeZoneInfo TimeZone);
@@ -163,19 +161,12 @@ public sealed class BookingService(
         }
 
         // Checks: container check digit (internal) + TOS.
-        var checks = new List<(int Index, CheckType Type, CheckResult Result, string? Message, string Source, string? TosRef)>();
-        foreach (var item in items.Where(i => i.ContainerNo is not null))
-        {
-            var valid = ContainerNumber.IsValid(item.ContainerNo!);
-            checks.Add((item.Index, CheckType.ContainerNumber, valid ? CheckResult.Pass : CheckResult.Fail,
-                valid ? null : $"{item.ContainerNo} has a wrong check digit — please re-check the number", InternalSource, null));
-        }
-
-        var tosChecks = await tos.ValidateAsync(
+        var checks = await ItemChecks.RunAsync(
+            tos,
             terminalId,
-            items.Select(i => new TosItemQuery(i.Index, i.Category.Code, i.Category.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoRef, slot.StartAt)).ToList(),
+            items.Select(i => new ItemToCheck(i.Index, i.Category.Code, i.Category.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoRef)).ToList(),
+            slot.StartAt,
             ct);
-        checks.AddRange(tosChecks.Select(c => (c.ItemIndex, c.Type, c.Result, c.Message, tos.Source, c.TosRef)));
 
         var checkDtos = checks.Select(c => new CheckDto(c.Index + 1, c.Type, c.Result, c.Message, c.Source)).ToList();
         var failures = checks.Where(c => c.Result == CheckResult.Fail).Select(c => $"Item {c.Index + 1}: {c.Message}").ToList();
@@ -223,6 +214,7 @@ public sealed class BookingService(
             QrToken = AppointmentNumbers.NewQrToken(),
             CreatedBy = p.User.UserId,
             CreatedAt = now,
+            LastValidatedAt = now,
             Items = p.Items.Select(i =>
             {
                 var itemChecks = p.Checks.Where(c => c.Index == i.Index).ToList();
