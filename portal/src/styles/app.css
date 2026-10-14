@@ -1,0 +1,718 @@
+/* ------------------------------------------------------------------ tokens
+   Quay concrete, hull ink, one petrol for actions. Red / amber / green / grey mean traffic-light status
+   and nothing else. Logical properties (inline-start/end) everywhere, so Arabic mirrors without overrides. */
+
+:root {
+  --quay: #eef0ee;
+  --surface: #ffffff;
+  --hull: #17232d;
+  --steel: #5e6b73;
+  --line: #cbd2d3;
+  --line-soft: #e1e5e5;
+  --petrol: #0a6e7a;
+  --petrol-dark: #08525b;
+  --petrol-tint: #e3f0f1;
+
+  --go: #1e8449;
+  --caution: #b9770e;
+  --hold: #c0392b;
+  --idle: #8a949a;
+  --go-tint: #e5f3ea;
+  --caution-tint: #fbf1df;
+  --hold-tint: #f9e6e3;
+  --idle-tint: #eceeef;
+
+  --font: 'Readex Pro', system-ui, 'Segoe UI', Tahoma, sans-serif;
+  --step--1: 0.8125rem; /* 13 */
+  --step-0: 0.9375rem; /* 15 */
+  --step-1: 1.0625rem; /* 17 */
+  --step-2: 1.3125rem; /* 21 */
+  --step-3: 1.75rem; /* 28 */
+  --step-4: 2.5rem; /* 40 */
+
+  --radius: 6px;
+  --rail: 15rem;
+  --focus: 0 0 0 3px #f2c94c;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font);
+  font-size: 100%;
+  color: var(--hull);
+  background: var(--quay);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-size: var(--step-0);
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+}
+
+[lang='ar'] body {
+  line-height: 1.7; /* Arabic needs room for its ascenders and dots */
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: var(--step-3);
+}
+
+h2 {
+  font-size: var(--step-2);
+}
+
+h3 {
+  font-size: var(--step-1);
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--petrol);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--petrol-dark);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 3px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  inset-inline-start: 1rem;
+  inset-block-start: -3rem;
+  z-index: 10;
+  padding: 0.5rem 0.9rem;
+  background: var(--hull);
+  color: #fff;
+  border-radius: var(--radius);
+}
+
+.skip-link:focus {
+  inset-block-start: 1rem;
+}
+
+.muted {
+  color: var(--steel);
+}
+
+/* Identifiers: appointment / container numbers, plates. Always left-to-right, even inside Arabic text. */
+.code {
+  direction: ltr;
+  unicode-bidi: isolate;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ controls */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-block-size: 2.5rem;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid var(--petrol);
+  border-radius: var(--radius);
+  background: var(--petrol);
+  color: #fff;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.button:hover {
+  background: var(--petrol-dark);
+  border-color: var(--petrol-dark);
+  color: #fff;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.button.secondary {
+  background: var(--surface);
+  color: var(--hull);
+  border-color: var(--line);
+}
+
+.button.secondary:hover {
+  border-color: var(--steel);
+  background: var(--surface);
+  color: var(--hull);
+}
+
+.button.quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--petrol);
+  padding-inline: 0.5rem;
+}
+
+.button.quiet:hover {
+  background: var(--petrol-tint);
+  color: var(--petrol-dark);
+}
+
+.button.danger {
+  color: var(--hold);
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.field label {
+  font-weight: 500;
+}
+
+.field .hint {
+  font-size: var(--step--1);
+  color: var(--steel);
+}
+
+input,
+select {
+  inline-size: 100%;
+  min-block-size: 2.6rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--hull);
+  font: inherit;
+}
+
+input:hover,
+select:hover {
+  border-color: var(--steel);
+}
+
+input:focus-visible,
+select:focus-visible {
+  border-color: var(--petrol);
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--hold);
+}
+
+input[type='email'],
+input[type='tel'] {
+  direction: ltr;
+  text-align: start;
+}
+
+[dir='rtl'] input[type='email'],
+[dir='rtl'] input[type='tel'] {
+  text-align: end;
+}
+
+.notice {
+  padding: 0.7rem 0.9rem;
+  border-inline-start: 4px solid var(--petrol);
+  background: var(--petrol-tint);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+[dir='rtl'] .notice {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.notice.error {
+  border-color: var(--hold);
+  background: var(--hold-tint);
+}
+
+.notice.success {
+  border-color: var(--go);
+  background: var(--go-tint);
+}
+
+/* ------------------------------------------------------------------ sign-in and password pages */
+
+.gate {
+  display: grid;
+  grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
+  min-block-size: 100vh;
+}
+
+.gate-form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2rem;
+  padding: 3rem clamp(1.25rem, 5vw, 4rem);
+  background: var(--surface);
+}
+
+.gate-form form {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.gate-form header {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.gate-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.wordmark {
+  font-weight: 600;
+  font-size: var(--step-1);
+}
+
+.gate-links {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+/* The one graphic of the product: a terminal day as 24 hour slots, filled the way a busy day fills. */
+.gate-visual {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1.25rem;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  background: var(--hull);
+  color: #dfe6e8;
+  overflow: hidden;
+}
+
+.gate-visual .title {
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: #fff;
+  max-inline-size: 12ch;
+}
+
+.slot-strip {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  align-items: end;
+  gap: 4px;
+  block-size: 11rem;
+  direction: ltr; /* hours run 00 → 23 in both languages, like the slot board */
+}
+
+.slot-strip span {
+  display: block;
+  background: #2fa4a3;
+  border-radius: 2px 2px 0 0;
+  min-block-size: 6px;
+}
+
+.slot-strip span[data-full='true'] {
+  background: #e7eef0;
+}
+
+.slot-strip span[data-closed='true'] {
+  background: transparent;
+  border: 1px dashed #5e6b73;
+  border-block-end: none;
+}
+
+.slot-hours {
+  display: flex;
+  justify-content: space-between;
+  direction: ltr;
+  font-size: var(--step--1);
+  color: #9aa7ad;
+}
+
+@media (max-width: 52rem) {
+  .gate {
+    grid-template-columns: 1fr;
+  }
+
+  .gate-visual {
+    order: -1;
+    min-block-size: auto;
+    padding-block: 1.5rem;
+  }
+
+  .gate-visual .title {
+    font-size: var(--step-3);
+  }
+
+  .slot-strip {
+    block-size: 4.5rem;
+  }
+}
+
+/* ------------------------------------------------------------------ app shell */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  min-block-size: 100vh;
+}
+
+.rail {
+  position: sticky;
+  inset-block-start: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  block-size: 100vh;
+  padding: 1.25rem 0.9rem;
+  background: var(--hull);
+  color: #dfe6e8;
+}
+
+.rail .wordmark {
+  padding-inline: 0.6rem;
+  color: #fff;
+}
+
+.rail nav ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rail nav a {
+  display: block;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius);
+  color: #c7d1d5;
+  text-decoration: none;
+}
+
+.rail nav a:hover {
+  background: #22323e;
+  color: #fff;
+}
+
+.rail nav a[aria-current='page'] {
+  background: #22323e;
+  color: #fff;
+  box-shadow: inset 3px 0 0 #2fa4a3;
+}
+
+[dir='rtl'] .rail nav a[aria-current='page'] {
+  box-shadow: inset -3px 0 0 #2fa4a3;
+}
+
+.rail-foot {
+  display: grid;
+  gap: 0.75rem;
+  margin-block-start: auto;
+  padding-inline: 0.6rem;
+  font-size: var(--step--1);
+}
+
+.rail-foot .who {
+  display: grid;
+  color: #9aa7ad;
+}
+
+.rail-foot .who strong {
+  color: #fff;
+  font-weight: 500;
+}
+
+.rail .button.quiet {
+  justify-self: start;
+  padding-inline: 0;
+  color: #9fd6d6;
+}
+
+.rail .button.quiet:hover {
+  background: none;
+  color: #fff;
+}
+
+.rail select {
+  background: #22323e;
+  border-color: #33464f;
+  color: #fff;
+  min-block-size: 2.3rem;
+}
+
+.main {
+  display: grid;
+  align-content: start;
+  gap: 1.5rem;
+  padding: 1.75rem clamp(1rem, 3vw, 2.5rem) 3rem;
+  min-inline-size: 0;
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-head .tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 52rem) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    position: static;
+    block-size: auto;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .rail nav ul {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .rail-foot {
+    margin: 0;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+
+/* ------------------------------------------------------------------ panels and tables */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+}
+
+.panel-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+}
+
+table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.7rem 0.9rem;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--line-soft);
+}
+
+th {
+  font-size: var(--step--1);
+  font-weight: 500;
+  color: var(--steel);
+  background: #f7f8f7;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-block-end: none;
+}
+
+td .sub {
+  display: block;
+  font-size: var(--step--1);
+  color: var(--steel);
+}
+
+/* The signature: each appointment row carries its traffic light as a painted edge, like a container door. */
+tr[data-light] td:first-child {
+  border-inline-start: 6px solid var(--idle);
+}
+
+tr[data-light='Green'] td:first-child {
+  border-inline-start-color: var(--go);
+}
+
+tr[data-light='Amber'] td:first-child {
+  border-inline-start-color: var(--caution);
+}
+
+tr[data-light='Red'] td:first-child {
+  border-inline-start-color: var(--hold);
+}
+
+tr[data-light='Red'] {
+  background: #fdf7f6;
+}
+
+.light {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.light::before {
+  content: '';
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border-radius: 50%;
+  background: var(--idle);
+}
+
+.light[data-light='Green']::before {
+  background: var(--go);
+}
+
+.light[data-light='Amber']::before {
+  background: var(--caution);
+}
+
+.light[data-light='Red']::before {
+  background: var(--hold);
+}
+
+.light[data-light='Red'] {
+  color: var(--hold);
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.counts li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.counts strong {
+  font-size: var(--step-2);
+  font-weight: 600;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: var(--step--1);
+  background: var(--idle-tint);
+  color: var(--hull);
+  white-space: nowrap;
+}
+
+.tag.pending {
+  background: var(--caution-tint);
+}
+
+.tag.off {
+  background: var(--hold-tint);
+  color: var(--hold);
+}
+
+.empty {
+  display: grid;
+  gap: 0.35rem;
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+}
+
+.day-picker {
+  display: flex;
+  align-items: end;
+  gap: 0.35rem;
+}
+
+.day-picker input {
+  inline-size: auto;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button,
+  .rail nav a {
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+}
+
+/* Direction arrows point the way time runs in the current language. */
+[dir='rtl'] .flip {
+  display: inline-block;
+  transform: scaleX(-1);
+}

@@ -162,6 +162,19 @@ public sealed class AuthService(
         return new AuthResult(AuthStatus.Ok, User: await ProfileAsync(user, ct));
     }
 
+    /// <summary>The language of the user's emails and messages (ar, en, ur, hi). Null if the language isn't supported.</summary>
+    public async Task<UserProfile?> SetLanguageAsync(int userId, string? language, CancellationToken ct = default)
+    {
+        var code = (language ?? "").Trim().ToLowerInvariant();
+        if (code is not ("ar" or "en" or "ur" or "hi"))
+            return null;
+
+        var user = await db.AppUsers.SingleAsync(u => u.UserId == userId, ct);
+        user.PreferredLanguage = code;
+        await db.SaveChangesAsync(ct);
+        return await ProfileAsync(user, ct);
+    }
+
     public async Task<UserProfile?> GetProfileAsync(int userId, CancellationToken ct = default)
     {
         var user = await db.AppUsers.AsNoTracking().SingleOrDefaultAsync(u => u.UserId == userId && u.IsActive, ct);

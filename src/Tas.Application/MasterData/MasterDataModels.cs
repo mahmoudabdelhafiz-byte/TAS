@@ -76,11 +76,15 @@ public sealed record CargoView(
             c.TotalTonnage, c.TotalTrips, c.DeliveredTonnage, c.BookedTrips, c.Status);
 }
 
+/// <param name="PasswordSet">False while an invited user hasn't set a password yet.</param>
 public sealed record UserView(
     int UserId, string Email, string FullName, UserRole Role, int? CompanyId, int? TerminalId, string? Mobile,
-    string PreferredLanguage, bool IsActive, DateTimeOffset? LastLoginAt, DateTimeOffset? LockedUntil)
+    string PreferredLanguage, bool IsActive, DateTimeOffset? LastLoginAt, DateTimeOffset? LockedUntil, bool PasswordSet)
 {
     public static UserView From(AppUser u) =>
         new(u.UserId, u.Email, u.FullName, u.Role, u.CompanyId, u.TerminalId, u.Mobile, u.PreferredLanguage.Trim(),
-            u.IsActive, u.LastLoginAt, u.LockedUntil);
+            u.IsActive, u.LastLoginAt, u.LockedUntil, u.PasswordHash is not null);
 }
+
+/// <summary>A terminal as the portal lists it (for choosing where to work).</summary>
+public sealed record TerminalSummary(int TerminalId, string Code, string Name, string TerminalType, string TimeZone, int SlotMinutes);
