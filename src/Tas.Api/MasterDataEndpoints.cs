@@ -145,6 +145,10 @@ public static class MasterDataEndpoints
             int userId, ResetPasswordInput body, HttpContext http, UserAdminService service, CancellationToken ct) =>
             TasApi.Admin(await service.ResetPasswordAsync(TasApi.User(http)!, userId, body.NewPassword, ct)));
 
+        // New invitation link for a user who hasn't set a password yet (the previous link stops working).
+        users.MapPost("/{userId:int}/invite", async (int userId, HttpContext http, UserAdminService service, CancellationToken ct) =>
+            TasApi.Admin(await service.ResendInviteAsync(TasApi.User(http)!, userId, ct)));
+
         return app;
     }
 

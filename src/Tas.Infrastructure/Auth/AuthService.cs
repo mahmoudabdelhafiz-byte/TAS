@@ -158,6 +158,7 @@ public sealed class AuthService(
         user.PasswordHash = passwords.Hash(user, newPassword);
         await db.SaveChangesAsync(ct);
         await RevokeAllAsync(user.UserId, clock.GetUtcNow(), ct);
+        await PasswordTokenService.CancelOutstandingAsync(db, user.UserId, clock.GetUtcNow(), ct);
         return new AuthResult(AuthStatus.Ok, User: await ProfileAsync(user, ct));
     }
 

@@ -91,6 +91,27 @@ auth.MapPost("/change-password", async (ChangePasswordBody body, HttpContext htt
     };
 }).RequireAuthorization().RequireRateLimiting("auth");
 
+// Forgotten password: always 202, whether or not the email exists (no account discovery).
+auth.MapPost("/forgot-password", async (ForgotPasswordBody body, PasswordTokenService service, HttpContext http, CancellationToken ct) =>
+{
+    await service.RequestResetAsync(body.Email, http.Connection.RemoteIpAddress?.ToString(), ct);
+    return Results.Accepted(value: new { message = "If the email belongs to an active account, a link to set a new password has been sent." });
+}).RequireRateLimiting("auth");
+
+// The portal's "set your password" page checks the link first (reset or invitation, for which account).
+auth.MapPost("/password-link", async (PasswordLinkBody body, PasswordTokenService service, CancellationToken ct) =>
+{
+    var info = await service.CheckAsync(body.Token, ct);
+    return info is null ? TasApi.Problem(StatusCodes.Status400BadRequest, PasswordTokenService.InvalidLink) : Results.Ok(info);
+}).RequireRateLimiting("auth");
+
+// Set a new password with the link from a reset or invitation email. Signs the user out everywhere.
+auth.MapPost("/reset-password", async (ResetWithLinkBody body, PasswordTokenService service, HttpContext http, CancellationToken ct) =>
+{
+    var (status, error) = await service.CompleteAsync(body.Token, body.NewPassword, http.Connection.RemoteIpAddress?.ToString(), ct);
+    return status == PasswordTokenStatus.Ok ? Results.NoContent() : TasApi.Problem(StatusCodes.Status400BadRequest, error!);
+}).RequireRateLimiting("auth");
+
 // ================================================================ users
 
 app.MapPost("/api/users", async (CreateUserRequest body, HttpContext http, UserAdminService service, CancellationToken ct) =>
@@ -98,7 +119,7 @@ app.MapPost("/api/users", async (CreateUserRequest body, HttpContext http, UserA
     var result = await service.CreateAsync(TasApi.User(http)!, body, ct);
     return result.Status switch
     {
-        UserAdminStatus.Created => Results.Created($"/api/users/{result.User!.UserId}", result.User),
+        UserAdminStatus.Created => Results.Created($"/api/users/{result.User!.UserId}", CreatedUserResponse.From(result.User, result.Invited)),
         UserAdminStatus.Forbidden => TasApi.Problem(StatusCodes.Status403Forbidden, result.Error!),
         UserAdminStatus.Conflict => TasApi.Problem(StatusCodes.Status409Conflict, result.Error!),
         _ => TasApi.Problem(StatusCodes.Status400BadRequest, result.Error!),

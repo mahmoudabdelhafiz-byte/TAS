@@ -74,6 +74,9 @@ public static class AuthSetup
         services.AddSingleton<TokenService>();
         services.AddScoped<AuthService>();
         services.AddScoped<UserAdminService>();
+        services.AddScoped<PasswordTokenService>();
+        services.AddSingleton<PayloadProtector>();
+        services.AddOptions<PasswordTokenOptions>().Bind(config.GetSection("PasswordTokens"));
         services.AddScoped<AdminBootstrapper>();
         return services;
     }

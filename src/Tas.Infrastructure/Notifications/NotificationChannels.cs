@@ -48,6 +48,9 @@ public sealed class NotificationOptions
     /// <summary>A sender owns a claimed message this long; if it crashes, another sender retries afterwards.</summary>
     public double LeaseMinutes { get; set; } = 5;
 
+    /// <summary>Address of the web portal, e.g. https://tas.terminal.example — password links point to it.</summary>
+    public string? PortalUrl { get; set; }
+
     public SmsOptions Sms { get; set; } = new();
     public EmailOptions Email { get; set; } = new();
 }

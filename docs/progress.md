@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after the notification sender)
+Last updated: 2026-10-14 (after password reset)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -155,6 +155,18 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Database: recipient, attempts, next attempt, last error, SKIPPED status; upgrade script `db/migrations/005_notifications.sql` |
 | ✅ | Tests: renderer and rules unit tests, SMS gateway / email against a fake server, end-to-end outbox flows incl. concurrent senders, API |
 
+### 13. Password reset & invitations (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Forgot password: email with a one-time link (60 min); same answer for unknown emails; max 3 requests per user per hour |
+| ✅ | Invitations: admins create users without a password; the user sets it from an emailed link (7 days); resend cancels the old link |
+| ✅ | Set password with a link: policy checked first (a typo doesn't burn the link); unlocks the account; signs out everywhere; audited |
+| ✅ | Links stored only as SHA-256 hashes; waiting in the outbox encrypted (AES-GCM) and wiped once sent / failed / skipped |
+| ✅ | Newer link cancels older ones; change password, admin reset and deactivation cancel open links; parallel use of one link succeeds once |
+| ✅ | Emails in Arabic, English, Urdu, Hindi with the company / terminal name; links to the portal (`Notifications:PortalUrl`) |
+| ✅ | Database: `password_token`, `notification_log.payload`; upgrade script `db/migrations/006_password_tokens.sql` |
+| ✅ | Tests: email texts, encryption, full flows incl. lockout, limits, expiry, invitations, concurrency, API |
+
 ---
 
 ## Remaining
@@ -162,8 +174,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase A — Backend MVP (make it usable by real customers)
 | | Item | Notes |
 |---|---|---|
-| 🔜 | **Password reset** | Forgotten-password flow (email or SMS, using the notification sender), invited users set their own password |
-| ⬜ | EF Core migrations | Replace `db/schema.sql` as the source of truth |
+| 🔜 | **EF Core migrations** | Replace `db/schema.sql` and the hand-written upgrade scripts as the source of truth |
 
 ### Phase B — Gate
 | | Item | Notes |

@@ -188,3 +188,53 @@ public class NotificationRulesTests
         Assert.True(NotificationRetry.Exhausted(5, 5));
     }
 }
+
+public class AccountMessageRendererTests
+{
+    private static readonly AccountMessageData Data = new(
+        "Khalid", "khalid@alnoor.example", "https://tas.test/reset-password#token=abc123", TimeSpan.FromMinutes(60), "Al Noor Transport");
+
+    public static TheoryData<string, string> AllTemplatesAndLanguages()
+    {
+        var data = new TheoryData<string, string>();
+        foreach (var template in NotificationTemplates.Account)
+        foreach (var language in NotificationRenderer.Languages)
+            data.Add(template, language);
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(AllTemplatesAndLanguages))]
+    public void Every_account_email_renders_in_every_language(string template, string language)
+    {
+        var message = AccountMessageRenderer.Render(template, language, Data);
+        Assert.NotNull(message);
+        Assert.Equal(language, message.Language);
+        Assert.Equal(language is "ar" or "ur", message.RightToLeft);
+        Assert.False(string.IsNullOrWhiteSpace(message.Subject));
+        Assert.Contains("Khalid", message.Body);
+        Assert.Contains("khalid@alnoor.example", message.Body);
+        Assert.Contains("https://tas.test/reset-password#token=abc123", message.Body);
+        Assert.Contains("60", message.Body);
+        Assert.DoesNotContain("{", message.Subject + message.Body);
+    }
+
+    [Theory]
+    [InlineData(60, "60 minutes")]
+    [InlineData(90, "90 minutes")]
+    [InlineData(180, "3 hours")]
+    [InlineData(7 * 24 * 60, "7 days")]
+    public void Link_validity_is_written_in_sensible_units(int minutes, string expected) =>
+        Assert.Contains(expected, AccountMessageRenderer.Render(NotificationTemplates.PasswordReset, "en", Data with { ValidFor = TimeSpan.FromMinutes(minutes) })!.Body);
+
+    [Fact]
+    public void Invitations_name_the_company_and_unknown_templates_are_not_rendered()
+    {
+        var invite = AccountMessageRenderer.Render(NotificationTemplates.AccountInvite, "en", Data)!;
+        Assert.Equal("Your truck appointment account — Al Noor Transport", invite.Subject);
+        Assert.Equal("Your truck appointment account", AccountMessageRenderer.Render(NotificationTemplates.AccountInvite, "en", Data with { CompanyOrTerminal = null })!.Subject);
+        Assert.Null(AccountMessageRenderer.Render(NotificationTemplates.StatusRed, "en", Data));
+        Assert.True(NotificationTemplates.IsAccount(NotificationTemplates.PasswordReset));
+        Assert.False(NotificationTemplates.IsAccount(NotificationTemplates.SlotReminder));
+    }
+}

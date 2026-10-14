@@ -23,6 +23,21 @@ public sealed record CreateAppointmentBody(
 
 public sealed record CancelBody(string? Reason);
 
+public sealed record ForgotPasswordBody(string? Email);
+
+public sealed record PasswordLinkBody(string? Token);
+
+public sealed record ResetWithLinkBody(string? Token, string? NewPassword);
+
+/// <param name="Invited">True when created without a password: an invitation email with a link was queued.</param>
+public sealed record CreatedUserResponse(
+    int UserId, string Email, string FullName, Tas.Domain.Parties.UserRole Role, int? CompanyId, string? CompanyName,
+    int? TerminalId, string PreferredLanguage, bool Invited)
+{
+    public static CreatedUserResponse From(UserProfile p, bool invited) =>
+        new(p.UserId, p.Email, p.FullName, p.Role, p.CompanyId, p.CompanyName, p.TerminalId, p.PreferredLanguage, invited);
+}
+
 public sealed record RescheduleBody(long SlotId);
 
 public sealed record AssignBody(int? TruckId, int? DriverId);

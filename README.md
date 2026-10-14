@@ -85,7 +85,11 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | `POST` | `/api/auth/logout` | Revoke a refresh token |
 | `GET` | `/api/auth/me` | Signed-in user's profile |
 | `POST` | `/api/auth/change-password` | Change password; signs out all other sessions |
-| `POST` | `/api/users` | Create a user (within the admin's scope) |
+| `POST` | `/api/auth/forgot-password` | `{ email }` → always `202`; an active account gets an email with a one-time link |
+| `POST` | `/api/auth/password-link` | `{ token }` → the link's purpose (`Reset` / `Invite`), email, name, expiry — for the "set password" page |
+| `POST` | `/api/auth/reset-password` | `{ token, newPassword }` → `204`; unlocks the account and signs out all sessions |
+| `POST` | `/api/users` | Create a user (within the admin's scope). Without `password` the user is **invited** by email (`invited: true`) |
+| `POST` | `/api/users/{id}/invite` | Send a new invitation (old link stops working) to a user who hasn't set a password yet |
 | `POST` | `/api/terminals/{id}/slots/generate?from=2026-10-20&to=2026-10-27` | Regenerate slots after changing templates or overrides (local dates) |
 | `GET` | `/api/terminals/{id}/availability?date=2026-10-20&category=IMP_PICKUP&companyId=1` | Slots of a day with remaining capacity for a category |
 | `POST` | `/api/terminals/{id}/appointments` | Book a truck visit (1–4 moves; 2+ = dual transaction) |
@@ -192,6 +196,13 @@ Booking responses: `201` booked · `400` invalid request · `404` not found · `
 
 Company users never see other companies' appointments (they get *not found*). Terminal staff booking on behalf of a company must send `companyId`.
 
+Password links (forgotten password: 60 min · invitation: 7 days) work once. Only a SHA-256 hash is stored; the
+link waits in the email outbox encrypted (AES-GCM, key derived from `Jwt:SigningKey`) and is wiped once sent.
+A newer link cancels the previous one, and any password change or deactivation cancels open links. Forgot-password
+never reveals whether an email exists and is limited to 3 requests per user per hour. Links point to
+`Notifications:PortalUrl` as `/reset-password#token=…` and `/accept-invite#token=…` (the token is in the
+fragment, so it never reaches server logs). Settings: `PasswordTokens:ResetMinutes`, `InviteDays`, `MaxResetRequestsPerHour`.
+
 Security: passwords hashed with ASP.NET Core Identity (PBKDF2); 5 wrong passwords lock the account for 15 minutes; login is rate-limited per IP; refresh tokens are stored only as SHA-256 hashes and rotate on every use — re-using an old one signs the user out everywhere.
 
 ### Booking rules
@@ -210,6 +221,7 @@ then delivered by a background sender (every 30 s) in the recipient's language �
 
 | Template | When | To |
 |---|---|---|
+| `PASSWORD_RESET` / `ACCOUNT_INVITE` | Forgotten password / new user invited | The user (email) |
 | `STATUS_RED` | A re-check finds a hold, unpaid charges, withdrawn release… — "don't set off" with the container and problem | Driver (SMS), booker (email) |
 | `STATUS_CLEARED` | Everything that failed is clear again | Driver (SMS), booker (email) |
 | `SLOT_REMINDER` | 2 h before the slot (not for appointments booked inside those 2 h) | Driver (SMS); booker (email) if no driver is assigned yet |

@@ -47,6 +47,13 @@ public sealed class NotificationLog
     public DateTimeOffset? NextAttemptAt { get; set; }
 
     public string? LastError { get; set; }
+
+    /// <summary>
+    /// Encrypted data the message needs but the database must not keep in clear text (e.g. a password link).
+    /// Cleared once the message is sent, failed or skipped.
+    /// </summary>
+    public string? Payload { get; set; }
+
     public string? ProviderRef { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? SentAt { get; set; }
@@ -66,5 +73,17 @@ public static class NotificationTemplates
     /// <summary>The terminal closed the slot of a booked appointment; it needs a new slot.</summary>
     public const string SlotClosed = "SLOT_CLOSED";
 
+    /// <summary>Forgotten-password link (email to the user).</summary>
+    public const string PasswordReset = "PASSWORD_RESET";
+
+    /// <summary>Invitation for a new user to set their password (email to the user).</summary>
+    public const string AccountInvite = "ACCOUNT_INVITE";
+
+    /// <summary>Templates about an appointment.</summary>
     public static readonly IReadOnlyList<string> All = [StatusRed, StatusCleared, SlotReminder, SlotClosed];
+
+    /// <summary>Templates about the user's account; not linked to an appointment.</summary>
+    public static readonly IReadOnlyList<string> Account = [PasswordReset, AccountInvite];
+
+    public static bool IsAccount(string template) => template is PasswordReset or AccountInvite;
 }

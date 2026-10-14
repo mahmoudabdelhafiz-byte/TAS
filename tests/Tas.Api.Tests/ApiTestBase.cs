@@ -4,7 +4,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Tas.Domain;
+using Tas.Infrastructure.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Tas.Infrastructure;
@@ -19,6 +24,9 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
 {
     public static readonly string? ConnectionString = Environment.GetEnvironmentVariable("TAS_API_TEST_DB");
 
+    /// <summary>Emails "sent" by the notification sender in tests.</summary>
+    public CapturedEmails Emails { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -29,8 +37,26 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("NoShow:Enabled", "false");
         builder.UseSetting("Revalidation:Enabled", "false");
         builder.UseSetting("Notifications:Enabled", "false");
+        builder.UseSetting("Notifications:PortalUrl", "https://portal.test");
+        builder.ConfigureTestServices(services => services.AddSingleton<INotificationChannel>(Emails));
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
     }
+}
+
+/// <summary>Captures emails instead of sending them; tests read password links from here.</summary>
+public sealed class CapturedEmails : INotificationChannel
+{
+    public ConcurrentQueue<OutgoingMessage> Sent { get; } = new();
+    public NotificationChannel Channel => NotificationChannel.Email;
+
+    public Task<DeliveryResult> SendAsync(OutgoingMessage message, CancellationToken ct)
+    {
+        Sent.Enqueue(message);
+        return Task.FromResult(DeliveryResult.Sent(null));
+    }
+
+    public string LastToken(string to) =>
+        Regex.Match(Sent.Last(m => m.To == to).Message.Body, @"#token=([A-Za-z0-9_\-]+)").Groups[1].Value;
 }
 
 /// <summary>
