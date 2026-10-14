@@ -9,6 +9,7 @@ using Tas.Infrastructure.Gate;
 using Tas.Infrastructure.MasterData;
 using Tas.Infrastructure.Persistence;
 using Tas.Infrastructure.Tos;
+using Tas.Infrastructure.Tos.N4;
 
 namespace Tas.Infrastructure;
 
@@ -47,12 +48,24 @@ public static class DependencyInjection
         // Gate
         services.AddScoped<GateService>();
 
-        // TOS: the fake until the N4 adapter exists ("Tos:Adapter": "Fake").
+        // TOS: "Tos:Adapter" = Fake (development / demos) or N4; "Tos:OnUnavailable" = Warn (default) or Reject.
+        services.AddSingleton(new TosSettings(config.GetValue("Tos:OnUnavailable", TosUnavailablePolicy.Warn)));
         var adapter = config.GetValue("Tos:Adapter", "Fake");
-        if (!string.Equals(adapter, "Fake", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException($"TOS adapter '{adapter}' is not available yet. Use 'Fake'.");
-        services.Configure<FakeTosOptions>(config.GetSection("FakeTos"));
-        services.AddSingleton<ITosAdapter, FakeTosAdapter>();
+        if (string.Equals(adapter, "Fake", StringComparison.OrdinalIgnoreCase))
+        {
+            services.Configure<FakeTosOptions>(config.GetSection("FakeTos"));
+            services.AddSingleton<ITosAdapter, FakeTosAdapter>();
+        }
+        else if (string.Equals(adapter, "N4", StringComparison.OrdinalIgnoreCase))
+        {
+            services.Configure<N4Options>(config.GetSection("N4"));
+            services.AddHttpClient<IN4Client, ArgoServiceClient>(c => c.Timeout = Timeout.InfiniteTimeSpan); // per-terminal timeout in the client
+            services.AddScoped<ITosAdapter, N4TosAdapter>();
+        }
+        else
+        {
+            throw new InvalidOperationException($"Unknown TOS adapter '{adapter}'. Use 'Fake' or 'N4'.");
+        }
 
         return services;
     }

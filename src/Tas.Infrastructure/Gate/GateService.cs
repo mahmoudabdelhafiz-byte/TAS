@@ -5,6 +5,7 @@ using Tas.Application.Booking;
 using Tas.Application.Capacity;
 using Tas.Application.Gate;
 using Tas.Application.MasterData;
+using Tas.Application.Tos;
 using Tas.Domain;
 using Tas.Domain.Booking;
 using Tas.Domain.Gate;
@@ -81,16 +82,30 @@ public sealed class GateService(
         // Re-check against the TOS at the gate (holds can appear minutes before arrival).
         var light = TrafficLight.Grey;
         var lightReason = "";
+        var tosDown = false;
         if (match.Appointment is not null && Appointment.IsBeforeGate(match.Appointment.Status))
         {
-            var check = await revalidation.RevalidateAsync(match.Appointment.AppointmentId, "gate", ct);
-            light = check?.Light ?? TrafficLight.Grey;
-            lightReason = check?.Reason ?? "";
+            try
+            {
+                var check = await revalidation.RevalidateAsync(match.Appointment.AppointmentId, "gate", ct);
+                light = check?.Light ?? TrafficLight.Grey;
+                lightReason = check?.Reason ?? "";
+            }
+            catch (TosUnavailableException ex)
+            {
+                tosDown = true;
+                logger.LogWarning(ex, "TOS unreachable at gate lane {Lane}", lane.LaneCode);
+            }
         }
         db.ChangeTracker.Clear();
 
         var decision = GateDecider.Decide(
             match.Appointment, light, lightReason, found?.TruckBlocked ?? false, found?.DriverBlocked ?? false, now, settings, timeZone);
+
+        // Never admit a truck we could not check: the clerk verifies in N4 and admits from the trouble desk.
+        if (tosDown && decision.Kind == GateDecisionKind.Admit)
+            decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.NotCleared,
+                "The terminal system could not be reached to re-check this truck — verify in the TOS and admit from the trouble desk.");
 
         AddEvent(terminalId, lane.LaneId, null, string.IsNullOrEmpty(qr) ? GateEventType.OcrRead : GateEventType.PassScan,
             input.PlateRead, containerReads, number is null ? null : $"Appointment no. {number}", now);

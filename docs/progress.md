@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after the gate)
+Last updated: 2026-10-14 (after the N4 adapter)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -130,6 +130,17 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Database: `gate_trouble`, upgrade script `db/migrations/004_gate.sql` |
 | ✅ | Tests: 139 unit + 26 database + 28 end-to-end API, all passing in CI |
 
+### 11. Navis N4 adapter (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Read-only N4 checks via ArgoService `genericInvoke` (SOAP, basic auth, per-terminal scope and timeout) |
+| ✅ | `TasLookup` Groovy code extension template returning units, bookings / EDOs and BLs as JSON (`integrations/n4/`) — lines marked VERIFY to confirm on the customer's N4 version |
+| ✅ | Rules: import in yard (transit state), category, holds per type, booking left, cargo cut-off, VGM warning, empty release, empty return, BL release |
+| ✅ | Hold mapping: configurable N4 hold id → check, keyword fallback (customs / line / payment / terminal) |
+| ✅ | Multi-terminal: N4 settings per TAS terminal code; `Tos:Adapter` = Fake or N4 |
+| ✅ | N4 outage: booking warns (or rejects, configurable) and is re-checked when N4 answers; trip start refused; gate refers to trouble desk |
+| ✅ | Tests: evaluator unit tests, SOAP client against a fake server, booking / re-check / gate flows with a stub N4 |
+
 ---
 
 ## Remaining
@@ -149,10 +160,11 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase C — Integrations
 | | Item | Notes |
 |---|---|---|
-| 🔜 | **Navis N4 adapter** | Validation (holds, availability, releases), pre-advice / truck visit creation, gate events. Web services or EDI ❓ |
+| ⬜ | N4 on the customer's system | Install TasLookup, confirm the VERIFY lines, set scope / hold mapping, test against their N4 ❓ test environment access |
+| ⬜ | N4 write-back | Pre-advise exports / create truck visits in N4 from bookings ❓ go-ahead needed |
 | ⬜ | FASAH customs release | If not already reflected in N4 |
 | ⬜ | National appointment platform | Check whether Mawani / FASAH requires integration at the customer's port ❓ |
-| ⬜ | Notification sender | Deliver the queued outbox (SMS / WhatsApp / email / push) in the recipient's language; reminders, slot closed |
+| 🔜 | **Notification sender** | Deliver the queued outbox (SMS / WhatsApp / email / push) in the recipient's language; reminders, slot closed |
 | ⬜ | Trucking company API | Client credentials, scopes, rate limits for bookings from their own TMS |
 
 ### Phase D — Operator & company portal (React)
@@ -192,7 +204,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 |---|---|---|
 | 1 | Make the GitHub repository private? (currently public) | Code confidentiality |
 | 2 | Customer hosting: cloud service from us, or on-premise at the terminal? | Database, deployment, pricing |
-| 3 | N4 integration path: web services, EDI, or database views? | Phase C |
+| 3 | N4 integration path: built on web services (genericInvoke + Groovy) — confirm this suits the customer, or EDI / DB views instead? | Phase C |
 | 4 | Is a national appointment platform mandatory at the customer's port? | Phase C |
 | 5 | Driver identity: mobile OTP enough, or Nafath / liveness required for ISPS? | Phase E |
 | 6 | Gate check-in: QR scan at lane, or geofence + OCR plate match only? | Phases B, E |

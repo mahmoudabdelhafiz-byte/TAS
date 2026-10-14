@@ -174,8 +174,15 @@ public sealed class RevalidationService(
         if (id is null)
             return BookingOutcome.NotFound($"Appointment {number} not found.");
 
-        if (await RevalidateAsync(id.Value, "on request", ct) is null)
-            return BookingOutcome.Conflict("Only appointments that have not passed the gate can be re-checked.");
+        try
+        {
+            if (await RevalidateAsync(id.Value, "on request", ct) is null)
+                return BookingOutcome.Conflict("Only appointments that have not passed the gate can be re-checked.");
+        }
+        catch (TosUnavailableException)
+        {
+            return BookingOutcome.Conflict("The terminal system can't be reached right now; please try again in a few minutes.");
+        }
 
         return BookingOutcome.Updated((await queries.GetAsync(terminalId, number, ct))!);
     }
@@ -202,7 +209,15 @@ public sealed class RevalidationService(
         if (now < appointment.Slot.StartAt.AddHours(-StartTripEarliestHours))
             return BookingOutcome.Conflict($"Too early: a trip can be started from {StartTripEarliestHours} hours before the slot.");
 
-        var check = await RevalidateAsync(appointment.AppointmentId, "trip start", ct);
+        RevalidationResult? check;
+        try
+        {
+            check = await RevalidateAsync(appointment.AppointmentId, "trip start", ct);
+        }
+        catch (TosUnavailableException)
+        {
+            return BookingOutcome.Conflict("The terminal system can't be reached to confirm the containers are clear; please try again in a few minutes before setting off.");
+        }
         if (check is null)
             return BookingOutcome.Conflict("The appointment changed in the meantime; reload and try again.");
         if (check.Light == TrafficLight.Red)

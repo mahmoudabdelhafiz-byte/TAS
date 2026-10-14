@@ -26,8 +26,11 @@ public sealed class BookingService(
     ITosAdapter tos,
     AppointmentQueryService queries,
     TimeProvider clock,
-    ILogger<BookingService> logger)
+    ILogger<BookingService> logger,
+    TosSettings? tosSettings = null)
 {
+    private readonly TosUnavailablePolicy _onTosUnavailable = (tosSettings ?? new TosSettings()).OnUnavailable;
+
     // ------------------------------------------------------------------ create
 
     /// <summary>Everything a booking needs, gathered and checked before any capacity is used.</summary>
@@ -161,12 +164,22 @@ public sealed class BookingService(
         }
 
         // Checks: container check digit (internal) + TOS.
-        var checks = await ItemChecks.RunAsync(
-            tos,
-            terminalId,
-            items.Select(i => new ItemToCheck(i.Index, i.Category.Code, i.Category.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoRef)).ToList(),
-            slot.StartAt,
-            ct);
+        List<ItemCheck> checks;
+        try
+        {
+            checks = await ItemChecks.RunAsync(
+                tos,
+                terminalId,
+                items.Select(i => new ItemToCheck(i.Index, i.Category.Code, i.Category.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoRef)).ToList(),
+                slot.StartAt,
+                ct,
+                _onTosUnavailable);
+        }
+        catch (TosUnavailableException ex)
+        {
+            logger.LogWarning(ex, "TOS unreachable while booking at terminal {TerminalId}", terminalId);
+            return (null, BookingOutcome.Rejected("The terminal system can't be reached right now, so the booking can't be checked. Please try again in a few minutes."));
+        }
 
         var checkDtos = checks.Select(c => new CheckDto(c.Index + 1, c.Type, c.Result, c.Message, c.Source)).ToList();
         var failures = checks.Where(c => c.Result == CheckResult.Fail).Select(c => $"Item {c.Index + 1}: {c.Message}").ToList();
@@ -214,7 +227,7 @@ public sealed class BookingService(
             QrToken = AppointmentNumbers.NewQrToken(),
             CreatedBy = p.User.UserId,
             CreatedAt = now,
-            LastValidatedAt = now,
+            LastValidatedAt = p.Checks.Any(c => c.Type == CheckType.TosUnavailable) ? null : now,
             Items = p.Items.Select(i =>
             {
                 var itemChecks = p.Checks.Where(c => c.Index == i.Index).ToList();
