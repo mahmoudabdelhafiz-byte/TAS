@@ -108,7 +108,7 @@ export function AppointmentsPage() {
             ))}
           </ul>
           <div className="table-wrap">
-            <table>
+            <table className="stack-on-phone">
               <thead>
                 <tr>
                   <th scope="col">{t('colTime')}</th>
@@ -122,28 +122,28 @@ export function AppointmentsPage() {
               <tbody>
                 {appointments.map((a) => (
                   <tr key={a.appointmentNo} data-light={a.trafficLight}>
-                    <td>
+                    <td data-label={t('colTime')}>
                       <span className="code">
                         {time(a.slotStart)}–{time(a.slotEnd)}
                       </span>
                     </td>
-                    <td>
+                    <td data-label={t('colAppointment')}>
                       <span className="code">{a.appointmentNo}</span>
                       {a.isDual && <span className="sub">{t('dual')}</span>}
                     </td>
-                    {showCompany && <td>{a.companyName}</td>}
-                    <td>
+                    {showCompany && <td data-label={t('colCompany')}>{a.companyName}</td>}
+                    <td data-label={t('colTruck')}>
                       {a.truckPlate ? <span className="code">{a.truckPlate}</span> : <span className="muted">{t('noTruck')}</span>}
                       {a.driverName && <span className="sub">{a.driverName}</span>}
                     </td>
-                    <td>
+                    <td data-label={t('colMoves')}>
                       {a.items.map((item, i) => (
                         <span key={i} className={i === 0 ? 'code' : 'code sub'} style={{ display: 'block' }}>
                           {describeItem(item)}
                         </span>
                       ))}
                     </td>
-                    <td>
+                    <td data-label={t('colStatus')} className="status-cell">
                       <span className="light" data-light={a.trafficLight}>
                         {t(lightLabelKey(a.trafficLight))}
                       </span>

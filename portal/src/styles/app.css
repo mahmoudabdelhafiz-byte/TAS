@@ -735,3 +735,96 @@ tr[data-light='Red'] {
   display: inline-block;
   transform: scaleX(-1);
 }
+
+/* Phones: each appointment becomes a block — time and status first, then the details as label / value lines. */
+@media (max-width: 40rem) {
+  .table-wrap:has(.stack-on-phone) {
+    overflow: visible;
+    background: none;
+    border: none;
+  }
+
+  .stack-on-phone,
+  .stack-on-phone tbody {
+    display: block;
+  }
+
+  .stack-on-phone thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .stack-on-phone tbody {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .stack-on-phone tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.2rem 1rem;
+    padding: 0.8rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-inline-start: 6px solid var(--idle);
+    border-radius: var(--radius);
+  }
+
+  .stack-on-phone tr[data-light='Green'] {
+    border-inline-start-color: var(--go);
+  }
+
+  .stack-on-phone tr[data-light='Amber'] {
+    border-inline-start-color: var(--caution);
+  }
+
+  .stack-on-phone tr[data-light='Red'] {
+    border-inline-start-color: var(--hold);
+  }
+
+  .stack-on-phone td,
+  .stack-on-phone tr[data-light] td:first-child {
+    display: block;
+    padding: 0;
+    border: none;
+  }
+
+  /* Row 1: time (start) and appointment number (end); row 2: the status across the full width. */
+  .stack-on-phone td:first-child {
+    font-weight: 600;
+    font-size: var(--step-1);
+  }
+
+  .stack-on-phone td.status-cell {
+    order: -1;
+    grid-column: 1 / -1;
+    order: 0;
+  }
+
+  .stack-on-phone td:not(:first-child):not(:nth-child(2)):not(.status-cell) {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .stack-on-phone td:not(:first-child):not(:nth-child(2)):not(.status-cell)::before {
+    content: attr(data-label);
+    flex: 0 0 7.5rem;
+    color: var(--steel);
+    font-size: var(--step--1);
+    padding-block-start: 0.15rem;
+  }
+
+  .stack-on-phone td:nth-child(2) {
+    text-align: end;
+    align-self: center;
+  }
+
+  .stack-on-phone td.status-cell {
+    grid-row: 2;
+    padding-block: 0.25rem 0.35rem;
+  }
+}
