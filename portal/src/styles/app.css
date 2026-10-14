@@ -615,7 +615,8 @@ tbody tr:last-child td {
   border-block-end: none;
 }
 
-td .sub {
+/* A secondary line under a value (an email under a name, an ID under a driver) — in tables and lists alike. */
+.sub {
   display: block;
   font-size: var(--step--1);
   color: var(--steel);

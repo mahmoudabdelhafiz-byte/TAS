@@ -206,12 +206,16 @@ function BulkResultView({
                 </td>
                 <td data-label={t('colResult')}>
                   <span className={`tag ${r.status === 'Failed' ? 'off' : 'ok'}`}>{t(resultKeys[r.status])}</span>
-                  {r.errors.map((e, i) => (
-                    <span key={i} className="sub" lang="en">
-                      {e}
-                    </span>
-                  ))}
-                  <CheckList checks={r.checks} onlyProblems />
+                  {/* Failed checks say it by name; plain errors only when there is no check behind them. */}
+                  {r.checks.some((c) => c.result !== 'Pass') ? (
+                    <CheckList checks={r.checks} onlyProblems />
+                  ) : (
+                    r.errors.map((e, i) => (
+                      <span key={i} className="sub" lang="en">
+                        {e}
+                      </span>
+                    ))
+                  )}
                 </td>
               </tr>
             ))}
