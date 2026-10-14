@@ -85,3 +85,43 @@ test('signing out returns to sign-in and protected pages need a session', async 
   await page.goto('/users');
   await expect(page).toHaveURL(/\/sign-in$/);
 });
+
+test('a dispatcher books a visit on the slot board, then moves and cancels it', async ({ page }) => {
+  // Each browser project books its own container (one container can't be in two live visits).
+  const container = test.info().project.name === 'phone' ? 'TCLU3334442' : 'TCLU1112220';
+  await signIn(page, DISPATCHER);
+  await expect(page.getByRole('heading', { name: 'المواعيد' })).toBeVisible();
+  await page.goto(`/book?day=${bookedDay()}`);
+  await expect(page.getByRole('heading', { name: 'حجز زيارة شاحنة' })).toBeVisible();
+
+  // A typo in the check digit is caught before anything is sent.
+  await page.getByLabel('رقم الحاوية').fill('TCLU1112229');
+  await expect(page.getByText('الرقم الأخير لا يطابق بقية الرقم. تحقق من وجود خطأ في الكتابة.')).toBeVisible();
+  await page.getByLabel('رقم الحاوية').fill(container);
+
+  const open = page.locator('.slot[data-state="open"]');
+  await open.last().click();
+  await page.getByLabel('الشاحنة', { exact: true }).selectOption({ label: '5678 HDR' });
+  await shot(page, '07-book-ar');
+  await page.getByRole('button', { name: 'احجز الزيارة' }).click();
+
+  await expect(page.getByText(/تم الحجز. رقم الموعد/)).toBeVisible();
+  await expect(page.getByText(container).first()).toBeVisible();
+  await expect(page.getByText('الفسح الجمركي')).toBeVisible();
+
+  await page.getByRole('button', { name: 'English' }).click();
+  await shot(page, '08-appointment-en');
+
+  // Move it to another open time.
+  await page.getByRole('button', { name: 'Move to another time' }).click();
+  await page.locator('.slot[data-state="open"]').first().click();
+  await page.getByRole('button', { name: /^Move to \d\d:\d\d$/ }).click();
+  await expect(page.getByText(/^Moved to /)).toBeVisible();
+
+  // And cancel it.
+  await page.getByRole('button', { name: 'Cancel the visit' }).click();
+  await page.getByLabel('Reason (optional)').fill('Vessel delayed');
+  await page.getByRole('button', { name: 'Yes, cancel the visit' }).click();
+  await expect(page.getByText('The visit is cancelled and its place is free again.')).toBeVisible();
+  await expect(page.getByText('Cancelled', { exact: true })).toBeVisible();
+});

@@ -16,7 +16,7 @@ function json(status: number, body: unknown) {
 }
 
 const dispatcher = { userId: 7, email: 'k@alnoor.example', fullName: 'Khalid', role: 'CompanyAdmin', companyId: 1, companyName: 'Al Noor Transport', terminalId: null, preferredLanguage: 'ar' };
-const terminal = { terminalId: 1, code: 'DEMO', name: 'Demo Terminal', terminalType: 'Multipurpose', timeZone: 'Asia/Riyadh', slotMinutes: 60 };
+const terminal = { terminalId: 1, code: 'DEMO', name: 'Demo Terminal', terminalType: 'Multipurpose', timeZone: 'Asia/Riyadh', slotMinutes: 60, bookingHorizonDays: 14 };
 
 function appointment(no: string, light: Appointment['trafficLight'], hour: number): Appointment {
   const start = new Date(Date.UTC(2026, 9, 20, hour - 3)).toISOString();
@@ -100,9 +100,10 @@ describe('rules', () => {
   });
 
   it('shows each role only its sections and invitable roles', () => {
-    expect(navFor('CompanyUser').map((i) => i.path)).toEqual(['/appointments', '/account']);
-    expect(navFor('Planner').map((i) => i.path)).toEqual(['/appointments', '/account']);
-    expect(navFor('TerminalAdmin').map((i) => i.path)).toEqual(['/appointments', '/users', '/account']);
+    expect(navFor('CompanyUser').map((i) => i.path)).toEqual(['/appointments', '/book', '/account']);
+    expect(navFor('Planner').map((i) => i.path)).toEqual(['/appointments', '/book', '/account']);
+    expect(navFor('GateClerk').map((i) => i.path)).toEqual(['/appointments', '/account']);
+    expect(navFor('TerminalAdmin').map((i) => i.path)).toEqual(['/appointments', '/book', '/users', '/account']);
     expect(invitableRoles('CompanyAdmin')).toEqual(['CompanyUser', 'CompanyAdmin']);
     expect(invitableRoles('GateClerk')).toEqual([]);
   });

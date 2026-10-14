@@ -17,6 +17,7 @@ public sealed class PortalSupportApiTests(TasApiFactory factory) : ApiTestBase(f
         var terminal = Assert.Single(forCompany);
         Assert.Equal(Demo.TerminalId, terminal.GetProperty("terminalId").GetInt32());
         Assert.Equal("Asia/Riyadh", terminal.GetProperty("timeZone").GetString());
+        Assert.True(terminal.GetProperty("bookingHorizonDays").GetInt32() > 0);
 
         var forStaff = await Read<List<JsonElement>>(await (await As(DemoDataSeeder.PlannerEmail)).GetAsync("/api/terminals"));
         Assert.Equal(Demo.TerminalId, Assert.Single(forStaff).GetProperty("terminalId").GetInt32());
