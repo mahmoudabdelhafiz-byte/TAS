@@ -5,7 +5,9 @@ import { AuthProvider, useAuth } from './auth/Auth';
 import { I18nProvider, type Language } from './i18n/I18n';
 import { RequireAuth } from './layout/AppShell';
 import { AccountPage } from './pages/Account';
+import { AppointmentDetailPage } from './pages/AppointmentDetail';
 import { AppointmentsPage } from './pages/Appointments';
+import { BookPage } from './pages/Book';
 import { ForgotPasswordPage } from './pages/ForgotPassword';
 import { SetPasswordPage } from './pages/SetPassword';
 import { SignInPage } from './pages/SignIn';
@@ -42,6 +44,8 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route index element={<Navigate to="/appointments" replace />} />
         <Route path="/appointments" element={<AppointmentsPage />} />
+        <Route path="/appointments/:no" element={<AppointmentDetailPage />} />
+        <Route path="/book" element={<BookPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/appointments" replace />} />

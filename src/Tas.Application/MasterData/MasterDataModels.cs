@@ -87,4 +87,5 @@ public sealed record UserView(
 }
 
 /// <summary>A terminal as the portal lists it (for choosing where to work).</summary>
-public sealed record TerminalSummary(int TerminalId, string Code, string Name, string TerminalType, string TimeZone, int SlotMinutes);
+/// <param name="BookingHorizonDays">How many days ahead (from today, local) slots can be booked.</param>
+public sealed record TerminalSummary(int TerminalId, string Code, string Name, string TerminalType, string TimeZone, int SlotMinutes, int BookingHorizonDays);

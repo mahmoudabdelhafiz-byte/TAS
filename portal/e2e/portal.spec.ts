@@ -16,8 +16,27 @@ async function signIn(page: Page, email: string) {
   await page.getByRole('button', { name: /^(دخول|Sign in)$/ }).click();
 }
 
-const shot = (page: Page, name: string) =>
-  page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-${name}.png`, fullPage: true });
+/** Screenshot for review — and every page must fit the screen width (no sideways scrolling, in either direction). */
+async function shot(page: Page, name: string) {
+  const { overflow, culprits } = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    // Elements sticking out of the screen whose children don't (the innermost cause), widest first.
+    const outside = [...document.querySelectorAll<HTMLElement>('body *')].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && (r.right > width + 1 || r.left < -1);
+    });
+    const innermost = outside.filter((el) => !outside.some((other) => other !== el && el.contains(other) && el.tagName !== 'TABLE'));
+    return {
+      overflow: document.documentElement.scrollWidth - width,
+      culprits: innermost
+        .sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width)
+        .slice(0, 4)
+        .map((el) => `${el.tagName.toLowerCase()}.${el.className} [${Math.round(el.getBoundingClientRect().left)}..${Math.round(el.getBoundingClientRect().right)}] "${(el.textContent ?? '').slice(0, 40)}"`),
+    };
+  });
+  await page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-${name}.png`, fullPage: true });
+  expect(overflow, `${name} is ${overflow}px wider than the screen: ${culprits.join(' | ')}`).toBeLessThanOrEqual(0);
+}
 
 test('a dispatcher signs in (Arabic first) and sees the day with traffic lights', async ({ page }) => {
   await page.goto('/sign-in');
@@ -57,7 +76,7 @@ test('a terminal admin invites a user, who then shows as pending', async ({ page
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Role', { exact: true }).selectOption('GateClerk');
   await shot(page, '04-invite-form-en');
-  await page.getByRole('button', { name: 'Send invitation' }).click();
+  await page.getByRole('button', { name: 'Send invitation', exact: true }).click();
 
   await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
   const row = page.locator('tr', { hasText: email });
@@ -84,4 +103,44 @@ test('signing out returns to sign-in and protected pages need a session', async 
   await expect(page.getByRole('heading', { name: 'تسجيل الدخول' })).toBeVisible();
   await page.goto('/users');
   await expect(page).toHaveURL(/\/sign-in$/);
+});
+
+test('a dispatcher books a visit on the slot board, then moves and cancels it', async ({ page }) => {
+  // Each browser project books its own container (one container can't be in two live visits).
+  const container = test.info().project.name === 'phone' ? 'TCLU3334442' : 'TCLU1112220';
+  await signIn(page, DISPATCHER);
+  await expect(page.getByRole('heading', { name: 'المواعيد' })).toBeVisible();
+  await page.goto(`/book?day=${bookedDay()}`);
+  await expect(page.getByRole('heading', { name: 'حجز زيارة شاحنة' })).toBeVisible();
+
+  // A typo in the check digit is caught before anything is sent.
+  await page.getByLabel('رقم الحاوية').fill('TCLU1112229');
+  await expect(page.getByText('الرقم الأخير لا يطابق بقية الرقم. تحقق من وجود خطأ في الكتابة.')).toBeVisible();
+  await page.getByLabel('رقم الحاوية').fill(container);
+
+  await shot(page, '07-book-ar');
+  const open = page.locator('.slot[data-state="open"]');
+  await open.nth(-2).click();
+  await page.getByLabel('الشاحنة', { exact: true }).selectOption({ label: '5678 HDR' });
+  await page.getByRole('button', { name: 'احجز الزيارة' }).click();
+
+  await expect(page.getByText(/تم الحجز. رقم الموعد/)).toBeVisible();
+  await expect(page.getByText(container).first()).toBeVisible();
+  await expect(page.getByText('الفسح الجمركي')).toBeVisible();
+
+  await page.getByRole('button', { name: 'English' }).click();
+  await shot(page, '08-appointment-en');
+
+  // Move it to another open time — a late one: cancelling closes 60 minutes before the slot.
+  await page.getByRole('button', { name: 'Move to another time' }).click();
+  await page.locator('.slot[data-state="open"]').last().click();
+  await page.getByRole('button', { name: /^Move to \d\d:\d\d$/ }).click();
+  await expect(page.getByText(/^Moved to /)).toBeVisible();
+
+  // And cancel it.
+  await page.getByRole('button', { name: 'Cancel the visit' }).click();
+  await page.getByLabel('Reason (optional)').fill('Vessel delayed');
+  await page.getByRole('button', { name: 'Yes, cancel the visit' }).click();
+  await expect(page.getByText('The visit is cancelled and its place is free again.')).toBeVisible();
+  await expect(page.getByText('This visit can’t be changed any more (Cancelled).')).toBeVisible();
 });

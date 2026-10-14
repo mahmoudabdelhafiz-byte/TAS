@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { api } from '../api/client';
 import type { Appointment, AppointmentItem, AppointmentStatus, TrafficLight } from '../api/types';
 import { isCompanyRole, useUser } from '../auth/Auth';
+import { canBook } from '../layout/nav';
+import { canChange } from './AppointmentDetail';
 import { LoadError, StatusLight, lightLabelKey } from '../components/ui';
 import { useI18n } from '../i18n/I18n';
 import type { MessageKey } from '../i18n/en';
@@ -83,6 +85,11 @@ export function AppointmentsPage() {
               {t('today')}
             </button>
           )}
+          {canBook(user.role) && day >= today && (
+            <Link className="button" to={day === today ? '/book' : `/book?day=${day}`}>
+              {t('navBook')}
+            </Link>
+          )}
         </div>
       </div>
 
@@ -128,7 +135,9 @@ export function AppointmentsPage() {
                       </span>
                     </td>
                     <td data-label={t('colAppointment')}>
-                      <span className="code">{a.appointmentNo}</span>
+                      <Link className="code" to={`/appointments/${a.appointmentNo}`}>
+                        {a.appointmentNo}
+                      </Link>
                       {a.isDual && <span className="sub">{t('dual')}</span>}
                     </td>
                     {showCompany && <td data-label={t('colCompany')}>{a.companyName}</td>}
@@ -148,7 +157,7 @@ export function AppointmentsPage() {
                         {t(lightLabelKey(a.trafficLight))}
                       </span>
                       <span className="sub">{t(statusKeys[a.status])}</span>
-                      {a.trafficReason && (
+                      {a.trafficReason && canChange(a.status) && (
                         <span className="sub" lang="en">
                           {a.trafficReason}
                         </span>

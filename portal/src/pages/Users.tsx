@@ -105,7 +105,7 @@ export function UsersPage() {
         </div>
       ) : (
         <div className="table-wrap">
-          <table>
+          <table className="stack-simple">
             <thead>
               <tr>
                 <th scope="col">{t('colUser')}</th>
@@ -123,20 +123,22 @@ export function UsersPage() {
                 const self = u.userId === user.userId;
                 return (
                   <tr key={u.userId}>
-                    <td>
+                    <td data-label={t('colUser')}>
                       {u.fullName} {self && <span className="tag">{t('you')}</span>}
                       <span className="sub code">{u.email}</span>
                     </td>
-                    <td>
+                    <td data-label={t('colRole')}>
                       {t(roleLabel(u.role))}
                       {u.companyId !== null && <span className="sub">{companyName(u.companyId)}</span>}
                     </td>
-                    <td>
+                    <td data-label={t('colState')}>
                       <span className={`tag ${state.tag}`}>
                         {t(state.key, { time: state.until ? lastSeen(state.until) : '' })}
                       </span>
                     </td>
-                    <td className="muted">{lastSeen(u.lastLoginAt)}</td>
+                    <td className="muted" data-label={t('colLastSignIn')}>
+                      {lastSeen(u.lastLoginAt)}
+                    </td>
                     <td>
                       {!self && deactivating === u.userId ? (
                         <form

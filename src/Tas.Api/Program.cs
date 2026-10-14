@@ -85,7 +85,7 @@ app.MapGet("/api/terminals", async (HttpContext http, TasDbContext db, Cancellat
         query = query.Where(t => t.TerminalId == user.TerminalId);
     var terminals = await query.OrderBy(t => t.Name).ToListAsync(ct);
     return Results.Ok(terminals.Select(t => new TerminalSummary(
-        t.TerminalId, t.Code, t.Name, t.TerminalType.ToString(), t.TimeZone, t.SlotMinutes)));
+        t.TerminalId, t.Code, t.Name, t.TerminalType.ToString(), t.TimeZone, t.SlotMinutes, t.BookingHorizonDays)));
 }).RequireAuthorization();
 
 // ================================================================ auth

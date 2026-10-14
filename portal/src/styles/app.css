@@ -195,6 +195,7 @@ a:hover {
 
 .field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* a long option name must not widen the page */
   gap: 0.3rem;
 }
 
@@ -210,6 +211,8 @@ a:hover {
 input,
 select {
   inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   min-block-size: 2.6rem;
   padding: 0.45rem 0.75rem;
   border: 1px solid var(--line);
@@ -373,7 +376,7 @@ input[type='tel'] {
 /* Phones: the form comes first; the strip shrinks to a band that names the product. */
 @media (max-width: 52rem) {
   .gate {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
   }
 
@@ -499,6 +502,7 @@ input[type='tel'] {
 
 .main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 1.5rem;
   padding: 1.75rem clamp(1rem, 3vw, 2.5rem) 3rem;
@@ -522,7 +526,7 @@ input[type='tel'] {
 
 @media (max-width: 52rem) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr); /* plain 1fr would grow to the widest table */
   }
 
   .rail {
@@ -554,6 +558,7 @@ input[type='tel'] {
 
 .panel-body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   padding: 1.25rem;
 }
@@ -697,6 +702,7 @@ tr[data-light='Red'] {
 
 .day-picker {
   display: flex;
+  flex-wrap: wrap;
   align-items: end;
   gap: 0.35rem;
 }
@@ -826,5 +832,276 @@ tr[data-light='Red'] {
   .stack-on-phone td.status-cell {
     grid-row: 2;
     padding-block: 0.25rem 0.35rem;
+  }
+}
+
+/* ------------------------------------------------------------------ booking */
+
+.steps {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+/* A booking is a real sequence (what → when → who), so its sections are numbered. */
+.steps > li {
+  counter-increment: step;
+}
+
+.steps > li > .panel > .panel-body > h2::before {
+  content: counter(step);
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.7rem;
+  block-size: 1.7rem;
+  margin-inline-end: 0.6rem;
+  border-radius: 50%;
+  background: var(--hull);
+  color: #fff;
+  font-size: var(--step--1);
+  vertical-align: 0.15em;
+}
+
+.move {
+  min-inline-size: 0; /* fieldsets otherwise refuse to shrink below their content */
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem;
+  padding-block: 0.75rem;
+  border-block-start: 1px solid var(--line-soft);
+}
+
+.move:first-of-type {
+  border-block-start: none;
+  padding-block-start: 0;
+}
+
+.move .remove {
+  margin-block-start: 1.85rem;
+}
+
+.move .wide {
+  grid-column: span 2;
+}
+
+@media (max-width: 52rem) {
+  .move {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .move .remove {
+    margin: 0;
+    justify-self: start;
+  }
+
+  .move .wide {
+    grid-column: auto;
+  }
+}
+
+.slot-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.75rem, 1fr));
+  gap: 6px;
+}
+
+.slot {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.55rem 0.4rem;
+  border: 1px solid var(--line);
+  border-block-end: 4px solid #2fa4a3;
+  border-radius: var(--radius) var(--radius) 2px 2px;
+  background: var(--surface);
+  color: var(--hull);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.slot:hover:not([aria-disabled='true']) {
+  border-color: var(--petrol);
+  border-block-end-color: var(--petrol);
+}
+
+.slot-time {
+  font-weight: 600;
+}
+
+.slot-state {
+  font-size: var(--step--1);
+  color: var(--steel);
+}
+
+.slot[data-state='full'] {
+  border-block-end-color: var(--line);
+  background: #f4f5f4;
+  cursor: not-allowed;
+}
+
+.slot[data-state='closed'] {
+  border-style: dashed;
+  border-block-end: 1px dashed var(--line);
+  background: transparent;
+  color: var(--steel);
+  cursor: not-allowed;
+}
+
+.slot[data-state='current'] {
+  border-block-end-color: var(--hull);
+  background: #f4f5f4;
+  cursor: default;
+}
+
+.slot[aria-checked='true'] {
+  background: var(--hull);
+  border-color: var(--hull);
+  border-block-end-color: #2fa4a3;
+  color: #fff;
+}
+
+.slot[aria-checked='true'] .slot-state {
+  color: #c7d1d5;
+}
+
+.checks {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checks li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 1rem;
+  padding: 0.4rem 0.6rem;
+  border-inline-start: 3px solid var(--go);
+  background: #f7f8f7;
+}
+
+.checks li[data-result='Warn'] {
+  border-inline-start-color: var(--caution);
+  background: var(--caution-tint);
+}
+
+.checks li[data-result='Fail'] {
+  border-inline-start-color: var(--hold);
+  background: var(--hold-tint);
+}
+
+.checks li .sub {
+  grid-column: 1 / -1;
+}
+
+.check-result {
+  font-weight: 500;
+}
+
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--hull);
+  color: #fff;
+  border-radius: var(--radius);
+}
+
+.summary-bar .button {
+  background: #2fa4a3;
+  border-color: #2fa4a3;
+  color: var(--hull);
+  font-weight: 600;
+}
+
+.summary-bar .button:hover {
+  background: #fff;
+  border-color: #fff;
+  color: var(--hull);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.5rem;
+  margin: 0;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+/* Phones: a simple table becomes one block per row, each value under its column name. */
+@media (max-width: 40rem) {
+  .table-wrap:has(.stack-simple) {
+    overflow: visible;
+    background: none;
+    border: none;
+  }
+
+  .stack-simple,
+  .stack-simple tbody,
+  .stack-simple tr,
+  .stack-simple td {
+    display: block;
+  }
+
+  .stack-simple thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .stack-simple tr {
+    margin-block-end: 0.6rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+  }
+
+  .stack-simple td {
+    padding: 0.2rem 0;
+    border: none;
+  }
+
+  .stack-simple td[data-label]:not(:first-child)::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--step--1);
+    color: var(--steel);
+  }
+
+  .stack-simple td:first-child {
+    font-weight: 500;
+    padding-block-end: 0.4rem;
+  }
+
+  .stack-simple .code {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }

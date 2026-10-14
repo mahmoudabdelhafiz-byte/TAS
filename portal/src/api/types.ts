@@ -30,6 +30,71 @@ export interface Terminal {
   terminalType: string;
   timeZone: string;
   slotMinutes: number;
+  bookingHorizonDays: number;
+}
+
+export interface Category {
+  categoryId: number;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  mode: 'Container' | 'Cargo';
+  unitType: 'Move' | 'Trip';
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface SlotAvailability {
+  slotId: number;
+  startAt: string;
+  endAt: string;
+  isClosed: boolean;
+  available: number;
+}
+
+export interface Truck {
+  truckId: number;
+  companyId: number;
+  plateNumber: string;
+  isBlocked: boolean;
+}
+
+export interface Driver {
+  driverId: number;
+  companyId: number;
+  fullName: string;
+  idNumber: string;
+  mobile: string;
+  isBlocked: boolean;
+}
+
+export interface Cargo {
+  cargoAllocationId: number;
+  companyId: number | null;
+  cargoRef: string;
+  commodity: string | null;
+  totalTrips: number | null;
+  bookedTrips: number;
+  status: string;
+}
+
+export type CheckType =
+  | 'ContainerNumber' | 'Availability' | 'CustomsRelease' | 'LineRelease' | 'TerminalHold' | 'Payment'
+  | 'BookingValid' | 'Vgm' | 'Cutoff' | 'CargoRelease' | 'TosUnavailable';
+
+export interface Check {
+  item: number | null;
+  type: CheckType;
+  result: 'Pass' | 'Warn' | 'Fail';
+  message: string | null;
+  source: string;
+}
+
+export interface BookingItem {
+  category: string;
+  containerNo?: string;
+  bookingRef?: string;
+  cargoRef?: string;
 }
 
 export type TrafficLight = 'Grey' | 'Green' | 'Amber' | 'Red';
@@ -46,6 +111,7 @@ export interface AppointmentItem {
   cargoRef: string | null;
   plannedTonnage: number | null;
   validationStatus: 'Pending' | 'Pass' | 'Warn' | 'Fail';
+  checks: Check[];
 }
 
 export interface Appointment {
@@ -102,4 +168,6 @@ export interface Problem {
   detail?: string;
   status?: number;
   errors?: string[] | Record<string, string[]>;
+  /** Booking refused because a check failed (422): every check with its result. */
+  checks?: Check[];
 }

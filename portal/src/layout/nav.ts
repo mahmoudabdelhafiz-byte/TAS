@@ -7,9 +7,13 @@ export interface NavItem {
   label: MessageKey;
 }
 
+/** Companies book for themselves; planners and admins on behalf of companies. Gate clerks book walk-ins at the gate. */
+export const canBook = (role: UserRole) => role !== 'GateClerk';
+
 /** The sections a role sees, in order. Pages check access again, and so does the API. */
 export function navFor(role: UserRole): NavItem[] {
   const items: NavItem[] = [{ path: '/appointments', label: 'navAppointments' }];
+  if (canBook(role)) items.push({ path: '/book', label: 'navBook' });
   if (canManageUsers(role)) items.push({ path: '/users', label: 'navUsers' });
   items.push({ path: '/account', label: 'navAccount' });
   return items;
