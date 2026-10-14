@@ -151,6 +151,8 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     needs: portal
+    permissions:
+      contents: write   # pushes the screenshots to the ci-screenshots branch for review
 
     services:
       postgres:
@@ -211,6 +213,26 @@ jobs:
         env:
           TAS_PORTAL_URL: http://localhost:5000
         run: npx playwright test
+
+      - name: Show the API log on failure
+        if: failure()
+        run: |
+          tail -n 60 api.log | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error title=api.log::${line:0:900}"; done
+          grep -h -A3 -E "Error:|expect\(" portal/test-results/*/error-context.md 2>/dev/null | head -40 | while IFS= read -r line; do echo "::error title=e2e::${line:0:900}"; done || true
+
+      # Screenshots on a separate branch (one commit, replaced each run): readable with plain git.
+      - name: Publish screenshots
+        if: always() && hashFiles('portal/e2e/screenshots/*.png') != ''
+        run: |
+          branch="ci-screenshots/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          mkdir /tmp/shots && cp portal/e2e/screenshots/*.png /tmp/shots/
+          cd /tmp/shots
+          git init -q -b main
+          git config user.name "TAS CI"
+          git config user.email "ci@users.noreply.github.com"
+          git add . && git commit -qm "Screenshots of ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${branch}"
+          echo "::notice title=screenshots::branch ${branch}"
 
       - name: Screenshots and report
         if: always()
