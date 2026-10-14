@@ -195,6 +195,7 @@ a:hover {
 
 .field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* a long option name must not widen the page */
   gap: 0.3rem;
 }
 
@@ -210,6 +211,8 @@ a:hover {
 input,
 select {
   inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   min-block-size: 2.6rem;
   padding: 0.45rem 0.75rem;
   border: 1px solid var(--line);
@@ -555,6 +558,7 @@ input[type='tel'] {
 
 .panel-body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   padding: 1.25rem;
 }
@@ -886,7 +890,7 @@ tr[data-light='Red'] {
 
 @media (max-width: 52rem) {
   .move {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .move .remove {
@@ -1046,4 +1050,58 @@ tr[data-light='Red'] {
 
 .facts dd {
   margin: 0;
+}
+
+/* Phones: a simple table becomes one block per row, each value under its column name. */
+@media (max-width: 40rem) {
+  .table-wrap:has(.stack-simple) {
+    overflow: visible;
+    background: none;
+    border: none;
+  }
+
+  .stack-simple,
+  .stack-simple tbody,
+  .stack-simple tr,
+  .stack-simple td {
+    display: block;
+  }
+
+  .stack-simple thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .stack-simple tr {
+    margin-block-end: 0.6rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+  }
+
+  .stack-simple td {
+    padding: 0.2rem 0;
+    border: none;
+  }
+
+  .stack-simple td[data-label]:not(:first-child)::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--step--1);
+    color: var(--steel);
+  }
+
+  .stack-simple td:first-child {
+    font-weight: 500;
+    padding-block-end: 0.4rem;
+  }
+
+  .stack-simple .code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
