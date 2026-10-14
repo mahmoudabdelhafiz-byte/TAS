@@ -12,7 +12,7 @@ namespace Tas.Infrastructure.Persistence;
 public sealed record MigrationScript(int Version, string Name, string Sql)
 {
     /// <summary>SHA-256 of the script with line endings normalized, so a Windows checkout gives the same value.</summary>
-    public string Checksum { get; } = Convert.ToHexStringLower(
+    public string Checksum => Convert.ToHexStringLower(
         SHA256.HashData(Encoding.UTF8.GetBytes(Sql.TrimStart('﻿').Replace("\r\n", "\n"))));
 
     public string FileName => $"{Version:D3}_{Name}.sql";

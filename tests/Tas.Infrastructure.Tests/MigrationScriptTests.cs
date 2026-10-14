@@ -9,7 +9,7 @@ public class MigrationScriptTests
     public void Every_file_in_db_migrations_is_embedded_numbered_and_in_order()
     {
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "db", "migrations"), "*.sql")
-            .Select(Path.GetFileName).Order().ToList();
+            .Select(f => Path.GetFileName(f)!).Order().ToList();
         var embedded = DatabaseMigrator.EmbeddedScripts();
 
         Assert.True(files.Count >= 6);
@@ -27,6 +27,7 @@ public class MigrationScriptTests
         var edited = new MigrationScript(1, "x", "CREATE TABLE a (id bigint);\nCREATE TABLE b (id int);\n");
 
         Assert.Equal(unix.Checksum, windows.Checksum);
+        Assert.Equal(edited.Checksum, (unix with { Sql = edited.Sql }).Checksum); // copies follow their SQL
         Assert.NotEqual(unix.Checksum, edited.Checksum);
         Assert.Matches("^[0-9a-f]{64}$", unix.Checksum);
     }
