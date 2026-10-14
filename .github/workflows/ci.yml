@@ -217,8 +217,7 @@ jobs:
       - name: Show the API log on failure
         if: failure()
         run: |
-          tail -n 60 api.log | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error title=api.log::${line:0:900}"; done
-          grep -h -A3 -E "Error:|expect\(" portal/test-results/*/error-context.md 2>/dev/null | head -40 | while IFS= read -r line; do echo "::error title=e2e::${line:0:900}"; done || true
+          python3 portal/e2e/ci_diagnostics.py
 
       # Screenshots on a separate branch (one commit, replaced each run): readable with plain git.
       - name: Publish screenshots
