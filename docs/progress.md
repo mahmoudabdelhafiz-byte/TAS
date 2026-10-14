@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after the portal foundation)
+Last updated: 2026-10-15 (after the booking screen)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -193,6 +193,17 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | API: `GET /api/terminals`, `PUT /api/auth/me/language`, `passwordSet` on users |
 | ✅ | CI: type check, 16 unit tests, build; Playwright end-to-end tests against the real API on desktop and phone; screenshots pushed to the `ci-screenshots/<branch>` branch |
 
+### 16. Booking screen and appointment page (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Book a visit: company (terminal staff), 1–4 moves by container or cargo release, booking reference, truck and driver now or later |
+| ✅ | Container numbers checked (ISO 6346, same rules as the API) while typing — a typo is caught before anything is sent |
+| ✅ | Slot board: each hour with places left for the chosen type; full / closed shown; keyboard arrows; booking horizon respected |
+| ✅ | A refused booking lists the failed checks by name in Arabic / English, with the terminal system's own message |
+| ✅ | Appointment page: light and reason, checks per move, check again, assign / change truck and driver, move to another time, cancel (cut-off enforced by the API, explained in the page) |
+| ✅ | Phones: no page wider than the screen (enforced by the e2e tests, which name the offending element); appointments and users stack into blocks |
+| ✅ | Tests: 25 portal unit tests; e2e books, moves and cancels through the UI on desktop and phone |
+
 ---
 
 ## Remaining
@@ -220,7 +231,8 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| 🔜 | **Booking screen**: availability for a day and category, book single / dual / cargo visits, assign truck and driver, cancel / move |
+| 🔜 | **Bulk upload and fleet**: upload the Excel / CSV booking sheet with the dry-run preview; trucks and drivers for company admins |
+| ⬜ | Terminal screens: capacity setup (weekly grid, seasonal templates, overrides calendar), slot board for planners, gate board |
 | ⬜ | Reasons in the user's language: API returns reason codes + values (today the traffic-light reasons and server errors are English only) |
 | ⬜ | Capacity setup: weekly template grid, seasonal templates, overrides calendar |
 | ⬜ | Slot board: capacity vs booked per hour/category, over-capacity alerts |

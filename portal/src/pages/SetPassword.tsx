@@ -48,7 +48,7 @@ export function SetPasswordPage() {
     setBusy(true);
     try {
       await api('/api/auth/reset-password', { body: { token, newPassword: password }, anonymous: true });
-      navigate('/sign-in', { replace: true, state: { notice: t('passwordSaved') } });
+      navigate('/sign-in', { replace: true, state: { noticeKey: 'passwordSaved' } });
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);

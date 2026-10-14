@@ -35,10 +35,8 @@ export function AppointmentDetailPage() {
   const location = useLocation();
   const queries = useQueryClient();
   const base = `/api/terminals/${terminal.terminalId}`;
-  const [flash, setFlash] = useState<Flash>(() => {
-    const notice = (location.state as { notice?: string } | null)?.notice;
-    return notice ? { kind: 'success', text: notice } : null;
-  });
+  const [flash, setFlash] = useState<Flash>(null);
+  const justBooked = (location.state as { noticeKey?: string } | null)?.noticeKey === 'bookedNotice';
 
   const appointment = useQuery({
     queryKey: ['appointment', terminal.terminalId, no],
@@ -94,7 +92,11 @@ export function AppointmentDetailPage() {
         <Link to={`/appointments?day=${todayAt(terminal.timeZone, new Date(a.slotStart))}`}>{t('allAppointments')}</Link>
       </div>
 
-      {flash && <Notice kind={flash.kind}>{flash.text}</Notice>}
+      {flash ? (
+        <Notice kind={flash.kind}>{flash.text}</Notice>
+      ) : (
+        justBooked && <Notice kind="success">{t('bookedNotice', { no: a.appointmentNo })}</Notice>
+      )}
 
       <div className="detail-grid">
         <div style={{ display: 'grid', gap: '1rem' }}>

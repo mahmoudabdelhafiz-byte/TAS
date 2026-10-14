@@ -136,7 +136,8 @@ export function BookPage() {
         },
       });
       await queries.invalidateQueries({ queryKey: ['appointments'] });
-      navigate(`/appointments/${appointment.appointmentNo}`, { state: { notice: t('bookedNotice', { no: appointment.appointmentNo }) } });
+      // A message key, not text: the notice follows the language if the user switches it.
+      navigate(`/appointments/${appointment.appointmentNo}`, { state: { noticeKey: 'bookedNotice' } });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setFailure({ text: t('noCapacityNow') });

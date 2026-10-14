@@ -17,7 +17,7 @@ export function SignInPage() {
   const [busy, setBusy] = useState(false);
 
   const from = (location.state as { from?: string } | null)?.from ?? '/';
-  const notice = (location.state as { notice?: string } | null)?.notice;
+  const passwordSaved = (location.state as { noticeKey?: string } | null)?.noticeKey === 'passwordSaved';
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -40,7 +40,7 @@ export function SignInPage() {
         <p className="muted">{t('signInIntro')}</p>
       </header>
       {state.status === 'signed-out' && state.reason === 'session-ended' && <Notice>{t('sessionEnded')}</Notice>}
-      {notice && <Notice kind="success">{notice}</Notice>}
+      {passwordSaved && <Notice kind="success">{t('passwordSaved')}</Notice>}
       <form onSubmit={submit} noValidate>
         <Field label={t('email')} type="email" name="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field
