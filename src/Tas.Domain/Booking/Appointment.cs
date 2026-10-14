@@ -51,6 +51,9 @@ public enum CheckType
     Vgm,
     Cutoff,
     CargoRelease,
+
+    /// <summary>The TOS could not be reached; the item is re-checked later.</summary>
+    TosUnavailable,
 }
 
 /// <summary>One truck visit to the terminal, holding one or more moves.</summary>
