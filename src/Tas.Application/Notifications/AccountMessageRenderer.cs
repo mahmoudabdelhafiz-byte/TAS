@@ -6,7 +6,7 @@ namespace Tas.Application.Notifications;
 /// <param name="ValidFor">How long the link works, e.g. 60 minutes or 7 days.</param>
 public sealed record AccountMessageData(string FullName, string Email, string Link, TimeSpan ValidFor, string? CompanyOrTerminal);
 
-/// <summary>Password reset and invitation emails in Arabic, English, Urdu and Hindi.</summary>
+/// <summary>Password reset and invitation emails in Arabic, English, Urdu and Hindi. The product name, Yardsyncs, stays in Latin letters in every language.</summary>
 public static class AccountMessageRenderer
 {
     private sealed record Texts(string Subject, string Body);
@@ -15,29 +15,29 @@ public static class AccountMessageRenderer
     private static readonly Dictionary<(string Template, string Language), Texts> TextsByKey = new()
     {
         [(NotificationTemplates.PasswordReset, "en")] = new(
-            "Reset your truck appointment password",
+            "Reset your Yardsyncs password",
             "Hello {name},\n\nWe received a request to reset the password of {email}.\nSet a new password here (the link works once, for {valid}):\n\n{link}\n\nIf you did not ask for this, ignore this email; your password stays the same."),
         [(NotificationTemplates.PasswordReset, "ar")] = new(
-            "إعادة تعيين كلمة المرور لنظام مواعيد الشاحنات",
+            "إعادة تعيين كلمة المرور في Yardsyncs",
             "مرحبًا {name}،\n\nتلقينا طلبًا لإعادة تعيين كلمة المرور للحساب {email}.\nعيّن كلمة مرور جديدة من هنا (الرابط صالح لمرة واحدة، لمدة {valid}):\n\n{link}\n\nإذا لم تطلب ذلك، تجاهل هذه الرسالة؛ ستبقى كلمة المرور كما هي."),
         [(NotificationTemplates.PasswordReset, "ur")] = new(
-            "ٹرک اپوائنٹمنٹ کا پاس ورڈ ری سیٹ کریں",
+            "Yardsyncs کا پاس ورڈ ری سیٹ کریں",
             "السلام علیکم {name}،\n\nہمیں {email} کا پاس ورڈ ری سیٹ کرنے کی درخواست ملی ہے۔\nیہاں نیا پاس ورڈ سیٹ کریں (لنک ایک بار، {valid} کے لیے کام کرے گا):\n\n{link}\n\nاگر آپ نے یہ درخواست نہیں کی تو اس ای میل کو نظرانداز کریں؛ آپ کا پاس ورڈ وہی رہے گا۔"),
         [(NotificationTemplates.PasswordReset, "hi")] = new(
-            "ट्रक अपॉइंटमेंट पासवर्ड रीसेट करें",
+            "Yardsyncs पासवर्ड रीसेट करें",
             "नमस्ते {name},\n\nहमें {email} का पासवर्ड रीसेट करने का अनुरोध मिला है।\nयहाँ नया पासवर्ड सेट करें (लिंक एक बार, {valid} तक काम करेगा):\n\n{link}\n\nअगर आपने यह अनुरोध नहीं किया, तो इस ईमेल को अनदेखा करें; आपका पासवर्ड वही रहेगा।"),
 
         [(NotificationTemplates.AccountInvite, "en")] = new(
-            "Your truck appointment account{org}",
+            "Your Yardsyncs account{org}",
             "Hello {name},\n\nAn account has been created for you{org} with the email {email}.\nSet your password here to start (the link works once, for {valid}):\n\n{link}"),
         [(NotificationTemplates.AccountInvite, "ar")] = new(
-            "حسابك في نظام مواعيد الشاحنات{org}",
+            "حسابك في Yardsyncs{org}",
             "مرحبًا {name}،\n\nتم إنشاء حساب لك{org} بالبريد {email}.\nعيّن كلمة المرور من هنا للبدء (الرابط صالح لمرة واحدة، لمدة {valid}):\n\n{link}"),
         [(NotificationTemplates.AccountInvite, "ur")] = new(
-            "ٹرک اپوائنٹمنٹ میں آپ کا اکاؤنٹ{org}",
+            "Yardsyncs میں آپ کا اکاؤنٹ{org}",
             "السلام علیکم {name}،\n\nآپ کے لیے{org} ای میل {email} کے ساتھ اکاؤنٹ بنایا گیا ہے۔\nشروع کرنے کے لیے یہاں پاس ورڈ سیٹ کریں (لنک ایک بار، {valid} کے لیے کام کرے گا):\n\n{link}"),
         [(NotificationTemplates.AccountInvite, "hi")] = new(
-            "ट्रक अपॉइंटमेंट में आपका खाता{org}",
+            "Yardsyncs में आपका खाता{org}",
             "नमस्ते {name},\n\nआपके लिए{org} ईमेल {email} से खाता बनाया गया है।\nशुरू करने के लिए यहाँ पासवर्ड सेट करें (लिंक एक बार, {valid} तक काम करेगा):\n\n{link}"),
     };
 

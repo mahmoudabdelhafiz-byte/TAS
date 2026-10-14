@@ -328,11 +328,22 @@ input[type='tel'] {
 }
 
 .gate-visual .title {
-  font-size: clamp(2.25rem, 5vw, 4rem);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   color: #fff;
-  max-inline-size: 12ch;
+  text-align: start;
+}
+
+[dir='rtl'] .gate-visual .title {
+  text-align: right; /* the Latin name sits on the reading-start side in Arabic too */
+}
+
+.gate-visual .tagline {
+  margin-block-start: 0.4rem;
+  color: #c7d1d5;
+  max-inline-size: 28ch;
 }
 
 .slot-strip {
@@ -388,7 +399,10 @@ input[type='tel'] {
 
   .gate-visual .title {
     font-size: var(--step-2);
-    max-inline-size: none;
+  }
+
+  .gate-visual .tagline {
+    display: none;
   }
 
   .slot-strip {
@@ -431,6 +445,12 @@ input[type='tel'] {
 .rail .wordmark {
   padding-inline: 0.6rem;
   color: #fff;
+  font-size: var(--step-2);
+  letter-spacing: -0.01em;
+}
+
+[dir='rtl'] .rail .wordmark {
+  text-align: right;
 }
 
 .rail nav ul {

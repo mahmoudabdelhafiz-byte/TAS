@@ -20,7 +20,12 @@ export function GateLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <aside className="gate-visual" aria-label={t('stripCaption')}>
-        <p className="title">{t('appName')}</p>
+        <div>
+          <p className="title" lang="en" dir="ltr">
+            {t('appName')}
+          </p>
+          <p className="tagline">{t('appTagline')}</p>
+        </div>
         <div>
           <div className="slot-strip" aria-hidden="true">
             {DAY.map((load, hour) => (

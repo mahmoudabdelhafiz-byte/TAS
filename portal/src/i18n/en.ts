@@ -1,7 +1,8 @@
 // English texts. Every key here must exist in ar.ts too (checked by the compiler).
 // Placeholders: {name}. Keep sentence case; buttons say what happens.
 export const en = {
-  appName: 'Truck appointments',
+  appName: 'Yardsyncs',
+  appTagline: 'Truck appointments for container and multipurpose terminals',
   languageName: 'English',
   switchLanguage: 'العربية',
 

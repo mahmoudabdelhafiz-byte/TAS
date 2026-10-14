@@ -231,8 +231,8 @@ public class AccountMessageRendererTests
     public void Invitations_name_the_company_and_unknown_templates_are_not_rendered()
     {
         var invite = AccountMessageRenderer.Render(NotificationTemplates.AccountInvite, "en", Data)!;
-        Assert.Equal("Your truck appointment account — Al Noor Transport", invite.Subject);
-        Assert.Equal("Your truck appointment account", AccountMessageRenderer.Render(NotificationTemplates.AccountInvite, "en", Data with { CompanyOrTerminal = null })!.Subject);
+        Assert.Equal("Your Yardsyncs account — Al Noor Transport", invite.Subject);
+        Assert.Equal("Your Yardsyncs account", AccountMessageRenderer.Render(NotificationTemplates.AccountInvite, "en", Data with { CompanyOrTerminal = null })!.Subject);
         Assert.Null(AccountMessageRenderer.Render(NotificationTemplates.StatusRed, "en", Data));
         Assert.True(NotificationTemplates.IsAccount(NotificationTemplates.PasswordReset));
         Assert.False(NotificationTemplates.IsAccount(NotificationTemplates.SlotReminder));

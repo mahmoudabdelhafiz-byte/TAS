@@ -2,7 +2,8 @@ import type { Messages } from './en';
 
 // Arabic texts (Modern Standard Arabic, Saudi port usage). Must cover every key of en.ts.
 export const ar: Messages = {
-  appName: 'مواعيد الشاحنات',
+  appName: 'Yardsyncs',
+  appTagline: 'مواعيد الشاحنات لمحطات الحاويات والمحطات متعددة الأغراض',
   languageName: 'العربية',
   switchLanguage: 'English',
 

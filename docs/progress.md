@@ -1,4 +1,4 @@
-# TAS — Progress Log
+# Yardsyncs — Progress Log
 
 Last updated: 2026-10-15 (after the booking screen)
 
