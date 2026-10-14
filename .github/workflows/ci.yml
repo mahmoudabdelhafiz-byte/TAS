@@ -94,3 +94,152 @@ jobs:
           dotnet build TAS.slnx --no-restore -c Release 2>&1 | grep -E "error [A-Z]+[0-9]+" | sort -u | head -30 | while read -r line; do
             echo "::error title=Build::$line"
           done
+
+  portal:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: portal
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install
+        run: if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+
+      - name: Keep the lock file
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-package-lock
+          path: portal/package-lock.json
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npx vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/unit.xml
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish test counts
+        if: always()
+        shell: python
+        run: |
+          import os, xml.etree.ElementTree as ET
+          path = "test-results/unit.xml"
+          if os.path.exists(path):
+              root = ET.parse(path).getroot()
+              suites = [root] if root.tag == "testsuite" else root.findall("testsuite")
+              total = sum(int(s.get("tests", 0)) for s in suites)
+              failed = sum(int(s.get("failures", 0)) + int(s.get("errors", 0)) for s in suites)
+              print(f"::notice title=portal unit::total={total} passed={total - failed} failed={failed}")
+              for case in root.iter("testcase"):
+                  failure = case.find("failure")
+                  if failure is not None:
+                      text = (failure.get("message") or failure.text or "")[:1200].replace("\n", "%0A")
+                      print(f"::error title={case.get('name')}::{text}")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portal-dist
+          path: portal/dist
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: portal
+    permissions:
+      contents: write   # pushes the screenshots to the ci-screenshots branch for review
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tas_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DOTNET_NOLOGO: true
+      ConnectionStrings__Tas: Host=localhost;Port=5432;Database=tas_e2e;Username=postgres;Password=postgres
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: portal-dist
+          path: portal/dist
+
+      - name: Build the API
+        run: dotnet build src/Tas.Api -c Release
+
+      - name: Start the API serving the portal
+        run: |
+          ASPNETCORE_ENVIRONMENT=Development \
+          Portal__Path="$GITHUB_WORKSPACE/portal/dist" \
+          RateLimit__AuthPerMinute=500 \
+          nohup sh -c 'cd src/Tas.Api/bin/Release/net10.0 && exec dotnet Tas.Api.dll --urls http://localhost:5000' > api.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:5000/health && break; sleep 1; done
+          curl -sf http://localhost:5000/health
+          curl -sf http://localhost:5000/sign-in | grep -q '<div id="root">'
+
+      - name: Install Playwright
+        working-directory: portal
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+          npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        working-directory: portal
+        env:
+          TAS_PORTAL_URL: http://localhost:5000
+        run: npx playwright test
+
+      - name: Show the API log on failure
+        if: failure()
+        run: |
+          python3 portal/e2e/ci_diagnostics.py
+
+      # Screenshots on a separate branch (one commit, replaced each run): readable with plain git.
+      - name: Publish screenshots
+        if: always() && hashFiles('portal/e2e/screenshots/*.png') != ''
+        run: |
+          branch="ci-screenshots/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          mkdir /tmp/shots && cp portal/e2e/screenshots/*.png /tmp/shots/
+          cd /tmp/shots
+          git init -q -b main
+          git config user.name "TAS CI"
+          git config user.email "ci@users.noreply.github.com"
+          git add . && git commit -qm "Screenshots of ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${branch}"
+          echo "::notice title=screenshots::branch ${branch}"
+
+      - name: Screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-e2e
+          path: |
+            portal/e2e/screenshots
+            portal/playwright-report
+            portal/test-results
+            api.log

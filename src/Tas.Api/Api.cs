@@ -25,6 +25,8 @@ public sealed record CancelBody(string? Reason);
 
 public sealed record ForgotPasswordBody(string? Email);
 
+public sealed record LanguageBody(string? Language);
+
 public sealed record PasswordLinkBody(string? Token);
 
 public sealed record ResetWithLinkBody(string? Token, string? NewPassword);

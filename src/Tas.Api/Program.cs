@@ -8,6 +8,8 @@ using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
 using Tas.Infrastructure.Notifications;
+using Microsoft.EntityFrameworkCore;
+using Tas.Application.MasterData;
 using Tas.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +39,28 @@ builder.Services.AddRateLimiter(o =>
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+// The web portal (portal/ built with "npm run build"): served from Portal:Path when set, so the portal and
+// the API share one address (password links, no CORS). Unknown non-API paths fall back to index.html.
+var portalPath = app.Configuration["Portal:Path"];
+var portalFiles = string.IsNullOrWhiteSpace(portalPath) ? null : Path.GetFullPath(portalPath, app.Environment.ContentRootPath);
+if (portalFiles is not null && Directory.Exists(portalFiles))
+{
+    var provider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(portalFiles);
+    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = provider });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = provider,
+        OnPrepareResponse = ctx =>
+        {
+            // Hashed assets never change; index.html must always be fresh.
+            ctx.Context.Response.Headers.CacheControl = ctx.File.Name == "index.html" ? "no-cache" : "public, max-age=31536000, immutable";
+            ctx.Context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            if (ctx.File.Name == "index.html")
+                PortalHeaders(ctx.Context.Response.Headers);
+        },
+    });
+}
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -51,6 +75,18 @@ using (var scope = app.Services.CreateScope())
     await scope.ServiceProvider.GetRequiredService<AdminBootstrapper>().EnsureAsync();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+// Terminals the signed-in user can work at: terminal staff their own, companies and sys admins every active one.
+app.MapGet("/api/terminals", async (HttpContext http, TasDbContext db, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    var query = db.Terminals.AsNoTracking().Where(t => t.IsActive);
+    if (user.IsTerminalStaff && !user.IsSysAdmin)
+        query = query.Where(t => t.TerminalId == user.TerminalId);
+    var terminals = await query.OrderBy(t => t.Name).ToListAsync(ct);
+    return Results.Ok(terminals.Select(t => new TerminalSummary(
+        t.TerminalId, t.Code, t.Name, t.TerminalType.ToString(), t.TimeZone, t.SlotMinutes)));
+}).RequireAuthorization();
 
 // ================================================================ auth
 
@@ -86,6 +122,13 @@ auth.MapGet("/me", async (HttpContext http, AuthService service, CancellationTok
     var user = TasApi.User(http);
     var profile = user is null ? null : await service.GetProfileAsync(user.UserId, ct);
     return profile is null ? Results.Unauthorized() : Results.Ok(profile);
+}).RequireAuthorization();
+
+// Language of the signed-in user's emails and messages.
+auth.MapPut("/me/language", async (LanguageBody body, HttpContext http, AuthService service, CancellationToken ct) =>
+{
+    var profile = await service.SetLanguageAsync(TasApi.User(http)!.UserId, body.Language, ct);
+    return profile is null ? TasApi.Problem(StatusCodes.Status400BadRequest, "Language must be one of: ar, en, ur, hi.") : Results.Ok(profile);
 }).RequireAuthorization();
 
 auth.MapPost("/change-password", async (ChangePasswordBody body, HttpContext http, AuthService service, CancellationToken ct) =>
@@ -350,9 +393,28 @@ if (app.Environment.IsDevelopment())
         Results.Ok(new { remindersQueued = await reminders.QueueDueAsync(ct), delivery = await sender.RunAsync(ct) }));
 }
 
+if (portalFiles is not null && Directory.Exists(portalFiles))
+{
+    app.MapFallback("{*path:nonfile}", (string? path, HttpContext http) =>
+    {
+        if (path is not null && (path.StartsWith("api/", StringComparison.OrdinalIgnoreCase) || path == "api"))
+            return Results.NotFound();
+        http.Response.Headers.CacheControl = "no-cache";
+        PortalHeaders(http.Response.Headers);
+        return Results.File(Path.Combine(portalFiles, "index.html"), "text/html; charset=utf-8");
+    });
+}
+
 app.Run();
 return 0;
 
 public partial class Program
 {
+    /// <summary>The portal only loads its own scripts, styles and fonts, and can't be framed.</summary>
+    private static void PortalHeaders(IHeaderDictionary headers)
+    {
+        headers["Content-Security-Policy"] =
+            "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+        headers["Referrer-Policy"] = "no-referrer";
+    }
 }

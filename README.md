@@ -31,7 +31,8 @@ db/schema.sql                 read-only snapshot of the full schema (CI checks i
 src/Tas.Domain                entities
 src/Tas.Application           capacity engine (pure logic: planning, availability, reconciliation)
 src/Tas.Infrastructure        EF Core + Npgsql, slot generation, availability queries, booking counters
-src/Tas.Api                   ASP.NET Core minimal API
+src/Tas.Api                   ASP.NET Core minimal API (also serves the built portal)
+portal/                       web portal: React + TypeScript (Vite), Arabic / English
 tests/Tas.Application.Tests   unit tests for the capacity rules
 tests/Tas.Infrastructure.Tests integration tests against PostgreSQL (run when TAS_TEST_DB is set)
 tests/Tas.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)
@@ -73,6 +74,20 @@ compiled into the API. Applied versions are recorded in `schema_migration` with 
 - Databases created earlier from `db/schema.sql` or the old upgrade scripts are recognised and recorded as a baseline automatically.
 - To change the schema: add `db/migrations/NNN_name.sql` (next number, lower-case name, no `BEGIN`/`COMMIT`, no `CONCURRENTLY`) and update `db/schema.sql` to match; CI rebuilds both and compares every table, column, constraint and index.
 
+Web portal (development):
+
+```bash
+cd portal
+npm install
+npm run dev        # http://localhost:5173, forwards /api to the API on :5000
+npm test           # unit tests
+npm run build      # portal/dist — the API serves it from Portal:Path (default ../../portal/dist)
+```
+
+In production the API serves the portal from `Portal:Path`, so portal and API share one address (password links,
+no CORS) and the portal page gets a strict Content-Security-Policy. CI also runs end-to-end tests
+(`portal/e2e`, Playwright, desktop and phone) against the real API and keeps screenshots as a build artifact.
+
 Tests:
 
 ```bash
@@ -100,6 +115,8 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | `POST` | `/api/auth/logout` | Revoke a refresh token |
 | `GET` | `/api/auth/me` | Signed-in user's profile |
 | `POST` | `/api/auth/change-password` | Change password; signs out all other sessions |
+| `PUT` | `/api/auth/me/language` | `{ language }` (ar / en / ur / hi) for the signed-in user's emails and messages |
+| `GET` | `/api/terminals` | Terminals the user can work at (staff: their own; companies and sys admins: all active) |
 | `POST` | `/api/auth/forgot-password` | `{ email }` → always `202`; an active account gets an email with a one-time link |
 | `POST` | `/api/auth/password-link` | `{ token }` → the link's purpose (`Reset` / `Invite`), email, name, expiry — for the "set password" page |
 | `POST` | `/api/auth/reset-password` | `{ token, newPassword }` → `204`; unlocks the account and signs out all sessions |
