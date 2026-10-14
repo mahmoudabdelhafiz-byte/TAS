@@ -12,3 +12,6 @@ public enum TosUnavailablePolicy
     /// <summary>Refuse the booking until the TOS answers.</summary>
     Reject,
 }
+
+/// <summary>TOS settings shared by the booking flow ("Tos:OnUnavailable": "Warn" | "Reject").</summary>
+public sealed record TosSettings(TosUnavailablePolicy OnUnavailable = TosUnavailablePolicy.Warn);

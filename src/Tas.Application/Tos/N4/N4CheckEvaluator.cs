@@ -58,9 +58,9 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
 
     public IReadOnlyList<TosCheck> Evaluate(IReadOnlyList<TosItemQuery> items, N4LookupResult n4)
     {
-        var units = (n4.Units ?? []).ToDictionary(u => u.ContainerNo.ToUpperInvariant(), StringComparer.OrdinalIgnoreCase);
-        var orders = (n4.Orders ?? []).ToDictionary(o => o.Nbr.ToUpperInvariant(), StringComparer.OrdinalIgnoreCase);
-        var bls = (n4.Bls ?? []).ToDictionary(b => b.Nbr.ToUpperInvariant(), StringComparer.OrdinalIgnoreCase);
+        var units = (n4.Units ?? Array.Empty<N4Unit>()).ToDictionary(u => u.ContainerNo.ToUpperInvariant(), StringComparer.OrdinalIgnoreCase);
+        var orders = (n4.Orders ?? Array.Empty<N4Order>()).ToDictionary(o => o.Nbr.ToUpperInvariant(), StringComparer.OrdinalIgnoreCase);
+        var bls = (n4.Bls ?? Array.Empty<N4BillOfLading>()).ToDictionary(b => b.Nbr.ToUpperInvariant(), StringComparer.OrdinalIgnoreCase);
 
         var checks = new List<TosCheck>();
         foreach (var item in items)
@@ -213,7 +213,7 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
     private IEnumerable<TosCheck> HoldChecks(int index, IReadOnlyList<string>? holdIds, string? what, string? tosRef, IReadOnlyList<CheckType> alwaysReport)
     {
         var failed = new HashSet<CheckType>();
-        foreach (var hold in (holdIds ?? []).Where(h => !string.IsNullOrWhiteSpace(h)).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var hold in (holdIds ?? Array.Empty<string>()).Where(h => !string.IsNullOrWhiteSpace(h)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var type = holds.Classify(hold);
             failed.Add(type);
@@ -233,7 +233,7 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
         _ => "Terminal hold",
     };
 
-    private string Local(DateTimeOffset t) => TimeZoneInfo.ConvertTime(t, terminalTimeZone).ToString("dd MMM HH:mm");
+    private string Local(DateTimeOffset t) => TimeZoneInfo.ConvertTime(t, terminalTimeZone).ToString("dd MMM HH:mm", System.Globalization.CultureInfo.InvariantCulture);
 
     private static TosCheck Pass(int i, CheckType t, string? tosRef = null) => new(i, t, CheckResult.Pass, null, tosRef);
     private static TosCheck Warn(int i, CheckType t, string m, string? tosRef = null) => new(i, t, CheckResult.Warn, m, tosRef);

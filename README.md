@@ -35,6 +35,7 @@ tests/Tas.Application.Tests   unit tests for the capacity rules
 tests/Tas.Infrastructure.Tests integration tests against PostgreSQL (run when TAS_TEST_DB is set)
 tests/Tas.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)
 db/migrations/                scripts to upgrade an existing database
+integrations/n4/              Navis N4: Groovy code extension (TasLookup) and setup guide
 ```
 
 ## Running locally
@@ -201,6 +202,18 @@ Security: passwords hashed with ASP.NET Core Identity (PBKDF2); 5 wrong password
 - Driver traffic light: **red** (check failed / window passed), **amber** (warning), **green** (inside slot ± grace), **grey** (not yet time, or finished).
 - Trucks that have not arrived by slot end + late grace become **no-shows**: capacity is released and the company's no-show count goes up.
 
+### TOS: Navis N4
+
+`Tos:Adapter` selects the TOS: `Fake` (development and demos, configured under `FakeTos`) or `N4`.
+The N4 adapter is **read-only**: each check is one ArgoService `genericInvoke` call running the `TasLookup` Groovy
+code extension, which returns units, bookings / EDOs and bills of lading as JSON; TAS turns that into checks
+(in the yard, holds, booking left, cut-off, VGM, BL release). Setup, hold mapping and rules:
+[`integrations/n4/README.md`](integrations/n4/README.md).
+
+If N4 can't be reached, bookings go ahead with an amber warning and are re-checked as soon as N4 answers
+(`Tos:OnUnavailable: Reject` refuses them instead); trip starts are refused and the gate sends the truck to the
+trouble desk — a truck is never sent or admitted unchecked.
+
 ### Bulk booking
 
 Dispatchers can upload a sheet of truck visits instead of booking one by one:
@@ -281,6 +294,6 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Bulk booking: Excel / CSV upload with dry-run preview, dual visits, per-row results, templates
 - [x] Re-checks before arrival: scheduled, on request and at trip start; history and notification outbox
 - [x] Gate: lane arrivals (QR / number / plate / container), re-check, admit or trouble desk, walk-ins, gate in/out, turn time, gate board
-- [ ] Navis N4 adapter
+- [x] Navis N4 adapter (read-only checks via genericInvoke + Groovy code extension), outage handling
 - [ ] Operator portal (React)
 - [ ] Driver app (Flutter)
