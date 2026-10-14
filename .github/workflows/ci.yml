@@ -36,19 +36,23 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Create database schema
+      - name: Create empty API test database
         env:
           PGPASSWORD: postgres
-        run: |
-          psql -h localhost -U postgres -d tas_test -v ON_ERROR_STOP=1 -q -f db/schema.sql
-          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -q -c "CREATE DATABASE tas_api_test"
-          psql -h localhost -U postgres -d tas_api_test -v ON_ERROR_STOP=1 -q -f db/schema.sql
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -q -c "CREATE DATABASE tas_api_test"
 
       - name: Restore
         run: dotnet restore TAS.slnx
 
       - name: Build
         run: dotnet build TAS.slnx --no-restore -c Release
+
+      # The same command used in deployments: create the schema from db/migrations.
+      - name: Migrate test databases
+        run: |
+          ConnectionStrings__Tas="$TAS_TEST_DB" dotnet src/Tas.Api/bin/Release/net10.0/Tas.Api.dll migrate
+          ConnectionStrings__Tas="$TAS_API_TEST_DB" dotnet src/Tas.Api/bin/Release/net10.0/Tas.Api.dll migrate
+          ConnectionStrings__Tas="$TAS_TEST_DB" dotnet src/Tas.Api/bin/Release/net10.0/Tas.Api.dll migrate status
 
       - name: Unit tests
         run: >-

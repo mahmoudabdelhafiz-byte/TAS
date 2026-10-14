@@ -14,6 +14,11 @@
     <ProjectReference Include="..\Tas.Application\Tas.Application.csproj" />
   </ItemGroup>
 
+  <!-- The database migrations travel inside the assembly: the API can create / upgrade its database anywhere. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\db\migrations\*.sql" LogicalName="Tas.Migrations.%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Tas.Infrastructure.Tests" />
   </ItemGroup>
