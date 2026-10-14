@@ -123,5 +123,5 @@ test('a dispatcher books a visit on the slot board, then moves and cancels it', 
   await page.getByLabel('Reason (optional)').fill('Vessel delayed');
   await page.getByRole('button', { name: 'Yes, cancel the visit' }).click();
   await expect(page.getByText('The visit is cancelled and its place is free again.')).toBeVisible();
-  await expect(page.getByText('Cancelled', { exact: true })).toBeVisible();
+  await expect(page.getByText('This visit can’t be changed any more (Cancelled).')).toBeVisible();
 });

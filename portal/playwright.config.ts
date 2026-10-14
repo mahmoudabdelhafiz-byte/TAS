@@ -10,6 +10,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.TAS_PORTAL_URL ?? 'http://localhost:5000',
     trace: 'retain-on-failure',
+    actionTimeout: 15_000, // a stuck step fails on its own line instead of the whole test timing out
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1360, height: 860 } } },

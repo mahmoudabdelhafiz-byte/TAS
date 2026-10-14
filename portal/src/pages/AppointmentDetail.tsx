@@ -109,7 +109,7 @@ export function AppointmentDetailPage() {
                 </span>
                 <span>{t(statusKeys[a.status])}</span>
               </div>
-              {a.trafficReason && <p lang="en">{a.trafficReason}</p>}
+              {a.trafficReason && changeable && <p lang="en">{a.trafficReason}</p>}
               <dl className="facts">
                 <dt className="muted">{t('colCompany')}</dt>
                 <dd>{a.companyName}</dd>
