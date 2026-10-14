@@ -11,13 +11,14 @@ using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.Auth;
 
+/// <param name="Password">Leave empty to invite the user: they get an email link to set their own password.</param>
 public sealed record CreateUserRequest(
     string Email,
     string FullName,
     UserRole Role,
     int? CompanyId,
     int? TerminalId,
-    string Password,
+    string? Password = null,
     string? Mobile = null,
     string PreferredLanguage = "en");
 
@@ -29,10 +30,11 @@ public enum UserAdminStatus
     Conflict,
 }
 
-public sealed record UserAdminResult(UserAdminStatus Status, UserProfile? User = null, string? Error = null);
+/// <param name="Invited">The user has no password yet and was sent an invitation link.</param>
+public sealed record UserAdminResult(UserAdminStatus Status, UserProfile? User = null, string? Error = null, bool Invited = false);
 
 /// <summary>Creates users within the rules of <see cref="AccessRules.CanCreateUser"/>.</summary>
-public sealed class UserAdminService(TasDbContext db, PasswordService passwords, AuthService auth, TimeProvider clock)
+public sealed class UserAdminService(TasDbContext db, PasswordService passwords, AuthService auth, PasswordTokenService passwordTokens, TimeProvider clock)
 {
     private static readonly HashSet<string> Languages = ["ar", "en", "ur", "hi"];
 
@@ -51,7 +53,8 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
         if (!Languages.Contains(language))
             return new UserAdminResult(UserAdminStatus.Invalid, Error: "Language must be one of: ar, en, ur, hi.");
 
-        var problem = PasswordPolicy.Check(request.Password, email);
+        var invite = string.IsNullOrEmpty(request.Password);
+        var problem = invite ? null : PasswordPolicy.Check(request.Password, email);
         if (problem is not null)
             return new UserAdminResult(UserAdminStatus.Invalid, Error: problem);
 
@@ -73,7 +76,8 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             Mobile = string.IsNullOrWhiteSpace(request.Mobile) ? null : request.Mobile.Trim(),
             PreferredLanguage = language,
         };
-        user.PasswordHash = passwords.Hash(user, request.Password);
+        if (!invite)
+            user.PasswordHash = passwords.Hash(user, request.Password!);
         db.AppUsers.Add(user);
 
         try
@@ -85,9 +89,11 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             return new UserAdminResult(UserAdminStatus.Conflict, Error: "A user with this email already exists.");
         }
 
-        Audit(user, AuditAction.Insert, null, UserView.From(user), null, actor);
+        Audit(user, AuditAction.Insert, null, UserView.From(user), invite ? "Invited by email" : null, actor);
+        if (invite)
+            await passwordTokens.IssueAsync(user, PasswordTokenPurpose.Invite, null, ct);
         await db.SaveChangesAsync(ct);
-        return new UserAdminResult(UserAdminStatus.Created, await auth.ProfileAsync(user, ct));
+        return new UserAdminResult(UserAdminStatus.Created, await auth.ProfileAsync(user, ct), Invited: invite);
     }
 
     /// <summary>
@@ -173,7 +179,10 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             Audit(user, AuditAction.Update, before, UserView.From(user), reason, actor);
             await db.SaveChangesAsync(ct);
             if (!active)
+            {
                 await RevokeSessionsAsync(user.UserId, ct);
+                await PasswordTokenService.CancelOutstandingAsync(db, user.UserId, clock.GetUtcNow(), ct);
+            }
         }
         return AdminResult<UserView>.Ok(UserView.From(user));
     }
@@ -198,6 +207,27 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
         Audit(user, AuditAction.Update, null, null, "Password reset by administrator", actor);
         await db.SaveChangesAsync(ct);
         await RevokeSessionsAsync(user.UserId, ct);
+        await PasswordTokenService.CancelOutstandingAsync(db, user.UserId, clock.GetUtcNow(), ct);
+        return AdminResult<UserView>.Ok(UserView.From(user));
+    }
+
+    /// <summary>
+    /// Sends a new invitation link (the old one stops working) to a user who hasn't set a password yet.
+    /// Users who already have a password use "forgot password" instead.
+    /// </summary>
+    public async Task<AdminResult<UserView>> ResendInviteAsync(CurrentUser actor, int userId, CancellationToken ct = default)
+    {
+        var (user, denied) = await LoadManagedAsync(actor, userId, ct);
+        if (denied is not null)
+            return denied;
+        if (!user!.IsActive)
+            return AdminResult<UserView>.Invalid("The user is deactivated; reactivate them first.");
+        if (user.PasswordHash is not null)
+            return AdminResult<UserView>.Invalid("The user has already set a password; they can use \"forgot password\".");
+
+        await passwordTokens.IssueAsync(user, PasswordTokenPurpose.Invite, null, ct);
+        Audit(user, AuditAction.Update, null, null, "Invitation sent again", actor);
+        await db.SaveChangesAsync(ct);
         return AdminResult<UserView>.Ok(UserView.From(user));
     }
 

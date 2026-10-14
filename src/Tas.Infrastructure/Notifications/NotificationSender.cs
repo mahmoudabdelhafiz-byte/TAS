@@ -8,6 +8,8 @@ using Npgsql;
 using Tas.Application.Notifications;
 using Tas.Domain;
 using Tas.Domain.Booking;
+using Tas.Domain.Parties;
+using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.Notifications;
@@ -27,6 +29,7 @@ public sealed class NotificationSender(
     TasDbContext db,
     IEnumerable<INotificationChannel> channels,
     IOptions<NotificationOptions> options,
+    PayloadProtector protector,
     TimeProvider clock,
     ILogger<NotificationSender> logger)
 {
@@ -118,6 +121,9 @@ public sealed class NotificationSender(
         if (n is null || n.Status != NotificationStatus.Queued)
             return Outcome.Gone;
 
+        if (NotificationTemplates.IsAccount(n.TemplateCode))
+            return await ProcessAccountAsync(n, ct);
+
         if (n.AppointmentId is not { } appointmentId)
             return await FinishAsync(n, Outcome.Failed, "Not linked to an appointment.", ct);
 
@@ -188,6 +194,56 @@ public sealed class NotificationSender(
         if (message is null)
             return await FinishAsync(n, Outcome.Failed, $"Unknown template '{n.TemplateCode}'.", ct);
 
+        return await DeliverAsync(n, to.Trim(), message, now, ct);
+    }
+
+    /// <summary>
+    /// Password reset / invitation email: the link is decrypted from the payload only now, and only if the link
+    /// can still be used (not used, replaced by a newer one or expired) and the user is still active.
+    /// </summary>
+    private async Task<Outcome> ProcessAccountAsync(NotificationLog n, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow();
+        if (n.UserId is not { } userId)
+            return await FinishAsync(n, Outcome.Failed, "Not linked to a user.", ct);
+
+        var user = await db.AppUsers.AsNoTracking().SingleOrDefaultAsync(u => u.UserId == userId, ct);
+        if (user is null || !user.IsActive)
+            return await FinishAsync(n, Outcome.Skipped, "The user has been deactivated.", ct);
+
+        var token = protector.Unprotect(n.Payload);
+        if (token is null)
+            return await FinishAsync(n, Outcome.Failed, "The link can't be read (the signing key changed?). Ask for a new link.", ct);
+
+        var hash = TokenService.HashRefreshToken(token);
+        var link = await db.PasswordTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash && t.UserId == userId, ct);
+        if (link is null || !link.IsUsable(now))
+            return await FinishAsync(n, Outcome.Skipped, "The link was already used, replaced by a newer one or has expired.", ct);
+
+        var portal = options.Value.PortalUrl?.Trim().TrimEnd('/');
+        if (string.IsNullOrEmpty(portal) || !Uri.TryCreate(portal, UriKind.Absolute, out _))
+            return await FinishAsync(n, Outcome.Failed, "Notifications:PortalUrl is not configured; the email needs it for the link.", ct);
+
+        // Token in the fragment (#): browsers don't send it to servers or in Referer headers.
+        var page = link.Purpose == PasswordTokenPurpose.Invite ? "accept-invite" : "reset-password";
+        var org = user.CompanyId is { } companyId
+            ? await db.Companies.AsNoTracking().Where(c => c.CompanyId == companyId).Select(c => c.Name).SingleOrDefaultAsync(ct)
+            : user.TerminalId is { } terminalId
+                ? await db.Terminals.AsNoTracking().Where(t => t.TerminalId == terminalId).Select(t => t.Name).SingleOrDefaultAsync(ct)
+                : null;
+
+        var message = AccountMessageRenderer.Render(n.TemplateCode, n.Language, new AccountMessageData(
+            user.FullName, user.Email, $"{portal}/{page}#token={token}", link.ExpiresAt - link.CreatedAt, org));
+        if (message is null)
+            return await FinishAsync(n, Outcome.Failed, $"Unknown template '{n.TemplateCode}'.", ct);
+
+        n.Recipient = Truncate(user.Email, 200);
+        return await DeliverAsync(n, user.Email, message, now, ct);
+    }
+
+    private async Task<Outcome> DeliverAsync(NotificationLog n, string to, RenderedMessage message, DateTimeOffset now, CancellationToken ct)
+    {
+        var o = options.Value;
         var channel = channels.FirstOrDefault(c => c.Channel == n.Channel);
         if (channel is null)
             return await FinishAsync(n, Outcome.Failed, $"No provider is configured for {n.Channel.ToString().ToUpperInvariant()} (Notifications settings).", ct);
@@ -195,7 +251,7 @@ public sealed class NotificationSender(
         DeliveryResult result;
         try
         {
-            result = await channel.SendAsync(new OutgoingMessage(n.NotificationId, n.Channel, to.Trim(), message), ct);
+            result = await channel.SendAsync(new OutgoingMessage(n.NotificationId, n.Channel, to, message), ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
@@ -209,6 +265,7 @@ public sealed class NotificationSender(
             n.ProviderRef = result.ProviderRef is null ? null : Truncate(result.ProviderRef, 100);
             n.LastError = null;
             n.NextAttemptAt = null;
+            n.Payload = null;
             await db.SaveChangesAsync(ct);
             return Outcome.Sent;
         }
@@ -230,6 +287,7 @@ public sealed class NotificationSender(
         n.Status = outcome == Outcome.Skipped ? NotificationStatus.Skipped : NotificationStatus.Failed;
         n.LastError = Truncate(reason, 300);
         n.NextAttemptAt = null;
+        n.Payload = null; // never keep a secret for a message that won't be sent
         await db.SaveChangesAsync(ct);
         return outcome;
     }

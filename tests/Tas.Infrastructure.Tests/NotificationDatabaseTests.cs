@@ -63,6 +63,9 @@ public sealed class NotificationDatabaseTests : IAsyncLifetime
         private readonly FakeTosAdapter _tos = new(new StaticOptions<FakeTosOptions>(tosOptions));
         public TasDbContext Db { get; } = new(new DbContextOptionsBuilder<TasDbContext>().UseNpgsql(ConnectionString).Options);
         public NotificationOptions Options { get; } = new() { MaxAttempts = 3, BatchSize = 50 };
+
+        private static readonly PayloadProtector Protector =
+            new(Microsoft.Extensions.Options.Options.Create(new JwtOptions { SigningKey = "test-only-signing-key-0123456789-abcdefghijkl" }));
         public AppointmentQueryService Queries => new(Db, clock);
         public BookingService Booking => new(Db, new BookingCounterStore(Db), _tos, Queries, clock, NullLogger<BookingService>.Instance);
         public RevalidationService Revalidation => new(Db, _tos, Queries, clock, new ConfigurationBuilder().Build(), NullLogger<RevalidationService>.Instance);
@@ -71,7 +74,7 @@ public sealed class NotificationDatabaseTests : IAsyncLifetime
         public NotificationQueryService Outbox => new(Db, clock);
 
         public NotificationSender Sender(params INotificationChannel[] channels) =>
-            new(Db, channels, Microsoft.Extensions.Options.Options.Create(Options), clock, NullLogger<NotificationSender>.Instance);
+            new(Db, channels, Microsoft.Extensions.Options.Options.Create(Options), Protector, clock, NullLogger<NotificationSender>.Instance);
 
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
