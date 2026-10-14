@@ -173,7 +173,7 @@ Every master data change is written to the audit log. Tokens are re-checked agai
 
 **Re-checks before arrival:** a container that was clear at booking can get a customs hold, a withdrawn release or unpaid charges later. Booked appointments starting within 24 h are re-checked against the TOS (at most every 60 min each), on request, and when the trip starts. If an item turns red or clears, the change is written to the appointment history and a notification (`STATUS_RED` / `STATUS_CLEARED`) is queued for the driver (SMS) and the person who booked (email) in the `notification_log` outbox.
 
-Background workers: slot generation (every 6 h), no-show marking (every 10 min), re-checks (every 15 min).
+Background workers: slot generation (every 6 h), no-show marking (every 10 min), re-checks (every 15 min), notifications (every 30 s).
 Settings: `Revalidation:LookAheadHours` (24), `Revalidation:MinAgeMinutes` (60), `Revalidation:IntervalMinutes` (15), `Revalidation:Enabled`.
 
 Booking responses: `201` booked · `400` invalid request · `404` not found · `409` no capacity / conflict ·
@@ -201,6 +201,62 @@ Security: passwords hashed with ASP.NET Core Identity (PBKDF2); 5 wrong password
 - Capacity is consumed atomically: one unit of the slot total per truck, one unit of the category quota per move, one trip from the cargo allocation for multipurpose cargo.
 - Driver traffic light: **red** (check failed / window passed), **amber** (warning), **green** (inside slot ± grace), **grey** (not yet time, or finished).
 - Trucks that have not arrived by slot end + late grace become **no-shows**: capacity is released and the company's no-show count goes up.
+
+### Notifications
+
+Messages are written to the `notification_log` outbox in the same transaction as the change that causes them,
+then delivered by a background sender (every 30 s) in the recipient's language — **Arabic, English, Urdu, Hindi**
+(drivers' language from their profile; unknown languages fall back to English).
+
+| Template | When | To |
+|---|---|---|
+| `STATUS_RED` | A re-check finds a hold, unpaid charges, withdrawn release… — "don't set off" with the container and problem | Driver (SMS), booker (email) |
+| `STATUS_CLEARED` | Everything that failed is clear again | Driver (SMS), booker (email) |
+| `SLOT_REMINDER` | 2 h before the slot (not for appointments booked inside those 2 h) | Driver (SMS); booker (email) if no driver is assigned yet |
+| `SLOT_CLOSED` | The terminal closed a slot that has bookings (bookings are kept; they need a new slot) | Driver (SMS), booker (email) |
+
+Before sending, each message is checked again and **skipped** if it no longer applies: appointment cancelled,
+completed or no-show, slot passed, a newer status message replaced it, or it is older than 12 h. Transient
+provider errors are retried (1, 5, 15, 30 min; at most 5 attempts); permanent ones (bad number, rejected mailbox,
+no provider configured) fail at once. Several API instances can run the sender safely — each message is claimed
+by exactly one of them (`FOR UPDATE SKIP LOCKED` plus a 5-minute lease).
+
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| `GET` | `/api/terminals/{id}/notifications?status=Failed&appointmentNo=…&limit=100` | terminal staff | What was sent to whom, failures with the reason |
+| `POST` | `/api/terminals/{id}/notifications/{notificationId}/retry` | Planner, TerminalAdmin | Send a failed / skipped message again (e.g. after fixing a mobile number) |
+
+Providers (`Notifications:Sms:Provider`, `Notifications:Email:Provider`):
+
+| Value | Meaning |
+|---|---|
+| `None` (default) | Not configured: messages are marked `FAILED` ("no provider configured") so it shows in the log |
+| `Log` | Development: the rendered message is written to the application log (set in `appsettings.Development.json`) |
+| `Http` (SMS) | Any HTTP SMS gateway (Unifonic, Taqnyat, Msegat, Twilio…): URL, headers, body template with `{to}` `{text}` `{sender}`, number format (`E164` / `NoPlus` / `International00`), JSON path to the message id. 5xx / 429 / timeouts are retried, 4xx are not |
+| `Smtp` (email) | SMTP server; plain text plus an HTML part with the right text direction for Arabic / Urdu |
+
+Example — an SMS gateway taking JSON with a bearer token:
+
+```json
+"Notifications": {
+  "Sms": {
+    "Provider": "Http",
+    "Http": {
+      "Url": "https://sms-gateway.example/api/send",
+      "Body": "{\"recipients\":[\"{to}\"],\"body\":\"{text}\",\"sender\":\"{sender}\"}",
+      "Headers": { "Authorization": "Bearer <token>" },
+      "Sender": "TERMINAL",
+      "NumberFormat": "NoPlus",
+      "MessageIdPath": "messageId"
+    }
+  },
+  "Email": { "Provider": "Smtp", "Host": "smtp.example.com", "Port": 587, "Username": "…", "Password": "…", "From": "no-reply@terminal.example" }
+}
+```
+
+Saudi sender names must be registered with the CST through the SMS provider before go-live. Other settings:
+`Notifications:Enabled`, `IntervalSeconds` (30), `BatchSize` (50), `MaxAttempts` (5), `MaxAgeHours` (12),
+`ReminderHoursBefore` (2; 0 = no reminders). In Development, `POST /api/dev/notifications/run` queues reminders and sends once.
 
 ### TOS: Navis N4
 
