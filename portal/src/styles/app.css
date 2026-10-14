@@ -1125,3 +1125,46 @@ tr[data-light='Red'] {
     overflow-wrap: anywhere;
   }
 }
+
+/* ------------------------------------------------------------------ fleet and uploads */
+
+.fleet-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fleet-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding-block: 0.6rem;
+  border-block-start: 1px solid var(--line-soft);
+}
+
+.fleet-list li:first-child {
+  border-block-start: none;
+}
+
+.tag.ok {
+  background: var(--go-tint);
+  color: var(--go);
+}
+
+tr[data-result='Failed'] td:first-child {
+  border-inline-start: 4px solid var(--hold);
+}
+
+tr[data-result='WouldBook'] td:first-child,
+tr[data-result='Booked'] td:first-child {
+  border-inline-start: 4px solid var(--go);
+}
+
+input[type='file'] {
+  padding: 0.5rem;
+  background: #f7f8f7;
+  border-style: dashed;
+}

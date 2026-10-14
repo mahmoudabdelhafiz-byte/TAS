@@ -56,6 +56,7 @@ export interface Truck {
   truckId: number;
   companyId: number;
   plateNumber: string;
+  plateNormalized: string;
   isBlocked: boolean;
 }
 
@@ -65,6 +66,7 @@ export interface Driver {
   fullName: string;
   idNumber: string;
   mobile: string;
+  preferredLanguage: string;
   isBlocked: boolean;
 }
 
@@ -170,4 +172,28 @@ export interface Problem {
   errors?: string[] | Record<string, string[]>;
   /** Booking refused because a check failed (422): every check with its result. */
   checks?: Check[];
+}
+
+export interface BulkVisitResult {
+  visit: string;
+  rows: number[];
+  slot: string;
+  status: 'Booked' | 'WouldBook' | 'Failed';
+  appointmentNo: string | null;
+  errors: string[];
+  checks: Check[];
+}
+
+export interface BulkResult {
+  dryRun: boolean;
+  visits: number;
+  succeeded: number;
+  failed: number;
+  fileErrors: { row: number; message: string }[];
+  results: BulkVisitResult[];
+}
+
+/** Configuration changes come back as { data, regeneratedSlots }. */
+export interface AdminResponse<T> {
+  data: T;
 }

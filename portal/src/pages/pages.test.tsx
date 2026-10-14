@@ -100,10 +100,10 @@ describe('rules', () => {
   });
 
   it('shows each role only its sections and invitable roles', () => {
-    expect(navFor('CompanyUser').map((i) => i.path)).toEqual(['/appointments', '/book', '/account']);
-    expect(navFor('Planner').map((i) => i.path)).toEqual(['/appointments', '/book', '/account']);
-    expect(navFor('GateClerk').map((i) => i.path)).toEqual(['/appointments', '/account']);
-    expect(navFor('TerminalAdmin').map((i) => i.path)).toEqual(['/appointments', '/book', '/users', '/account']);
+    expect(navFor('CompanyUser').map((i) => i.path)).toEqual(['/appointments', '/book', '/fleet', '/account']);
+    expect(navFor('Planner').map((i) => i.path)).toEqual(['/appointments', '/book', '/fleet', '/account']);
+    expect(navFor('GateClerk').map((i) => i.path)).toEqual(['/appointments', '/fleet', '/account']);
+    expect(navFor('TerminalAdmin').map((i) => i.path)).toEqual(['/appointments', '/book', '/fleet', '/users', '/account']);
     expect(invitableRoles('CompanyAdmin')).toEqual(['CompanyUser', 'CompanyAdmin']);
     expect(invitableRoles('GateClerk')).toEqual([]);
   });
