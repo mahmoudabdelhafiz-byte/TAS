@@ -24,7 +24,7 @@ function appointment(no: string, light: Appointment['trafficLight'], hour: numbe
   return {
     appointmentNo: no, status: 'Confirmed', slotId: hour, slotStart: start, slotEnd: end, slotLocal: '', companyId: 1, companyName: 'Al Noor Transport',
     truckId: 1, truckPlate: '1234 ABJ', driverId: 1, driverName: 'Abdullah', isDual: false, trafficLight: light, trafficReason: light === 'Red' ? 'Customs hold on MSCU7654329' : '',
-    items: [{ category: 'IMP_PICKUP', containerNo: light === 'Red' ? 'MSCU7654329' : 'MSCU1234566', isoType: null, bookingRef: null, edoRef: null, cargoRef: null, plannedTonnage: null, validationStatus: 'Pass' }],
+    items: [{ category: 'IMP_PICKUP', containerNo: light === 'Red' ? 'MSCU7654329' : 'MSCU1234566', isoType: null, bookingRef: null, edoRef: null, cargoRef: null, plannedTonnage: null, validationStatus: 'Pass', checks: [] }],
     createdAt: start,
   };
 }
