@@ -499,6 +499,7 @@ input[type='tel'] {
 
 .main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 1.5rem;
   padding: 1.75rem clamp(1rem, 3vw, 2.5rem) 3rem;
@@ -697,6 +698,7 @@ tr[data-light='Red'] {
 
 .day-picker {
   display: flex;
+  flex-wrap: wrap;
   align-items: end;
   gap: 0.35rem;
 }
@@ -877,6 +879,10 @@ tr[data-light='Red'] {
   margin-block-start: 1.85rem;
 }
 
+.move .wide {
+  grid-column: span 2;
+}
+
 @media (max-width: 52rem) {
   .move {
     grid-template-columns: 1fr;
@@ -885,6 +891,10 @@ tr[data-light='Red'] {
   .move .remove {
     margin: 0;
     justify-self: start;
+  }
+
+  .move .wide {
+    grid-column: auto;
   }
 }
 

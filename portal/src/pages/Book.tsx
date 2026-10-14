@@ -234,7 +234,7 @@ export function BookPage() {
                           </select>
                         </div>
                         {category?.mode === 'Cargo' ? (
-                          <div className="field" style={{ gridColumn: 'span 2' }}>
+                          <div className="field wide">
                             <label htmlFor={`cargo-${m.key}`}>{t('cargoRelease')}</label>
                             <select id={`cargo-${m.key}`} value={m.cargoRef} onChange={(e) => update(m.key, { cargoRef: e.target.value })} aria-invalid={showErrors && !m.cargoRef ? true : undefined}>
                               <option value="" />

@@ -16,8 +16,12 @@ async function signIn(page: Page, email: string) {
   await page.getByRole('button', { name: /^(دخول|Sign in)$/ }).click();
 }
 
-const shot = (page: Page, name: string) =>
-  page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-${name}.png`, fullPage: true });
+/** Screenshot for review — and every page must fit the screen width (no sideways scrolling, in either direction). */
+async function shot(page: Page, name: string) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  await page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-${name}.png`, fullPage: true });
+  expect(overflow, `${name} is ${overflow}px wider than the screen`).toBeLessThanOrEqual(0);
+}
 
 test('a dispatcher signs in (Arabic first) and sees the day with traffic lights', async ({ page }) => {
   await page.goto('/sign-in');
@@ -99,10 +103,10 @@ test('a dispatcher books a visit on the slot board, then moves and cancels it', 
   await expect(page.getByText('الرقم الأخير لا يطابق بقية الرقم. تحقق من وجود خطأ في الكتابة.')).toBeVisible();
   await page.getByLabel('رقم الحاوية').fill(container);
 
+  await shot(page, '07-book-ar');
   const open = page.locator('.slot[data-state="open"]');
   await open.nth(-2).click();
   await page.getByLabel('الشاحنة', { exact: true }).selectOption({ label: '5678 HDR' });
-  await shot(page, '07-book-ar');
   await page.getByRole('button', { name: 'احجز الزيارة' }).click();
 
   await expect(page.getByText(/تم الحجز. رقم الموعد/)).toBeVisible();
