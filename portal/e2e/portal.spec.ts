@@ -18,9 +18,24 @@ async function signIn(page: Page, email: string) {
 
 /** Screenshot for review — and every page must fit the screen width (no sideways scrolling, in either direction). */
 async function shot(page: Page, name: string) {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  const { overflow, culprits } = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    // Elements sticking out of the screen whose children don't (the innermost cause), widest first.
+    const outside = [...document.querySelectorAll<HTMLElement>('body *')].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && (r.right > width + 1 || r.left < -1);
+    });
+    const innermost = outside.filter((el) => !outside.some((other) => other !== el && el.contains(other) && el.tagName !== 'TABLE'));
+    return {
+      overflow: document.documentElement.scrollWidth - width,
+      culprits: innermost
+        .sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width)
+        .slice(0, 4)
+        .map((el) => `${el.tagName.toLowerCase()}.${el.className} [${Math.round(el.getBoundingClientRect().left)}..${Math.round(el.getBoundingClientRect().right)}] "${(el.textContent ?? '').slice(0, 40)}"`),
+    };
+  });
   await page.screenshot({ path: `e2e/screenshots/${test.info().project.name}-${name}.png`, fullPage: true });
-  expect(overflow, `${name} is ${overflow}px wider than the screen`).toBeLessThanOrEqual(0);
+  expect(overflow, `${name} is ${overflow}px wider than the screen: ${culprits.join(' | ')}`).toBeLessThanOrEqual(0);
 }
 
 test('a dispatcher signs in (Arabic first) and sees the day with traffic lights', async ({ page }) => {
