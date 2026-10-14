@@ -134,7 +134,7 @@ public class NotificationChannelTests
     [Fact]
     public void Emails_have_a_utf8_subject_and_a_right_to_left_html_part_for_arabic()
     {
-        var options = new EmailOptions { From = "no-reply@terminal.test", FromName = "Truck Appointments" };
+        var options = new EmailOptions { From = "no-reply@terminal.test", FromName = "Yardsyncs" };
         using var mail = SmtpEmailChannel.BuildMail(options, new MailAddress("khalid@alnoor.test"),
             new RenderedMessage("لا تتحرك: الموعد DEMO-1", "سطر 1\n<سطر 2>", "ar", true));
 

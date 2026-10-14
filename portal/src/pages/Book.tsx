@@ -176,7 +176,10 @@ export function BookPage() {
     <>
       <div className="page-head">
         <h1>{t('bookTitle')}</h1>
-        <Link to="/appointments">{t('allAppointments')}</Link>
+        <div className="form-actions">
+          <Link to="/book/upload">{t('manyVisits')}</Link>
+          <Link to="/appointments">{t('allAppointments')}</Link>
+        </div>
       </div>
 
       <form onSubmit={submit} noValidate>

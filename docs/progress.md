@@ -1,6 +1,6 @@
-# TAS — Progress Log
+# Yardsyncs — Progress Log
 
-Last updated: 2026-10-15 (after the booking screen)
+Last updated: 2026-10-15 (after bulk upload and fleet)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -204,6 +204,14 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Phones: no page wider than the screen (enforced by the e2e tests, which name the offending element); appointments and users stack into blocks |
 | ✅ | Tests: 25 portal unit tests; e2e books, moves and cancels through the UI on desktop and phone |
 
+### 17. Yardsyncs name, booking sheet upload, trucks and drivers (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Product named **Yardsyncs** (portal, page titles, emails, docs); code projects keep `Tas.*` |
+| ✅ | Upload a booking sheet: template download, dry run checking every visit with the terminal, preview with failed checks by name, book the ready visits; sheet problems listed by row |
+| ✅ | Trucks and drivers: Arabic / Latin plates, ID / Iqama, mobile, SMS language; company admins edit, terminal admins block with a reason |
+| ✅ | Tests: 29 portal unit tests; e2e uploads a CSV and books it, adds a truck and a driver |
+
 ---
 
 ## Remaining
@@ -231,8 +239,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| 🔜 | **Bulk upload and fleet**: upload the Excel / CSV booking sheet with the dry-run preview; trucks and drivers for company admins |
-| ⬜ | Terminal screens: capacity setup (weekly grid, seasonal templates, overrides calendar), slot board for planners, gate board |
+| 🔜 | **Terminal screens**: capacity setup (weekly grid, seasonal templates, overrides calendar), slot board for planners, gate board |
 | ⬜ | Reasons in the user's language: API returns reason codes + values (today the traffic-light reasons and server errors are English only) |
 | ⬜ | Capacity setup: weekly template grid, seasonal templates, overrides calendar |
 | ⬜ | Slot board: capacity vs booked per hour/category, over-capacity alerts |

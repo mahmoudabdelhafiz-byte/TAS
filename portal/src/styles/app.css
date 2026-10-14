@@ -328,11 +328,22 @@ input[type='tel'] {
 }
 
 .gate-visual .title {
-  font-size: clamp(2.25rem, 5vw, 4rem);
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   color: #fff;
-  max-inline-size: 12ch;
+  text-align: start;
+}
+
+[dir='rtl'] .gate-visual .title {
+  text-align: right; /* the Latin name sits on the reading-start side in Arabic too */
+}
+
+.gate-visual .tagline {
+  margin-block-start: 0.4rem;
+  color: #c7d1d5;
+  max-inline-size: 28ch;
 }
 
 .slot-strip {
@@ -388,7 +399,10 @@ input[type='tel'] {
 
   .gate-visual .title {
     font-size: var(--step-2);
-    max-inline-size: none;
+  }
+
+  .gate-visual .tagline {
+    display: none;
   }
 
   .slot-strip {
@@ -431,6 +445,12 @@ input[type='tel'] {
 .rail .wordmark {
   padding-inline: 0.6rem;
   color: #fff;
+  font-size: var(--step-2);
+  letter-spacing: -0.01em;
+}
+
+[dir='rtl'] .rail .wordmark {
+  text-align: right;
 }
 
 .rail nav ul {
@@ -595,7 +615,8 @@ tbody tr:last-child td {
   border-block-end: none;
 }
 
-td .sub {
+/* A secondary line under a value (an email under a name, an ID under a driver) — in tables and lists alike. */
+.sub {
   display: block;
   font-size: var(--step--1);
   color: var(--steel);
@@ -1104,4 +1125,47 @@ tr[data-light='Red'] {
     white-space: normal;
     overflow-wrap: anywhere;
   }
+}
+
+/* ------------------------------------------------------------------ fleet and uploads */
+
+.fleet-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fleet-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding-block: 0.6rem;
+  border-block-start: 1px solid var(--line-soft);
+}
+
+.fleet-list li:first-child {
+  border-block-start: none;
+}
+
+.tag.ok {
+  background: var(--go-tint);
+  color: var(--go);
+}
+
+tr[data-result='Failed'] td:first-child {
+  border-inline-start: 4px solid var(--hold);
+}
+
+tr[data-result='WouldBook'] td:first-child,
+tr[data-result='Booked'] td:first-child {
+  border-inline-start: 4px solid var(--go);
+}
+
+input[type='file'] {
+  padding: 0.5rem;
+  background: #f7f8f7;
+  border-style: dashed;
 }

@@ -40,7 +40,9 @@ function AppShell() {
         {t('skipToContent')}
       </a>
       <aside className="rail">
-        <span className="wordmark">{t('appName')}</span>
+        <span className="wordmark" lang="en" dir="ltr">
+          {t('appName')}
+        </span>
         <nav aria-label={t('mainNavigation')}>
           <ul>
             {navFor(user.role).map((item) => (

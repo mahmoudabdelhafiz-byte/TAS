@@ -144,3 +144,60 @@ test('a dispatcher books a visit on the slot board, then moves and cancels it', 
   await expect(page.getByText('The visit is cancelled and its place is free again.')).toBeVisible();
   await expect(page.getByText('This visit can’t be changed any more (Cancelled).')).toBeVisible();
 });
+
+test('a dispatcher uploads a booking sheet, previews it and books the ready visits', async ({ page }) => {
+  // Per project its own containers; the last row has a wrong check digit and must fail on its own.
+  const [a, b, c, bad] =
+    test.info().project.name === 'phone'
+      ? ['TRIU5000011', 'TRIU5000027', 'SEGU3000019', 'TRIU5000012']
+      : ['SEGU2000014', 'SEGU2000020', 'SEGU3000024', 'SEGU3000025'];
+  const day = bookedDay();
+  const csv = [
+    'visit,date,time,category,container_no',
+    `V1,${day},22:00,IMP_PICKUP,${a}`,
+    `V1,${day},22:00,IMP_PICKUP,${b}`,
+    `V2,${day},22:00,IMP_PICKUP,${c}`,
+    `V3,${day},22:00,IMP_PICKUP,${bad}`,
+  ].join('\n');
+
+  await page.goto('/sign-in');
+  await page.getByRole('button', { name: 'English' }).click();
+  await signIn(page, DISPATCHER);
+  await page.getByRole('link', { name: 'Book a visit' }).first().click();
+  await page.getByRole('link', { name: 'Many visits? Upload a sheet' }).click();
+  await expect(page.getByRole('heading', { name: 'Upload a booking sheet' })).toBeVisible();
+
+  await page.getByLabel(/^Sheet/).setInputFiles({ name: 'visits.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await page.getByRole('button', { name: 'Check the sheet' }).click();
+  await expect(page.getByText('2 of 3 visits can be booked.')).toBeVisible();
+  await expect(page.locator('tr[data-result="Failed"]')).toHaveCount(1);
+  await shot(page, '09-upload-preview-en');
+
+  await page.getByRole('button', { name: 'Book the 2 visits that are ready' }).click();
+  await expect(page.getByRole('heading', { name: '2 of 3 visits booked.' })).toBeVisible();
+  await expect(page.locator('tr[data-result="Booked"] a')).toHaveCount(2);
+});
+
+test('a company admin adds a truck (Arabic plate) and a driver', async ({ page }) => {
+  const digits = String(Date.now() % 9000 + 1000);
+  const plate = test.info().project.name === 'phone' ? `د ر س ${digits}` : `أ ب ح ${digits}`;
+  const id = `10${String(Date.now()).slice(-8)}`;
+
+  await signIn(page, DISPATCHER);
+  await page.getByRole('link', { name: 'الشاحنات والسائقون' }).click();
+  await expect(page.getByRole('heading', { name: 'الشاحنات والسائقون', level: 1 })).toBeVisible();
+
+  await page.getByRole('button', { name: 'أضف شاحنة' }).click();
+  await page.getByLabel('رقم اللوحة').fill(plate);
+  await page.getByRole('button', { name: 'احفظ' }).click();
+  await expect(page.getByText(/تمت إضافة الشاحنة/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'أضف سائقًا' }).click();
+  await page.getByLabel('الاسم الكامل').fill('سعيد القحطاني');
+  await page.getByLabel('رقم الهوية / الإقامة').fill(id);
+  await page.getByLabel('الجوال').fill('0551234567');
+  await page.getByRole('button', { name: 'احفظ' }).click();
+  await expect(page.getByText('تمت إضافة سعيد القحطاني.')).toBeVisible();
+  await expect(page.getByText('+966551234567').first()).toBeVisible(); // mobile stored in international form
+  await shot(page, '10-fleet-ar');
+});

@@ -94,6 +94,7 @@ export function problemMessage(problem: Problem | undefined, fallback: string): 
 async function send(path: string, init: RequestInit, withAuth: boolean): Promise<Response> {
   const headers = new Headers(init.headers);
   if (withAuth && accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  // A FormData body sets its own multipart content type (with the boundary).
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   headers.set('Accept', 'application/json');
   return fetch(path, { ...init, headers });
@@ -134,6 +135,8 @@ export interface RequestOptions {
   query?: Record<string, string | number | boolean | null | undefined>;
   /** Don't send the access token and don't try to refresh (sign-in, password links). */
   anonymous?: boolean;
+  /** A multipart form (file upload) instead of a JSON body. */
+  form?: FormData;
 }
 
 export function buildPath(path: string, query?: RequestOptions['query']): string {
@@ -150,8 +153,8 @@ export function buildPath(path: string, query?: RequestOptions['query']): string
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const url = buildPath(path, options.query);
   const init: RequestInit = {
-    method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    method: options.method ?? (options.body === undefined && !options.form ? 'GET' : 'POST'),
+    body: options.form ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
   };
 
   let response = await send(url, init, !options.anonymous);
@@ -178,6 +181,22 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   }
   const type = response.headers.get('content-type') ?? '';
   return (type.includes('json') ? await response.json() : undefined) as T;
+}
+
+/** Downloads a file the API produces (with the session) and hands it to the browser as a download. */
+export async function download(path: string, fallbackName: string): Promise<void> {
+  let response = await send(path, { method: 'GET' }, true);
+  if (response.status === 401 && (await refreshSession())) response = await send(path, { method: 'GET' }, true);
+  if (!response.ok) throw new ApiError(response.status, problemMessage(await readProblem(response), `${response.status}`));
+
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const name = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const link = Object.assign(document.createElement('a'), { href: url, download: decodeURIComponent(name) });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 // ------------------------------------------------------------------ session

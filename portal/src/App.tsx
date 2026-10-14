@@ -8,6 +8,8 @@ import { AccountPage } from './pages/Account';
 import { AppointmentDetailPage } from './pages/AppointmentDetail';
 import { AppointmentsPage } from './pages/Appointments';
 import { BookPage } from './pages/Book';
+import { BulkUploadPage } from './pages/BulkUpload';
+import { FleetPage } from './pages/Fleet';
 import { ForgotPasswordPage } from './pages/ForgotPassword';
 import { SetPasswordPage } from './pages/SetPassword';
 import { SignInPage } from './pages/SignIn';
@@ -46,6 +48,8 @@ export function AppRoutes() {
         <Route path="/appointments" element={<AppointmentsPage />} />
         <Route path="/appointments/:no" element={<AppointmentDetailPage />} />
         <Route path="/book" element={<BookPage />} />
+        <Route path="/book/upload" element={<BulkUploadPage />} />
+        <Route path="/fleet" element={<FleetPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="*" element={<Navigate to="/appointments" replace />} />

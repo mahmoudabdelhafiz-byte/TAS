@@ -1,6 +1,7 @@
-# TAS — Truck Appointment System
+# Yardsyncs
 
 Truck appointment and landside management for **container and multipurpose terminals**.
+(Code and projects keep the internal name `Tas.*`.)
 Multi-terminal by design: one deployment serves many terminals.
 
 ## Scope

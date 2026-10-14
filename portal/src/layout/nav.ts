@@ -14,6 +14,7 @@ export const canBook = (role: UserRole) => role !== 'GateClerk';
 export function navFor(role: UserRole): NavItem[] {
   const items: NavItem[] = [{ path: '/appointments', label: 'navAppointments' }];
   if (canBook(role)) items.push({ path: '/book', label: 'navBook' });
+  items.push({ path: '/fleet', label: 'navFleet' });
   if (canManageUsers(role)) items.push({ path: '/users', label: 'navUsers' });
   items.push({ path: '/account', label: 'navAccount' });
   return items;
