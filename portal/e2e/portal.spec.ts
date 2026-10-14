@@ -31,7 +31,7 @@ test('a dispatcher signs in (Arabic first) and sees the day with traffic lights'
   const rows = page.locator('tbody tr');
   await expect(rows).toHaveCount(4);
   await expect(page.locator('tbody tr[data-light="Amber"]')).toHaveCount(1);
-  await expect(page.getByText('CMAU5100028')).toBeVisible();
+  await expect(page.getByText('CMAU5100028', { exact: true })).toBeVisible();
   await shot(page, '02-appointments-ar');
 
   await page.getByRole('button', { name: 'English' }).click();
@@ -53,9 +53,9 @@ test('a terminal admin invites a user, who then shows as pending', async ({ page
 
   const email = `clerk-${test.info().project.name}-${Date.now()}@demo-terminal.example`;
   await page.getByRole('button', { name: 'Invite a user' }).click();
-  await page.getByLabel('Full name').fill('Gate Clerk Three');
-  await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Role').selectOption('GateClerk');
+  await page.getByLabel('Full name', { exact: true }).fill('Gate Clerk Three');
+  await page.getByLabel('Email', { exact: true }).fill(email);
+  await page.getByLabel('Role', { exact: true }).selectOption('GateClerk');
   await shot(page, '04-invite-form-en');
   await page.getByRole('button', { name: 'Send invitation' }).click();
 

@@ -15,7 +15,6 @@ export function GateLayout({ children }: { children: ReactNode }) {
     <div className="gate">
       <main className="gate-form" id="content">
         <div className="gate-top">
-          <span className="wordmark">{t('appName')}</span>
           <LanguageSwitch />
         </div>
         {children}
@@ -41,9 +40,7 @@ export function GateLayout({ children }: { children: ReactNode }) {
             <span>23</span>
           </div>
         </div>
-        <p className="muted" style={{ color: '#9aa7ad' }}>
-          {t('stripCaption')}
-        </p>
+        <p className="strip-caption">{t('stripCaption')}</p>
       </aside>
     </div>
   );

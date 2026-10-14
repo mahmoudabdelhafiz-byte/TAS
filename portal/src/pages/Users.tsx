@@ -113,7 +113,7 @@ export function UsersPage() {
                 <th scope="col">{t('colState')}</th>
                 <th scope="col">{t('colLastSignIn')}</th>
                 <th scope="col">
-                  <span className="visually-hidden">{t('colState')}</span>
+                  <span className="visually-hidden">{t('colActions')}</span>
                 </th>
               </tr>
             </thead>

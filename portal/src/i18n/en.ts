@@ -103,6 +103,7 @@ export const en = {
   colRole: 'Role',
   colState: 'State',
   colLastSignIn: 'Last sign-in',
+  colActions: 'Actions',
   never: 'Never',
   stateActive: 'Active',
   stateInvited: 'Invitation pending',

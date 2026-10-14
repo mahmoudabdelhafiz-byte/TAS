@@ -99,6 +99,7 @@ export const ar: Messages = {
   colRole: 'الدور',
   colState: 'الوضع',
   colLastSignIn: 'آخر دخول',
+  colActions: 'الإجراءات',
   never: 'لم يدخل بعد',
   stateActive: 'نشط',
   stateInvited: 'الدعوة بانتظار القبول',
