@@ -7,6 +7,7 @@ using Tas.Infrastructure;
 using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
+using Tas.Infrastructure.Notifications;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,6 +111,9 @@ var terminal = app.MapGroup("/api/terminals/{terminalId:int}").RequireAuthorizat
 
 // Planner configuration: templates, overrides, reservations, release rules, settings, slot board, audit.
 terminal.MapCapacityAdmin();
+
+// Notification outbox: what was sent to drivers / dispatchers, failures, re-send.
+terminal.MapNotifications();
 
 // Regenerate slots for a date range (local dates, inclusive) after changing templates or overrides.
 terminal.MapPost("/slots/generate", async (
@@ -313,6 +317,8 @@ if (app.Environment.IsDevelopment())
     app.MapPost("/api/dev/seed", async (DemoDataSeeder seeder, CancellationToken ct) => Results.Ok(await seeder.SeedAsync(ct)));
     app.MapPost("/api/dev/no-shows", async (NoShowService service, CancellationToken ct) =>
         Results.Ok(new { marked = await service.MarkNoShowsAsync(ct) }));
+    app.MapPost("/api/dev/notifications/run", async (SlotReminderService reminders, NotificationSender sender, CancellationToken ct) =>
+        Results.Ok(new { remindersQueued = await reminders.QueueDueAsync(ct), delivery = await sender.RunAsync(ct) }));
 }
 
 app.Run();

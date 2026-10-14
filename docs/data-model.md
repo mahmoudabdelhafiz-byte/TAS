@@ -147,7 +147,7 @@ Appointment statuses: `DRAFT → CONFIRMED → EN_ROUTE → ARRIVED → GATE_IN 
 | Table | Purpose |
 |---|---|
 | `AppointmentMessage` | Driver ↔ control room chat: text, voice notes, call requests, location, and **templated messages** (e.g. "Go to trouble desk") auto-shown in the driver's language. |
-| `NotificationLog` | Every outbound push / SMS / WhatsApp / email with template, language and delivery status. |
+| `NotificationLog` | Outbox of every push / SMS / WhatsApp / email: template, language, recipient, status (queued / sent / failed / skipped), attempts, next attempt, last error. |
 | `ApiClient` | Credentials, scopes and rate limits for trucking companies booking from their own TMS. |
 
 ### 3.11 Traffic-light logic (driver app)

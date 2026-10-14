@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after the N4 adapter)
+Last updated: 2026-10-14 (after the notification sender)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -141,6 +141,20 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | N4 outage: booking warns (or rejects, configurable) and is re-checked when N4 answers; trip start refused; gate refers to trouble desk |
 | ✅ | Tests: evaluator unit tests, SOAP client against a fake server, booking / re-check / gate flows with a stub N4 |
 
+### 12. Notification sender (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Outbox delivery every 30 s; messages queued in the same transaction as the change that causes them |
+| ✅ | Templates in Arabic, English, Urdu, Hindi (SMS short, email with details); failing containers and problems named in the recipient's language |
+| ✅ | Templates: STATUS_RED, STATUS_CLEARED, SLOT_REMINDER (2 h before; dispatcher if no driver yet), SLOT_CLOSED (terminal closed a booked slot) |
+| ✅ | Re-checked before sending: skipped if cancelled / done, slot passed, superseded by a newer status, or older than 12 h |
+| ✅ | Retries with back-off for transient errors (max 5 attempts); permanent errors fail at once |
+| ✅ | Safe with several API instances: rows claimed with FOR UPDATE SKIP LOCKED and a lease |
+| ✅ | Providers: generic HTTP SMS gateway (any Saudi provider by configuration), SMTP email (RTL HTML for Arabic / Urdu), Log for development; None by default so missing setup is visible |
+| ✅ | API: notification log for terminal staff with filters; re-send failed messages (planners / admins) |
+| ✅ | Database: recipient, attempts, next attempt, last error, SKIPPED status; upgrade script `db/migrations/005_notifications.sql` |
+| ✅ | Tests: renderer and rules unit tests, SMS gateway / email against a fake server, end-to-end outbox flows incl. concurrent senders, API |
+
 ---
 
 ## Remaining
@@ -148,7 +162,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase A — Backend MVP (make it usable by real customers)
 | | Item | Notes |
 |---|---|---|
-| ⬜ | Password reset | Forgotten-password flow (email or SMS), invited users set their own password |
+| 🔜 | **Password reset** | Forgotten-password flow (email or SMS, using the notification sender), invited users set their own password |
 | ⬜ | EF Core migrations | Replace `db/schema.sql` as the source of truth |
 
 ### Phase B — Gate
@@ -164,7 +178,8 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | N4 write-back | Pre-advise exports / create truck visits in N4 from bookings ❓ go-ahead needed |
 | ⬜ | FASAH customs release | If not already reflected in N4 |
 | ⬜ | National appointment platform | Check whether Mawani / FASAH requires integration at the customer's port ❓ |
-| 🔜 | **Notification sender** | Deliver the queued outbox (SMS / WhatsApp / email / push) in the recipient's language; reminders, slot closed |
+| ⬜ | SMS provider account | Pick the customer's SMS gateway, register the sender name with the CST, fill `Notifications:Sms:Http` ❓ which provider |
+| ⬜ | WhatsApp / push channels | WhatsApp Business templates (pre-approved per language); push comes with the driver app (Phase E) |
 | ⬜ | Trucking company API | Client credentials, scopes, rate limits for bookings from their own TMS |
 
 ### Phase D — Operator & company portal (React)
@@ -211,3 +226,4 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | 7 | Fees: free booking, paid booking, or penalties for no-show / late only? | Phase A, billing |
 | 8 | Slot length: fixed per terminal, or different lengths by time of day? | Capacity engine |
 | 9 | Can N4 provide yard positions per truck visit in real time? | Yard guidance |
+| 10 | Which SMS provider does the customer use (or should we contract one)? Urdu / Hindi texts reviewed by a native speaker? | Notifications |

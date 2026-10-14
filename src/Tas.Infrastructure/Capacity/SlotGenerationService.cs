@@ -1,11 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Tas.Application.Capacity;
+using Tas.Domain;
+using Tas.Domain.Booking;
+using Tas.Infrastructure.Notifications;
 using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.Capacity;
 
-public sealed record SlotGenerationResult(int TerminalId, DateOnly From, DateOnly To, int Created, int Updated, int Closed, int OverCapacity);
+/// <param name="AppointmentsInClosedSlots">Booked appointments whose slot was just closed; their driver and booker are notified.</param>
+public sealed record SlotGenerationResult(
+    int TerminalId, DateOnly From, DateOnly To, int Created, int Updated, int Closed, int OverCapacity, int AppointmentsInClosedSlots = 0);
 
 /// <summary>Loads a terminal's capacity rules, plans slots and writes them, preserving booked counters.</summary>
 public sealed class SlotGenerationService(TasDbContext db, TimeProvider clock, ILogger<SlotGenerationService> logger)
@@ -61,11 +66,26 @@ public sealed class SlotGenerationService(TasDbContext db, TimeProvider clock, I
             .Where(s => s.TerminalId == terminalId && s.StartAt >= rangeStart && s.StartAt < rangeEnd)
             .ToListAsync(ct);
 
-        var outcome = SlotReconciler.Reconcile(terminalId, planned, existing, clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        var openWithBookings = existing.Where(s => !s.IsClosed && s.TotalBooked > 0 && s.EndAt > now).Select(s => s.SlotId).ToHashSet();
+
+        var outcome = SlotReconciler.Reconcile(terminalId, planned, existing, now);
         db.Slots.AddRange(outcome.ToAdd);
+
+        // Bookings are never cancelled, but a booked slot that is now closed needs a new time: tell the driver and the booker.
+        var newlyClosed = existing.Where(s => s.IsClosed && openWithBookings.Contains(s.SlotId)).Select(s => s.SlotId).ToList();
+        var affected = await db.Appointments.AsNoTracking()
+            .Where(a => newlyClosed.Contains(a.SlotId) && (a.Status == AppointmentStatus.Confirmed || a.Status == AppointmentStatus.EnRoute))
+            .Select(a => new { a.AppointmentId, a.DriverId, a.CreatedBy })
+            .ToListAsync(ct);
+        foreach (var a in affected)
+            await NotificationOutbox.QueueAsync(db, a.AppointmentId, a.DriverId, a.CreatedBy, NotificationTemplates.SlotClosed, now, ct);
+
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
+        if (affected.Count > 0)
+            logger.LogWarning("Terminal {TerminalId}: {Count} booked appointment(s) are in slots that were closed; drivers and bookers notified", terminalId, affected.Count);
         if (outcome.OverCapacity > 0)
             logger.LogWarning("Terminal {TerminalId}: {Count} slot(s) are booked above their new capacity", terminalId, outcome.OverCapacity);
 
@@ -73,7 +93,7 @@ public sealed class SlotGenerationService(TasDbContext db, TimeProvider clock, I
             "Terminal {TerminalId} slots {From}..{To}: {Created} created, {Updated} updated, {Closed} closed",
             terminalId, from, to, outcome.ToAdd.Count, outcome.Updated, outcome.Orphaned);
 
-        return new SlotGenerationResult(terminalId, from, to, outcome.ToAdd.Count, outcome.Updated, outcome.Orphaned, outcome.OverCapacity);
+        return new SlotGenerationResult(terminalId, from, to, outcome.ToAdd.Count, outcome.Updated, outcome.Orphaned, outcome.OverCapacity, affected.Count);
     }
 
     private static DateTimeOffset StartOfLocalDayUtc(DateOnly date, TimeZoneInfo timeZone)
