@@ -100,7 +100,7 @@ test('a dispatcher books a visit on the slot board, then moves and cancels it', 
   await page.getByLabel('رقم الحاوية').fill(container);
 
   const open = page.locator('.slot[data-state="open"]');
-  await open.last().click();
+  await open.nth(-2).click();
   await page.getByLabel('الشاحنة', { exact: true }).selectOption({ label: '5678 HDR' });
   await shot(page, '07-book-ar');
   await page.getByRole('button', { name: 'احجز الزيارة' }).click();
@@ -112,9 +112,9 @@ test('a dispatcher books a visit on the slot board, then moves and cancels it', 
   await page.getByRole('button', { name: 'English' }).click();
   await shot(page, '08-appointment-en');
 
-  // Move it to another open time.
+  // Move it to another open time — a late one: cancelling closes 60 minutes before the slot.
   await page.getByRole('button', { name: 'Move to another time' }).click();
-  await page.locator('.slot[data-state="open"]').first().click();
+  await page.locator('.slot[data-state="open"]').last().click();
   await page.getByRole('button', { name: /^Move to \d\d:\d\d$/ }).click();
   await expect(page.getByText(/^Moved to /)).toBeVisible();
 
