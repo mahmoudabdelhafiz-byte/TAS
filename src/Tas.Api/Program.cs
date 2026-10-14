@@ -8,8 +8,13 @@ using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
 using Tas.Infrastructure.Notifications;
+using Tas.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// "Tas.Api migrate [status]": create / upgrade the database and exit (no web server, no other settings needed).
+if (args.Length > 0 && string.Equals(args[0], "migrate", StringComparison.OrdinalIgnoreCase))
+    return await DatabaseStartup.CommandAsync(args[1..], builder.Configuration);
 
 builder.Services.AddTasInfrastructure(builder.Configuration);
 builder.Services.AddOpenApi();
@@ -38,6 +43,9 @@ app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
+
+// Database:Migrations = Apply (default) / Verify / Off — before anything touches the database.
+await DatabaseStartup.RunAsync(app.Configuration, app.Services.GetRequiredService<ILoggerFactory>());
 
 using (var scope = app.Services.CreateScope())
     await scope.ServiceProvider.GetRequiredService<AdminBootstrapper>().EnsureAsync();
@@ -343,6 +351,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+return 0;
 
 public partial class Program
 {

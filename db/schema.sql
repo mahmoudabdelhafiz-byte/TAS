@@ -1,6 +1,12 @@
 /* =====================================================================
    Truck Appointment System (TAS) — PostgreSQL schema, draft v0.7
    Requires PostgreSQL 15+ and PostGIS (for geofences).
+
+   READ-ONLY SNAPSHOT of the schema after all of db/migrations/. The
+   database is created and upgraded by those numbered scripts (the API
+   applies them; see README "Database"). To change the schema, add a new
+   db/migrations/NNN_name.sql and update this file to match — CI fails if
+   the two differ.
    Multi-terminal. See docs/data-model.md for the design.
 
    Conventions

@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after password reset)
+Last updated: 2026-10-14 (after database migrations)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -167,14 +167,25 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Database: `password_token`, `notification_log.payload`; upgrade script `db/migrations/006_password_tokens.sql` |
 | ✅ | Tests: email texts, encryption, full flows incl. lockout, limits, expiry, invitations, concurrency, API |
 
+### 14. Database migrations (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | Decision: versioned SQL scripts with a built-in runner instead of EF-generated migrations — EF maps 27 of 36 tables and none of the PostGIS columns, so generated migrations would drop tables and most CHECK constraints / partial indexes |
+| ✅ | `db/migrations/001_initial.sql` (v0.2 from history) + 002–006 rebuild today's schema exactly (verified table by table) |
+| ✅ | Runner compiled into the API: `schema_migration` history with checksums, one transaction per script, advisory lock for concurrent instances |
+| ✅ | Safety: edited applied scripts, out-of-order scripts and databases newer than the build are refused with a clear message |
+| ✅ | Existing databases (from `schema.sql` or the manual scripts) recognised and baselined automatically |
+| ✅ | `Tas.Api migrate` / `migrate status` for deployment pipelines; `Database:Migrations` = Apply / Verify / Off on start |
+| ✅ | `db/schema.sql` kept as a readable snapshot; CI fails if it drifts from the migrations |
+| ✅ | CI creates its test databases with the same `migrate` command used in deployments |
+| ✅ | Tests: script naming / ordering / checksums; fresh, baseline, partial upgrade, edited script, older build, failing script rollback, 4 parallel instances |
+
 ---
 
 ## Remaining
 
 ### Phase A — Backend MVP (make it usable by real customers)
-| | Item | Notes |
-|---|---|---|
-| 🔜 | **EF Core migrations** | Replace `db/schema.sql` and the hand-written upgrade scripts as the source of truth |
+✅ Complete (sections 5–14). Fees / billing wait for open decision 7.
 
 ### Phase B — Gate
 | | Item | Notes |
@@ -196,6 +207,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
+| 🔜 | **Portal foundation**: React + TypeScript, sign-in (incl. forgot password / accept invite pages), Arabic / English with RTL, role-based navigation |
 | ⬜ | Capacity setup: weekly template grid, seasonal templates, overrides calendar |
 | ⬜ | Slot board: capacity vs booked per hour/category, over-capacity alerts |
 | ⬜ | Appointments: search, details, cancel / move on behalf of companies |

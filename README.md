@@ -26,7 +26,8 @@ Multi-terminal by design: one deployment serves many terminals.
 
 ```
 docs/                         design documents (docs/data-model.md) and progress log (docs/progress.md)
-db/schema.sql                 PostgreSQL + PostGIS schema
+db/migrations/                numbered SQL scripts that create and upgrade the database (source of truth)
+db/schema.sql                 read-only snapshot of the full schema (CI checks it matches the migrations)
 src/Tas.Domain                entities
 src/Tas.Application           capacity engine (pure logic: planning, availability, reconciliation)
 src/Tas.Infrastructure        EF Core + Npgsql, slot generation, availability queries, booking counters
@@ -34,7 +35,6 @@ src/Tas.Api                   ASP.NET Core minimal API
 tests/Tas.Application.Tests   unit tests for the capacity rules
 tests/Tas.Infrastructure.Tests integration tests against PostgreSQL (run when TAS_TEST_DB is set)
 tests/Tas.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)
-db/migrations/                scripts to upgrade an existing database
 integrations/n4/              Navis N4: Groovy code extension (TasLookup) and setup guide
 ```
 
@@ -44,10 +44,8 @@ Requires the .NET 10 SDK and PostgreSQL 15+ with PostGIS.
 
 ```bash
 createdb tas
-psql -d tas -f db/schema.sql
-
 # set ConnectionStrings:Tas in src/Tas.Api/appsettings.json (or an environment variable)
-dotnet run --project src/Tas.Api
+dotnet run --project src/Tas.Api          # creates / upgrades the database on start, then serves
 ```
 
 Production settings (environment variables):
@@ -58,16 +56,33 @@ Production settings (environment variables):
 | `Jwt__SigningKey` | **Required.** Random secret, at least 32 characters. The API refuses to start without it |
 | `Bootstrap__AdminEmail`, `Bootstrap__AdminPassword` | Creates the first SysAdmin on start if none exists; remove afterwards |
 
-Upgrading an existing database: run the scripts in `db/migrations/` in order.
+### Database
+
+The schema is created and upgraded by the numbered scripts in `db/migrations/` (`001_initial.sql`, `002_auth.sql`, …),
+compiled into the API. Applied versions are recorded in `schema_migration` with a checksum.
+
+| | |
+|---|---|
+| `Tas.Api migrate` | Apply pending migrations and exit (deployment step; needs only `ConnectionStrings__Tas`) |
+| `Tas.Api migrate status` | Show applied / pending migrations; exit code 1 if not up to date |
+| `Database:Migrations` | What the API does on start: `Apply` (default — migrate, then start), `Verify` (refuse to start if not up to date; use with a separate `migrate` step), `Off` |
+
+- Each script runs in its own transaction; a failing script is rolled back and the database stays at the previous version.
+- Several instances starting together are safe: one migrates, the others wait (advisory lock, `Database:MigrationLockTimeoutSeconds`, 300).
+- Editing an already-applied script stops the run — put the change in a new script. Running an older build against a newer database is refused.
+- Databases created earlier from `db/schema.sql` or the old upgrade scripts are recognised and recorded as a baseline automatically.
+- To change the schema: add `db/migrations/NNN_name.sql` (next number, lower-case name, no `BEGIN`/`COMMIT`, no `CONCURRENTLY`) and update `db/schema.sql` to match; CI rebuilds both and compares every table, column, constraint and index.
 
 Tests:
 
 ```bash
 dotnet test tests/Tas.Application.Tests
 
-# integration and API tests each need their own database created from db/schema.sql
+# integration and API tests each need their own database, migrated with `Tas.Api migrate`
 export TAS_TEST_DB="Host=localhost;Database=tas_test;Username=postgres;Password=postgres"
 export TAS_API_TEST_DB="Host=localhost;Database=tas_api_test;Username=postgres;Password=postgres"
+ConnectionStrings__Tas="$TAS_TEST_DB" dotnet run --project src/Tas.Api -- migrate
+ConnectionStrings__Tas="$TAS_API_TEST_DB" dotnet run --project src/Tas.Api -- migrate
 dotnet test tests/Tas.Infrastructure.Tests
 dotnet test tests/Tas.Api.Tests
 ```
