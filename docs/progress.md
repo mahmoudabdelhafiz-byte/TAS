@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after database migrations)
+Last updated: 2026-10-14 (after the portal foundation)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -180,6 +180,19 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | CI creates its test databases with the same `migrate` command used in deployments |
 | ✅ | Tests: script naming / ordering / checksums; fresh, baseline, partial upgrade, edited script, older build, failing script rollback, 4 parallel instances |
 
+### 15. Web portal foundation (2026-10-14)
+| | Item |
+|---|---|
+| ✅ | `portal/`: React + TypeScript (Vite), React Router, TanStack Query; served by the API from `Portal:Path` (one address, strict CSP) |
+| ✅ | Arabic first (RTL) with English; typed texts (a missing Arabic text fails the build); Gregorian dates, Latin digits, terminal time zone |
+| ✅ | Sign in, forgot password, set password / accept invitation (token from the URL fragment, removed after reading) |
+| ✅ | Appointments of a day: traffic light as a coloured row edge, counts per light, refresh every minute; stacked blocks on phones |
+| ✅ | Users (admins): invite, resend invitation, deactivate / reactivate; pending invitations shown |
+| ✅ | My account: language of emails and SMS, change password (stays signed in on this device) |
+| ✅ | Sessions: access token in memory, rotating refresh token, refreshes serialised across browser tabs |
+| ✅ | API: `GET /api/terminals`, `PUT /api/auth/me/language`, `passwordSet` on users |
+| ✅ | CI: type check, 16 unit tests, build; Playwright end-to-end tests against the real API on desktop and phone; screenshots pushed to the `ci-screenshots/<branch>` branch |
+
 ---
 
 ## Remaining
@@ -207,7 +220,8 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| 🔜 | **Portal foundation**: React + TypeScript, sign-in (incl. forgot password / accept invite pages), Arabic / English with RTL, role-based navigation |
+| 🔜 | **Booking screen**: availability for a day and category, book single / dual / cargo visits, assign truck and driver, cancel / move |
+| ⬜ | Reasons in the user's language: API returns reason codes + values (today the traffic-light reasons and server errors are English only) |
 | ⬜ | Capacity setup: weekly template grid, seasonal templates, overrides calendar |
 | ⬜ | Slot board: capacity vs booked per hour/category, over-capacity alerts |
 | ⬜ | Appointments: search, details, cancel / move on behalf of companies |
