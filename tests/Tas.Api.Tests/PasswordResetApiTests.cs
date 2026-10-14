@@ -41,12 +41,12 @@ public sealed class PasswordResetApiTests(TasApiFactory factory) : ApiTestBase(f
         Assert.Equal(email, info.GetProperty("email").GetString());
 
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/auth/reset-password", new { token, newPassword = "weak" })).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/auth/reset-password", new { token, newPassword = "Planner-Reset-2026" })).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/auth/reset-password", new { token, newPassword = "Planner-Again-2026" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/auth/reset-password", new { token, newPassword = "Quay-Crane-2026" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/auth/reset-password", new { token, newPassword = "Quay-Again-2026" })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/auth/password-link", new { token })).StatusCode);
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await LoginRaw(email, Password)).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await LoginRaw(email, "Planner-Reset-2026")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await LoginRaw(email, "Quay-Crane-2026")).StatusCode);
     }
 
     [Fact]
