@@ -76,7 +76,7 @@ test('a terminal admin invites a user, who then shows as pending', async ({ page
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Role', { exact: true }).selectOption('GateClerk');
   await shot(page, '04-invite-form-en');
-  await page.getByRole('button', { name: 'Send invitation' }).click();
+  await page.getByRole('button', { name: 'Send invitation', exact: true }).click();
 
   await expect(page.getByText(`Invitation sent to ${email}.`)).toBeVisible();
   const row = page.locator('tr', { hasText: email });
