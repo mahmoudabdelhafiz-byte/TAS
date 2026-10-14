@@ -197,7 +197,7 @@ jobs:
           ASPNETCORE_ENVIRONMENT=Development \
           Portal__Path="$GITHUB_WORKSPACE/portal/dist" \
           RateLimit__AuthPerMinute=500 \
-          nohup dotnet src/Tas.Api/bin/Release/net10.0/Tas.Api.dll --urls http://localhost:5000 > api.log 2>&1 &
+          nohup sh -c 'cd src/Tas.Api/bin/Release/net10.0 && exec dotnet Tas.Api.dll --urls http://localhost:5000' > api.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:5000/health && break; sleep 1; done
           curl -sf http://localhost:5000/health
           curl -sf http://localhost:5000/sign-in | grep -q '<div id="root">'
