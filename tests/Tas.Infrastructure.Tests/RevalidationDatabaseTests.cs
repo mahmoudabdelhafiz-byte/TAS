@@ -48,6 +48,9 @@ public sealed class RevalidationDatabaseTests : IAsyncLifetime
         public string Source => "N4";
         public Task<IReadOnlyList<TosCheck>> ValidateAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default) =>
             throw new HttpRequestException("TOS unreachable");
+
+        public Task<IReadOnlyList<TosBlUnit>?> FindBlContainersAsync(int terminalId, string blNo, CancellationToken ct = default) =>
+            throw new HttpRequestException("TOS unreachable");
     }
 
     private sealed class Services(TimeProvider clock, ITosAdapter tos) : IAsyncDisposable

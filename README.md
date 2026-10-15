@@ -112,6 +112,7 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | `POST` | `/api/terminals/{id}/slots/generate?from=2026-10-20&to=2026-10-27` | Regenerate slots after changing templates or overrides (local dates) |
 | `GET` | `/api/terminals/{id}/availability?date=2026-10-20&category=IMP_PICKUP&companyId=1` | Slots of a day with remaining capacity for a category |
 | `POST` | `/api/terminals/{id}/appointments` | Book a truck visit (1–4 moves; 2+ = dual transaction) |
+| `POST` | `/api/terminals/{id}/containers/lookup` | Book by BL or several containers: `{category, blNo}` or `{category, containers[], bookingRef?}` → each container with size and status (Ready / Warning / Blocked / Booked) and what stops it. Books nothing |
 | `GET` | `/api/terminals/{id}/appointments/{no}` | One appointment with checks and live traffic light |
 | `GET` | `/api/terminals/{id}/appointments?date=2026-10-20&companyId=1` | Appointments of a day |
 | `POST` | `/api/terminals/{id}/appointments/{no}/cancel` | Cancel (until the cancellation cut-off; terminal staff any time) |

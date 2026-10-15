@@ -35,6 +35,9 @@ public sealed class FakeTosOptions
 
     /// <summary>Cargo references (BL / DO) not released by customs.</summary>
     public List<string> CargoNotReleased { get; set; } = [];
+
+    /// <summary>Import bills of lading and their containers, as "CONTAINER" or "CONTAINER:ISOTYPE" (e.g. "MSCU1234566:22G1").</summary>
+    public Dictionary<string, List<string>> BillsOfLading { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : ITosAdapter
@@ -94,6 +97,20 @@ public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : IT
         }
 
         return Task.FromResult<IReadOnlyList<TosCheck>>(checks);
+    }
+
+    public Task<IReadOnlyList<TosBlUnit>?> FindBlContainersAsync(int terminalId, string blNo, CancellationToken ct = default)
+    {
+        var bls = options.CurrentValue.BillsOfLading;
+        var key = bls.Keys.FirstOrDefault(k => string.Equals(k, blNo.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (key is null)
+            return Task.FromResult<IReadOnlyList<TosBlUnit>?>(null);
+
+        IReadOnlyList<TosBlUnit> units = bls[key]
+            .Select(entry => entry.Split(':', 2, StringSplitOptions.TrimEntries))
+            .Select(parts => new TosBlUnit(parts[0].ToUpperInvariant(), parts.Length > 1 && parts[1].Length > 0 ? parts[1].ToUpperInvariant() : null))
+            .ToList();
+        return Task.FromResult<IReadOnlyList<TosBlUnit>?>(units);
     }
 
     private static bool Listed(IEnumerable<string> list, string? key) =>

@@ -5,6 +5,7 @@ import { addDays, dayLabel, localDate, slotRange } from '../lib/time.ts';
 import type { Appointment, BookingItemInput, Category, Company, Driver, SlotAvailability, Truck } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { DayStepper, LoadError, Notice, TrafficLight, useLoad } from '../ui/kit.tsx';
+import { ManyTrucks } from './ManyTrucks.tsx';
 
 interface ItemDraft {
   category: string;
@@ -36,6 +37,8 @@ export function Book() {
   const [error, setError] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<ApiError | null>(null);
   const [booked, setBooked] = useState<Appointment | null>(null);
+  const [many, setMany] = useState(false);
+  const [hourSet, setHourSet] = useState<number[]>([]);
 
   const categories = useLoad(() => api.get<Category[]>(`${base}/categories`), [base]);
   const companies = useLoad(
@@ -57,12 +60,15 @@ export function Book() {
     if (categories.data?.length && items.length === 0) setItems([emptyItem(categories.data[0].code)]);
   }, [categories.data, items.length]);
 
-  useEffect(() => setSlotId(null), [date, mainCategory]);
+  useEffect(() => { setSlotId(null); setHourSet([]); }, [date, mainCategory]);
 
   const byCode = new Map((categories.data ?? []).map(c => [c.code, c]));
   const maxDate = addDays(today, Math.max(0, terminal.bookingHorizonDays - 1));
   const now = Date.now();
   const chosen = slots.data?.find(s => s.slotId === slotId) ?? null;
+  const containerMove = byCode.get(mainCategory)?.mode === 'Container';
+  const severalTrucks = many && containerMove;
+  const pickedHours = (slots.data ?? []).filter(s => hourSet.includes(s.slotId));
 
   function update(index: number, patch: Partial<ItemDraft>) {
     setItems(list => list.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -156,17 +162,35 @@ export function Book() {
             </div>
           </fieldset>
 
+          {containerMove && (
+            <fieldset className="block">
+              <legend>{t('book.howMany')}</legend>
+              <div className="segmented" role="radiogroup">
+                <label className={!many ? 'seg active' : 'seg'}>
+                  <input type="radio" name="many" checked={!many} onChange={() => setMany(false)} />{t('book.one')}
+                </label>
+                <label className={many ? 'seg active' : 'seg'}>
+                  <input type="radio" name="many" checked={many} onChange={() => setMany(true)} />{t('book.many')}
+                </label>
+              </div>
+            </fieldset>
+          )}
+
           <fieldset className="block">
-            <legend>{t('book.hour')}</legend>
+            <legend>{severalTrucks ? t('book.hours') : t('book.hour')}</legend>
+            {severalTrucks && <p className="hint">{t('book.hoursHint')}</p>}
             {slots.error && <LoadError error={slots.error} retry={slots.reload} />}
             {slots.data && slots.data.length === 0 && !slots.loading && <p className="muted">{t('book.noSlots')}</p>}
-            <div className="hours" role="radiogroup" aria-busy={slots.loading}>
+            <div className="hours" role={severalTrucks ? 'group' : 'radiogroup'} aria-busy={slots.loading}>
               {(slots.data ?? []).map(s => {
                 const past = new Date(s.endAt).getTime() <= now;
                 const unavailable = s.isClosed || s.available <= 0 || past;
                 return (
-                  <label key={s.slotId} className={`hour${slotId === s.slotId ? ' active' : ''}${unavailable ? ' off' : ''}`}>
-                    <input type="radio" name="slot" disabled={unavailable} checked={slotId === s.slotId} onChange={() => setSlotId(s.slotId)} />
+                  <label key={s.slotId} className={`hour${(severalTrucks ? hourSet.includes(s.slotId) : slotId === s.slotId) ? ' active' : ''}${unavailable ? ' off' : ''}`}>
+                    {severalTrucks
+                      ? <input type="checkbox" disabled={unavailable} checked={hourSet.includes(s.slotId)}
+                          onChange={() => setHourSet(set => (set.includes(s.slotId) ? set.filter(x => x !== s.slotId) : [...set, s.slotId]))} />
+                      : <input type="radio" name="slot" disabled={unavailable} checked={slotId === s.slotId} onChange={() => setSlotId(s.slotId)} />}
                     <span className="hour-time">{slotRange(s.startAt, s.endAt, terminal.timeZone)}</span>
                     <span className="hour-free">
                       {s.isClosed ? t('book.closed') : s.available <= 0 ? t('book.full') : t('book.free', { n: s.available })}
@@ -178,6 +202,9 @@ export function Book() {
           </fieldset>
         </div>
 
+        {severalTrucks ? (
+          <ManyTrucks key={mainCategory} category={mainCategory} hours={pickedHours} companyId={companyId} onBooked={slots.reload} />
+        ) : (
         <div className="book-side">
           <fieldset className="block">
             <legend>{t('book.moves')}</legend>
@@ -254,6 +281,7 @@ export function Book() {
             {busy ? t('book.busy') : chosen ? t('book.submit', { time: slotRange(chosen.startAt, chosen.endAt, terminal.timeZone) }) : t('book.pickHour')}
           </button>
         </div>
+        )}
       </div>
     </section>
   );

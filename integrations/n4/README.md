@@ -70,6 +70,8 @@ The `responsePayLoad` should be JSON like:
 | Empty return | Container not already in the terminal; holds |
 | Breakbulk / bulk (BL) | BL known; released; holds |
 
+**Book by BL** (several trucks at once): `blUnits` lists the containers of an import BL that are still active in N4 (announced, inbound or in the yard) with their ISO type; each is then checked like an import pickup. The unit → BL path in `blUnitsInfo` is marked VERIFY.
+
 ## 4. When N4 can't be reached
 
 Timeouts, HTTP errors, SOAP faults, a missing payload or `{"error": …}` from the code extension all count as

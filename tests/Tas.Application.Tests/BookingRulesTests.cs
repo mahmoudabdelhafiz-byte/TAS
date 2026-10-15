@@ -191,3 +191,29 @@ public class AppointmentNumberAndSettingsTests
         Assert.Equal(TerminalSettings.Defaults.CancelCutoffMinutes, settings.CancelCutoffMinutes);
     }
 }
+
+public class ContainerListTests
+{
+    [Theory]
+    [InlineData("22G1", 20)]
+    [InlineData("45G1", 40)]
+    [InlineData("42R1", 40)]
+    [InlineData("L5G1", 45)]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    [InlineData("X5G1", null)]
+    public void Length_comes_from_the_iso_size_code(string? iso, int? feet) =>
+        Assert.Equal(feet, IsoSizeType.LengthFeet(iso));
+
+    [Fact]
+    public void Pasted_lists_split_on_lines_commas_and_spaces_between_numbers()
+    {
+        var list = IsoSizeType.SplitContainers(new[]
+        {
+            "MSCU1234566\nmscu 552341-7, TGHU8812340;MSCU1234566",
+            "CMAU5100028 MEDU2601003\tXX",
+        });
+
+        Assert.Equal(new[] { "MSCU1234566", "MSCU5523417", "TGHU8812340", "CMAU5100028", "MEDU2601003", "XX" }, list.ToArray());
+    }
+}

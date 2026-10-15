@@ -6,7 +6,7 @@
  * ArgoService.genericInvoke:
  *
  *   <groovy class-location="code-extension" class-name="TasLookup">
- *     <parameters><parameter id="request" value='{"units":[...],"orders":[...],"bls":[...]}'/></parameters>
+ *     <parameters><parameter id="request" value='{"units":[...],"orders":[...],"bls":[...],"blUnits":[...]}'/></parameters>
  *   </groovy>
  *
  * READ-ONLY: it only looks things up and returns JSON (shape below). It never changes N4 data.
@@ -19,8 +19,10 @@
  * {
  *   "units":  [{ "containerNo","found","gkey","category","freightKind","transitState","lineOperator","vgmKg","holds":[...] }],
  *   "orders": [{ "nbr","found","gkey","subType","lineOperator","quantityRemaining","cargoCutoff","holds":[...] }],
- *   "bls":    [{ "nbr","found","gkey","released","holds":[...] }]
+ *   "bls":    [{ "nbr","found","gkey","released","holds":[...] }],
+ *   "blUnits":[{ "nbr","found","units":[{ "containerNo","isoType" }] }]
  * }
+ *   blUnits:       containers of an import BL still in the terminal or announced (used for "book by BL")
  *   category:      IMPRT | EXPRT | STRGE | TRSHP | THRGH
  *   transitState:  S10_ADVISED | S20_INBOUND | S30_ECIN | S40_YARD | S50_ECOUT | S60_LOADED | S70_DEPARTED | S99_RETIRED
  *   holds:         ids of ACTIVE holds that stop road delivery / receipt (TAS maps them via N4:HoldMapping)
@@ -52,12 +54,14 @@ class TasLookup {
             def units = (request.units ?: []).take(MAX_ITEMS)
             def orders = (request.orders ?: []).take(MAX_ITEMS)
             def bls = (request.bls ?: []).take(MAX_ITEMS)
+            def blUnits = (request.blUnits ?: []).take(MAX_ITEMS)
 
             UnitFinder finder = (UnitFinder) Roastery.getBean(UnitFinder.BEAN_ID)
             return JsonOutput.toJson([
                 units : units.collect { String nbr -> unitInfo(finder, nbr) },
                 orders: orders.collect { String nbr -> orderInfo(nbr) },
                 bls   : bls.collect { String nbr -> blInfo(nbr) },
+                blUnits: blUnits.collect { String nbr -> blUnitsInfo(nbr) },
             ])
         } catch (Throwable t) {
             return JsonOutput.toJson([error: (t.getClass().getSimpleName() + ": " + t.getMessage())])
@@ -158,6 +162,34 @@ class TasLookup {
             released: holds.isEmpty(),
             holds   : holds,
         ]
+    }
+
+    // ------------------------------------------------------------------ containers of an import BL
+
+    private static final int MAX_BL_UNITS = 200
+
+    private Map blUnitsInfo(String nbr) {
+        // VERIFY: path from a unit to its BL number on your version. Containers carry the BL in their goods
+        // (unit.unitGoods.gdsBlNbr); some sites link units through BlGoodsBl instead. Only active visits are listed
+        // (announced, inbound or in the yard), so delivered containers drop off the list.
+        DomainQuery dq = QueryUtils.createDomainQuery("UnitFacilityVisit")
+            .addDqPredicate(PredicateFactory.eq(com.navis.framework.metafields.MetafieldIdFactory.valueOf("ufvUnit.unitGoods.gdsBlNbr"), nbr))
+            .addDqPredicate(PredicateFactory.eq(com.navis.framework.metafields.MetafieldIdFactory.valueOf("ufvVisitState"),
+                com.navis.argo.business.atoms.UfvVisitStateEnum.ACTIVE))                          // VERIFY enum name
+        List visits = HibernateApi.getInstance().findEntitiesByDomainQuery(dq)
+        if (visits == null || visits.isEmpty())
+            return [nbr: nbr, found: false]
+
+        def units = visits.take(MAX_BL_UNITS).collect { UnitFacilityVisit ufv ->
+            Unit unit = ufv.getUfvUnit()
+            String isoType = null
+            try {
+                isoType = unit.getPrimaryEq()?.getEqEquipType()?.getEqtypId()                     // VERIFY, e.g. "22G1"
+            } catch (MissingMethodException ignored) { }
+            [containerNo: unit.getUnitId(), isoType: isoType]
+        }.unique { it.containerNo }
+
+        return [nbr: nbr, found: true, units: units]
     }
 
     // ------------------------------------------------------------------ helpers
