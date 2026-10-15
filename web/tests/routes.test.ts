@@ -17,6 +17,9 @@ test('each role gets its own menu', () => {
   assert.deepEqual(screensFor('GateClerk'), ['gate', 'appointments']);
   assert.equal(screensFor('Planner')[0], 'slots');
   assert.ok(!screensFor('CompanyAdmin').includes('gate'));
+  assert.ok(screensFor('TerminalAdmin').includes('map') && screensFor('Planner').includes('map'));
+  assert.ok(!screensFor('CompanyAdmin').includes('map') && !screensFor('GateClerk').includes('map'));
+  assert.equal(parseHash('#/map').screen, 'map');
 });
 
 test('gate lookup tells appointment numbers from plates', () => {

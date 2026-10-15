@@ -222,6 +222,18 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | App: "Where to go" button after gate-in; next stop in large text (block, row, bay, tier) and a map drawn on the phone from the terminal plan — no map service, works with weak signal; refreshes every 30 s |
 | ✅ | Tests: routing (one-way, unreachable), stop order and route ends, moved container, road upload rights and validation, app parsing and map projection |
 
+### 20. Terminal map editor (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Portal screen "Terminal map" for terminal staff: terminal admins edit, planners view |
+| ✅ | Draw areas (yard blocks with their TOS block name, gate, exit, pre-gate, parking, CFS, approach) and roads; reshape by dragging corners, add / remove corners; one-way roads with arrows and reverse |
+| ✅ | New roads join existing ones where they start or end on them; moving a junction keeps the roads joined |
+| ✅ | Check before saving: gate and exit drawn, roads in one piece, every block reachable from the gate and left to the exit, block names present and unique |
+| ✅ | Try a route between any two points on the current (unsaved) roads, same routing rules as the server |
+| ✅ | Import a GeoJSON export from CAD / GIS (polygons → areas, lines → roads); background map tiles configurable per installation, plain grid without internet |
+| ✅ | API: change an area (`PUT /geofences/{id}`), read the saved roads; yard blocks need a unique TOS block name |
+| ✅ | Tests: routing, map check, snapping, projection and import (web); area edits and roads read-back (API) |
+
 ---
 
 ## Remaining
@@ -264,9 +276,8 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | National e-ID verification as a per-terminal option | Nafath in Saudi Arabia |
 | ⬜ | Reasons from the TOS in the driver's language (English today) | |
 | 🔜 | Background position while on the way (Android foreground service / iOS background location), so the app needn't stay open | |
-| ⬜ | Map editor for terminal areas in the portal (API exists) | |
 | ⬜ | Transfer points (lane / TP) as stops when N4 assigns them instead of a block | `yard_instruction.lane_or_tp` ready |
-| ⬜ | Map editor in the portal for roads and areas; import from the terminal's CAD drawing / survey (upload API exists) | ❓ decision 10 |
+| ⬜ | Speed zones and no-go lanes on the terminal roads; DXF import (GeoJSON import exists) | ❓ decision 10 |
 | ⬜ | Turn-by-turn and voice prompts in the driver's language; the screen does not take input while the truck moves | ❓ decision 11 (phone use inside the terminal) |
 | ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
 | ⬜ | Arrived at the block (geofence) → shown to the control room / gate board; time per stop for turn-time analysis | `geofence`, `geofence_event` tables |

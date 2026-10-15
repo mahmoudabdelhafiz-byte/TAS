@@ -227,6 +227,11 @@ public sealed class YardGuidanceService(TasDbContext db, ITosAdapter tos, TripTr
         return new MapData(mapAreas, roads, bounds);
     }
 
+    /// <summary>The roads as saved (GeoJSON FeatureCollection, with names and one-way flags), for the map editor.</summary>
+    public async Task<string> RoadsAsync(int terminalId, CancellationToken ct = default) =>
+        await db.TerminalMaps.AsNoTracking().Where(m => m.TerminalId == terminalId).Select(m => m.Roads).SingleOrDefaultAsync(ct)
+        ?? """{"type":"FeatureCollection","features":[]}""";
+
     /// <summary>Saves the roads (a GeoJSON FeatureCollection of LineStrings, property oneWay).</summary>
     public async Task<IReadOnlyList<string>> SaveRoadsAsync(int terminalId, int userId, JsonElement roads, CancellationToken ct = default)
     {

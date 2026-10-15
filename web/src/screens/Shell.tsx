@@ -10,6 +10,7 @@ import { BulkUpload } from './BulkUpload.tsx';
 import { CapacitySetup } from './CapacitySetup.tsx';
 import { Fleet } from './Fleet.tsx';
 import { Kpi } from './Kpi.tsx';
+import { MapEditor } from './MapEditor.tsx';
 import { GateScreen } from './Gate.tsx';
 import { SlotBoard } from './SlotBoard.tsx';
 
@@ -19,6 +20,7 @@ const navText: Record<Screen, TextKey> = {
   appointments: 'nav.appointments',
   slots: 'nav.slots',
   setup: 'nav.setup',
+  map: 'nav.map',
   gate: 'nav.gate',
   kpi: 'nav.kpi',
   fleet: 'nav.fleet',
@@ -83,6 +85,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
           {screen === 'gate' && <GateScreen />}
           {screen === 'bulk' && <BulkUpload />}
           {screen === 'setup' && <CapacitySetup />}
+          {screen === 'map' && <MapEditor />}
           {screen === 'kpi' && <Kpi />}
           {screen === 'fleet' && <Fleet />}
         </main>
@@ -111,6 +114,7 @@ function NavIcon({ screen }: { screen: Screen }) {
     bulk: <><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4M9 12h6M9 16h6" /></>,
     kpi: <><path d="M4 20V4M4 20h16" /><path d="M7 15l4-5 3 3 5-7" /></>,
     fleet: <><path d="M2 16V7h11v9M13 10h4l3 3v3h-7" /><circle cx="6" cy="17" r="2" /><circle cx="17" cy="17" r="2" /></>,
+    map: <><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" /><path d="M9 4v14M15 6v14" /></>,
     setup: <><rect x="3" y="4" width="18" height="16" rx="1" /><path d="M3 9h18M9 4v16M15 4v16" /></>,
   };
   return (
