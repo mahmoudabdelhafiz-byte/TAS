@@ -43,6 +43,8 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<GatePass> GatePasses => Set<GatePass>();
     public DbSet<AppointmentEta> AppointmentEtas => Set<AppointmentEta>();
     public DbSet<GeofenceEvent> GeofenceEvents => Set<GeofenceEvent>();
+    public DbSet<TerminalMap> TerminalMaps => Set<TerminalMap>();
+    public DbSet<YardInstruction> YardInstructions => Set<YardInstruction>();
     public DbSet<CargoAllocation> CargoAllocations => Set<CargoAllocation>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<AppointmentItem> AppointmentItems => Set<AppointmentItem>();
@@ -206,6 +208,20 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
         });
 
         b.Entity<GeofenceEvent>(e => e.HasKey(x => x.GeofenceEventId));
+
+        b.Entity<TerminalMap>(e =>
+        {
+            e.HasKey(x => x.TerminalId);
+            e.Property(x => x.TerminalId).ValueGeneratedNever();
+            e.Property(x => x.Roads).HasColumnType("jsonb");
+            e.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<YardInstruction>(e =>
+        {
+            e.HasKey(x => x.InstructionId);
+            e.Property(x => x.IssuedAt).HasDefaultValueSql("now()");
+        });
 
         // ---------- Booking ----------
 

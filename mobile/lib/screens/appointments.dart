@@ -10,6 +10,7 @@ import '../models.dart';
 import '../strings.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'yard_screen.dart';
 
 /// My appointments: the next ones first, each with its traffic light.
 class AppointmentsScreen extends StatefulWidget {
@@ -336,6 +337,15 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           if (_error != null) ...[ErrorBox(message: _error!), const SizedBox(height: 12)],
           if (_done != null) ...[
             Text(_done!, style: const TextStyle(fontSize: 16, color: green, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+          ],
+          if (a.status == 'GateIn') ...[
+            FilledButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => YardScreen(api: widget.api, lang: widget.lang, appointmentNo: a.appointmentNo),
+              )),
+              child: Text(t('whereToGo')),
+            ),
             const SizedBox(height: 12),
           ],
           if (a.status == 'Confirmed') ...[

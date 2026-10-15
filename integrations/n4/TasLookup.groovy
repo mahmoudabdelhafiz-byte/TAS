@@ -17,7 +17,7 @@
  *
  * Answer:
  * {
- *   "units":  [{ "containerNo","found","gkey","category","freightKind","transitState","lineOperator","vgmKg","holds":[...] }],
+ *   "units":  [{ "containerNo","found","gkey","category","freightKind","transitState","lineOperator","vgmKg","holds":[...],"block","position" }],
  *   "orders": [{ "nbr","found","gkey","subType","lineOperator","quantityRemaining","cargoCutoff","holds":[...] }],
  *   "bls":    [{ "nbr","found","gkey","released","holds":[...] }],
  *   "blUnits":[{ "nbr","found","units":[{ "containerNo","isoType" }] }]
@@ -87,7 +87,35 @@ class TasLookup {
             lineOperator: unit.getUnitLineOperator()?.getBzuId(),
             vgmKg       : unit.getUnitGoodsAndCtrWtKgVerfiedGross(),        // VERIFY: VGM field name on your version
             holds       : activeRoadHolds(unit),
+            block       : yardBlock(ufv),
+            position    : yardSlot(ufv),
         ]
+    }
+
+    /** Yard block of the container now (or, for a container being delivered, where it is planned to go). */
+    private String yardBlock(UnitFacilityVisit ufv) {
+        try {
+            def pos = yardPosition(ufv)
+            return pos?.getBlockName()                                        // VERIFY: block name accessor on LocPosition
+        } catch (MissingMethodException ignored) {
+            return null
+        }
+    }
+
+    /** Slot in the yard as N4 writes it, e.g. "A01.12.03.2". */
+    private String yardSlot(UnitFacilityVisit ufv) {
+        try {
+            return yardPosition(ufv)?.getPosSlot()                            // VERIFY: slot accessor on LocPosition
+        } catch (MissingMethodException ignored) {
+            return null
+        }
+    }
+
+    private def yardPosition(UnitFacilityVisit ufv) {
+        if (ufv == null) return null
+        def pos = ufv.getUfvLastKnownPosition()
+        if (pos != null && pos.isYardPosition()) return pos                  // VERIFY: isYardPosition on your version
+        return ufv.getFinalPlannedPosition()                                  // VERIFY: planned yard position for receivals
     }
 
     /** Active holds that block road delivery / receipt. */

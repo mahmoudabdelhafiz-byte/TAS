@@ -129,8 +129,19 @@ public sealed class DemoDataSeeder(TasDbContext db, SlotGenerationService slotGe
             INSERT INTO geofence (terminal_id, name, zone_type, area, triggers_check_in) VALUES
               ({tid}, 'Approach roads', 'APPROACH', ST_GeogFromText('POLYGON((39.140 21.440, 39.200 21.440, 39.200 21.500, 39.140 21.500, 39.140 21.440))'), false),
               ({tid}, 'Pre-gate parking', 'PRE_GATE', ST_GeogFromText('POLYGON((39.169 21.471, 39.171 21.471, 39.171 21.4725, 39.169 21.4725, 39.169 21.471))'), true),
-              ({tid}, 'Main gate', 'GATE', ST_GeogFromText('POLYGON((39.1695 21.470, 39.1705 21.470, 39.1705 21.471, 39.1695 21.471, 39.1695 21.470))'), false)
+              ({tid}, 'Main gate', 'GATE', ST_GeogFromText('POLYGON((39.1695 21.470, 39.1705 21.470, 39.1705 21.471, 39.1695 21.471, 39.1695 21.470))'), false),
+              ({tid}, 'Exit gate', 'EXIT', ST_GeogFromText('POLYGON((39.1755 21.4615, 39.1765 21.4615, 39.1765 21.4625, 39.1755 21.4625, 39.1755 21.4615))'), false)
             """, ct);
+
+        // Demo yard: import blocks A1 / B2 north of the middle road, export E1 and empties M1 south of it.
+        await db.Database.ExecuteSqlAsync($"""
+            INSERT INTO geofence (terminal_id, name, zone_type, area, yard_block) VALUES
+              ({tid}, 'Block A1', 'YARD_ZONE', ST_GeogFromText('POLYGON((39.165 21.466, 39.168 21.466, 39.168 21.468, 39.165 21.468, 39.165 21.466))'), 'A1'),
+              ({tid}, 'Block B2', 'YARD_ZONE', ST_GeogFromText('POLYGON((39.172 21.466, 39.175 21.466, 39.175 21.468, 39.172 21.468, 39.172 21.466))'), 'B2'),
+              ({tid}, 'Block E1', 'YARD_ZONE', ST_GeogFromText('POLYGON((39.165 21.463, 39.168 21.463, 39.168 21.465, 39.165 21.465, 39.165 21.463))'), 'E1'),
+              ({tid}, 'Block M1', 'YARD_ZONE', ST_GeogFromText('POLYGON((39.172 21.463, 39.175 21.463, 39.175 21.465, 39.172 21.465, 39.172 21.463))'), 'M1')
+            """, ct);
+        db.TerminalMaps.Add(new TerminalMap { TerminalId = tid, Roads = DemoRoads, UpdatedAt = clock.GetUtcNow() });
 
         AppUser WithPassword(AppUser user)
         {
@@ -208,4 +219,7 @@ public sealed class DemoDataSeeder(TasDbContext db, SlotGenerationService slotGe
     private static TransactionCategory Category(
         int terminalId, string code, string en, string ar, CategoryMode mode, int order, UnitType unit = UnitType.Move) =>
         new() { TerminalId = terminalId, Code = code, NameEn = en, NameAr = ar, Mode = mode, SortOrder = order, UnitType = unit };
+
+    /// <summary>Roads of the demo yard: a north–south spine from the gate, three cross roads (the south one one-way, east), and side roads.</summary>
+    private const string DemoRoads = @"{""type"":""FeatureCollection"",""features"":[{""type"":""Feature"",""properties"":{""name"":""Spine""},""geometry"":{""type"":""LineString"",""coordinates"":[[39.17,21.47],[39.17,21.469],[39.17,21.4655],[39.17,21.4625]]}},{""type"":""Feature"",""properties"":{""name"":""North road""},""geometry"":{""type"":""LineString"",""coordinates"":[[39.164,21.469],[39.1665,21.469],[39.17,21.469],[39.1735,21.469],[39.176,21.469]]}},{""type"":""Feature"",""properties"":{""name"":""Middle road""},""geometry"":{""type"":""LineString"",""coordinates"":[[39.164,21.4655],[39.1665,21.4655],[39.17,21.4655],[39.1735,21.4655],[39.176,21.4655]]}},{""type"":""Feature"",""properties"":{""name"":""South road"",""oneWay"":true},""geometry"":{""type"":""LineString"",""coordinates"":[[39.164,21.4625],[39.17,21.4625],[39.176,21.4625]]}},{""type"":""Feature"",""properties"":{""name"":""West road""},""geometry"":{""type"":""LineString"",""coordinates"":[[39.164,21.469],[39.164,21.4655],[39.164,21.4625]]}},{""type"":""Feature"",""properties"":{""name"":""East road""},""geometry"":{""type"":""LineString"",""coordinates"":[[39.176,21.469],[39.176,21.4655],[39.176,21.4625]]}}]}";
 }

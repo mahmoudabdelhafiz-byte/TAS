@@ -256,4 +256,93 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"{areas}/{created.GeofenceId}/deactivate", null)).StatusCode);
         Assert.False((await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.Name == "Block C").IsActive);
     }
+
+    [Fact]
+    public async Task After_gate_in_the_driver_gets_stops_and_routes_through_the_yard()
+    {
+        if (!Enabled) return;
+
+        // Dual visit: drop an export, then pick up an import.
+        var alNoor = await As(DemoDataSeeder.DispatcherEmail);
+        var booked = await alNoor.PostAsJsonAsync(Appointments, new
+        {
+            slotId = SlotId,
+            driverId = Demo.DriverIds[0],
+            items = new object[]
+            {
+                new { category = "IMP_PICKUP", containerNo = "MSCU1234566" },
+                new { category = "EXP_DROP", containerNo = "MSCU5523417" },
+            },
+        });
+        Assert.Equal(HttpStatusCode.Created, booked.StatusCode);
+        var number = (await Read<Tas.Application.Booking.AppointmentDto>(booked)).AppointmentNo;
+        var phone = await SignInAsync("install-phone-0001");
+        var yard = $"/api/driver/appointments/{number}/yard";
+
+        // Not inside yet: no positions.
+        var early = await phone.GetAsync(yard);
+        Assert.Equal(HttpStatusCode.Conflict, early.StatusCode);
+        Assert.Contains("after you pass the gate", await early.Content.ReadAsStringAsync());
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            await db.Appointments.Where(a => a.AppointmentNo == number)
+                .ExecuteUpdateAsync(x => x.SetProperty(a => a.Status, Tas.Domain.Booking.AppointmentStatus.GateIn));
+        }
+
+        var guidance = await Read<YardGuidance>(await phone.GetAsync(yard));
+        Assert.True(guidance.Live);
+        Assert.Equal(new[] { "DROP", "PICKUP", "EXIT" }, guidance.Stops.Select(x => x.Kind).ToArray());
+        Assert.Equal("E1", guidance.Stops[0].Block);
+        Assert.Equal("B2", guidance.Stops[1].Block);
+        Assert.Equal("14.03.2", guidance.Stops[1].Slot);
+        Assert.Equal("MSCU1234566", Assert.Single(guidance.Stops[1].Containers));
+        Assert.All(guidance.Stops, x => Assert.False(x.Moved));
+
+        // A route for each stop and the exit, starting at the gate, along the roads.
+        Assert.Equal(3, guidance.Legs.Count);
+        Assert.Equal(new[] { 39.170, 21.4700 }, guidance.Legs[0].Path[0]);
+        Assert.All(guidance.Legs, leg => Assert.True(leg.Path.Count >= 2 && leg.Meters > 0));
+        Assert.Equal(new[] { 39.176, 21.4625 }, guidance.Legs[2].Path[^1]);
+        Assert.Equal(4, guidance.Map.Areas.Count(a => a.Kind == "YARD_ZONE"));
+        Assert.Equal(6, guidance.Map.Roads.Count);
+
+        // If the container is moved in the yard, the driver is told.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            await db.YardInstructions.Where(y => y.Sequence == 2).ExecuteUpdateAsync(x => x.SetProperty(y => y.Block, "A1"));
+        }
+        var again = await Read<YardGuidance>(await phone.GetAsync(yard));
+        Assert.True(again.Stops[1].Moved);
+        Assert.False(again.Stops[0].Moved);
+    }
+
+    [Fact]
+    public async Task Terminal_admins_draw_the_roads()
+    {
+        if (!Enabled) return;
+
+        var admin = await As(DemoDataSeeder.TerminalAdminEmail);
+        var planner = await As(DemoDataSeeder.PlannerEmail);
+        var map = await Read<YardMapView>(await planner.GetAsync($"{Terminal}/yard-map"));
+        Assert.Equal(6, map.Roads.Count);
+        Assert.True(map.Bounds[2] > map.Bounds[0]);
+
+        var roads = new
+        {
+            type = "FeatureCollection",
+            features = new object[]
+            {
+                new { type = "Feature", properties = new { oneWay = true }, geometry = new { type = "LineString", coordinates = new[] { new[] { 39.170, 21.470 }, new[] { 39.170, 21.465 } } } },
+            },
+        };
+        Assert.Equal(HttpStatusCode.Forbidden, (await planner.PutAsJsonAsync($"{Terminal}/yard-map/roads", new { roads })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync($"{Terminal}/yard-map/roads", new { roads })).StatusCode);
+        Assert.Single((await Read<YardMapView>(await planner.GetAsync($"{Terminal}/yard-map"))).Roads);
+
+        var bad = new { type = "FeatureCollection", features = new object[] { new { type = "Feature", geometry = new { type = "Point", coordinates = new[] { 39.17, 21.47 } } } } };
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"{Terminal}/yard-map/roads", new { roads = bad })).StatusCode);
+    }
 }

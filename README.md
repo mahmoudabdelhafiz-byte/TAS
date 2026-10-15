@@ -233,7 +233,7 @@ Security: passwords hashed with ASP.NET Core Identity (PBKDF2); 5 wrong password
 
 ### TOS: Navis N4
 
-`Tos:Adapter` selects the TOS: `Fake` (development and demos, configured under `FakeTos`) or `N4`.
+`Tos:Adapter` selects the TOS: `Fake` (development and demos, configured under `FakeTos`) or `N4`. The fake TOS takes yard positions from `FakeTos:YardPositions` (container → `block.row.bay.tier`), drop / return blocks from `ReceivalBlocks` (category → block) and otherwise picks one of `DefaultBlocks`.
 The N4 adapter is **read-only**: each check is one ArgoService `genericInvoke` call running the `TasLookup` Groovy
 code extension, which returns units, bookings / EDOs and bills of lading as JSON; TAS turns that into checks
 (in the yard, holds, booking left, cut-off, VGM, BL release). Setup, hold mapping and rules:
@@ -288,6 +288,9 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `POST` | `/api/driver/appointments/{no}/position` | `{latitude, longitude, speed?}` while on the way only: arrival estimate, terminal areas entered, automatic check-in in the pre-gate area |
 | `GET` / `POST` | `/api/terminals/{id}/geofences` | Terminal areas (approach, pre-gate, gate, yard zones…) as GeoJSON; terminal admins draw them as a ring of `[longitude, latitude]` points |
 | `POST` | `/api/terminals/{id}/geofences/{gid}/deactivate` | Remove an area |
+| `GET` | `/api/driver/appointments/{no}/yard?lat&lon` | After gate-in: stops in order (drops, then pickups, then exit) with block and row.bay.tier from the TOS, routes on the terminal's roads, and the yard map; `live: false` when the TOS can't be reached and the last known stops are shown |
+| `GET` | `/api/terminals/{id}/yard-map` | Areas and roads of the terminal (staff) |
+| `PUT` | `/api/terminals/{id}/yard-map/roads` | Terminal admins: `{roads: FeatureCollection}` of LineStrings in `[longitude, latitude]`, `properties.oneWay` for one-way roads (drawn direction); roads join where they share a point |
 
 Gate lanes accept the rotating gate pass in `qrToken` (as well as the static appointment code): the live code is checked and the truck is matched to its appointment. Gate pass secrets are stored encrypted; set `GatePass__Key` (32 bytes, base64) or a key is derived from the JWT signing key.
 

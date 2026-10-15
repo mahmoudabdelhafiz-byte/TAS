@@ -212,6 +212,16 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Arrival estimate shown in the portal's appointment list and in the app |
 | ✅ | Tests: shared gate-code vectors in C# and Dart, gate pass at the lane, positions and check-in, areas |
 
+### 19. Yard navigation (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Container's yard position from the TOS at gate-in: N4 `TasLookup` returns block and slot (row.bay.tier); the demo TOS gives listed, receival-block or made-up positions |
+| ✅ | Terminal road map (`terminal_map`): roads as GeoJSON lines with one-way flags; terminal admins upload it (`PUT /api/terminals/{id}/yard-map/roads`); demo roads for the demo terminal |
+| ✅ | Routes on the terminal's own roads (shortest path that respects one-way roads), from the truck's position or the gate to each block, then to the exit |
+| ✅ | "Where to go" for the driver after gate-in: drops before pickups, one stop per block, then exit; saved as `yard_instruction` rows; a container moved since the last look is flagged; if the TOS is down the last known stops are shown, marked as not live |
+| ✅ | App: "Where to go" button after gate-in; next stop in large text (block, row, bay, tier) and a map drawn on the phone from the terminal plan — no map service, works with weak signal; refreshes every 30 s |
+| ✅ | Tests: routing (one-way, unreachable), stop order and route ends, moved container, road upload rights and validation, app parsing and map projection |
+
 ---
 
 ## Remaining
@@ -253,16 +263,15 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | 🔜 | App identity: package name, icon, signing keys, store listings; commit the Android / iOS folders; release builds with HTTPS only | |
 | ⬜ | National e-ID verification as a per-terminal option | Nafath in Saudi Arabia |
 | ⬜ | Reasons from the TOS in the driver's language (English today) | |
-| ⬜ | After gate-in the app shows where to go (block, row, bay or transfer point) | with yard navigation |
 | 🔜 | Background position while on the way (Android foreground service / iOS background location), so the app needn't stay open | |
 | ⬜ | Map editor for terminal areas in the portal (API exists) | |
-| ⬜ | **Yard navigation:** at gate-in TAS reads the container's yard position from N4 and turns it into stops (`yard_instruction`): import pickup → block / row / bay; export drop / empty return → block or transfer point N4 assigns; dual moves → stops in order, then exit | N4 TasLookup adds the position; ❓ decision 9 |
-| ⬜ | **Terminal map:** blocks, roads (one-way, speed zones), transfer points, gates and exits as a map layer; routes computed on the terminal's own road network (public maps don't know internal roads); works without mobile data inside the yard | Built from the terminal's CAD drawing / survey; editor in the portal ❓ decision 10 |
-| ⬜ | Route on the map from the gate to the block, next turn in large text, voice prompts in the driver's language; the screen does not take input while the truck moves | ❓ decision 11 (phone use inside the terminal) |
-| ⬜ | Container moved in the yard (rehandle / housekeeping) → new position pushed to the driver, route redrawn | N4 change detected by re-reading the position on a short interval while the truck is inside |
+| ⬜ | Transfer points (lane / TP) as stops when N4 assigns them instead of a block | `yard_instruction.lane_or_tp` ready |
+| ⬜ | Map editor in the portal for roads and areas; import from the terminal's CAD drawing / survey (upload API exists) | ❓ decision 10 |
+| ⬜ | Turn-by-turn and voice prompts in the driver's language; the screen does not take input while the truck moves | ❓ decision 11 (phone use inside the terminal) |
+| ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
 | ⬜ | Arrived at the block (geofence) → shown to the control room / gate board; time per stop for turn-time analysis | `geofence`, `geofence_event` tables |
 | ⬜ | Chat / call request to the control room, templated messages | `appointment_message` table |
-| ⬜ | Backend for the above: devices, verification, gate pass, ETA, yard instructions, map data, messages | Tables already in the schema |
+| ⬜ | Backend for messages | `appointment_message` table |
 
 ### Phase F — Production readiness
 | | Item |

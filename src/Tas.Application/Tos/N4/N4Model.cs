@@ -23,7 +23,9 @@ public sealed record N4Unit(
     [property: JsonPropertyName("transitState")] string? TransitState = null,
     [property: JsonPropertyName("lineOperator")] string? LineOperator = null,
     [property: JsonPropertyName("vgmKg")] decimal? VgmKg = null,
-    [property: JsonPropertyName("holds")] IReadOnlyList<string>? Holds = null);
+    [property: JsonPropertyName("holds")] IReadOnlyList<string>? Holds = null,
+    [property: JsonPropertyName("block")] string? Block = null,
+    [property: JsonPropertyName("position")] string? Position = null);
 
 /// <summary>An equipment order — export booking or empty release (EDO) — as N4 sees it now.</summary>
 /// <param name="QuantityRemaining">Units still to be received / delivered against the order (null = unknown).</param>

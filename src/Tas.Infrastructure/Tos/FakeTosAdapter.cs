@@ -36,6 +36,15 @@ public sealed class FakeTosOptions
     /// <summary>Cargo references (BL / DO) not released by customs.</summary>
     public List<string> CargoNotReleased { get; set; } = [];
 
+    /// <summary>Yard positions of containers, as "BLOCK.ROW.BAY.TIER" (e.g. "B2.14.03.2"). Unlisted imports get a made-up slot in <see cref="DefaultBlocks"/>.</summary>
+    public Dictionary<string, string> YardPositions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Blocks used for unlisted import / empty pickups.</summary>
+    public List<string> DefaultBlocks { get; set; } = [];
+
+    /// <summary>Block where deliveries of a move type go, e.g. EXP_DROP → E1, MTY_RETURN → M1.</summary>
+    public Dictionary<string, string> ReceivalBlocks { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Import bills of lading and their containers, as "CONTAINER" or "CONTAINER:ISOTYPE" (e.g. "MSCU1234566:22G1").</summary>
     public Dictionary<string, List<string>> BillsOfLading { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
@@ -111,6 +120,34 @@ public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : IT
             .Select(parts => new TosBlUnit(parts[0].ToUpperInvariant(), parts.Length > 1 && parts[1].Length > 0 ? parts[1].ToUpperInvariant() : null))
             .ToList();
         return Task.FromResult<IReadOnlyList<TosBlUnit>?>(units);
+    }
+
+    public Task<IReadOnlyList<TosYardPosition>> YardPositionsAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default)
+    {
+        var o = options.CurrentValue;
+        var result = new List<TosYardPosition>();
+        foreach (var item in items)
+        {
+            var code = item.CategoryCode.ToUpperInvariant();
+            if (item.ContainerNo is { } container && o.YardPositions.TryGetValue(container, out var listed))
+            {
+                var parts = listed.Split('.', 2);
+                result.Add(new TosYardPosition(item.Index, parts[0], parts.Length > 1 ? parts[1] : null, null));
+            }
+            else if (o.ReceivalBlocks.TryGetValue(code, out var block))
+            {
+                result.Add(new TosYardPosition(item.Index, block, null, null));
+            }
+            else if (item.ContainerNo is { Length: >= 11 } c && o.DefaultBlocks.Count > 0)
+            {
+                // Stable made-up slot from the container's digits, so demos show the same place every time.
+                var digits = c[4..10];
+                var n = digits.Sum(ch => ch - '0');
+                result.Add(new TosYardPosition(item.Index, o.DefaultBlocks[n % o.DefaultBlocks.Count],
+                    $"{1 + n % 20:00}.{1 + (n / 3) % 12:00}.{1 + n % 4}", null));
+            }
+        }
+        return Task.FromResult<IReadOnlyList<TosYardPosition>>(result);
     }
 
     private static bool Listed(IEnumerable<string> list, string? key) =>
