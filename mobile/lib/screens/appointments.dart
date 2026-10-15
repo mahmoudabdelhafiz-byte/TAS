@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../api.dart';
@@ -48,6 +47,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Future<void> _load() async {
     try {
       final items = await widget.api.appointments();
+      // A trip on the way keeps sharing its position, also after the app was closed and opened again.
+      final onTheWay = items.where((a) => a.status == 'EnRoute').toList();
+      if (onTheWay.isNotEmpty) {
+        unawaited(widget.api.tracker.follow(onTheWay.first.appointmentNo, widget.lang));
+      } else if (widget.api.tracker.appointmentNo != null) {
+        unawaited(widget.api.tracker.stop());
+      }
       if (!mounted) return;
       setState(() {
         _items = items;
@@ -174,7 +180,6 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   String? _done;
   GatePass? _pass;
   Timer? _tick;
-  Timer? _tracking;
   String? _locationProblem;
 
   String t(String key, [Map<String, String> values = const {}]) => tr(widget.lang, key, values);
@@ -187,13 +192,14 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && _a.gateCode != null) setState(() {});
     });
+    widget.api.tracker.addListener(_onTracking);
     if (_a.status == 'EnRoute') _startTracking();
   }
 
   @override
   void dispose() {
     _tick?.cancel();
-    _tracking?.cancel();
+    widget.api.tracker.removeListener(_onTracking);
     super.dispose();
   }
 
@@ -206,35 +212,20 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     }
   }
 
-  /// While on the way and this screen is open: send the position every minute (foreground only).
-  void _startTracking() {
-    _tracking?.cancel();
-    _sendPosition();
-    _tracking = Timer.periodic(const Duration(seconds: 60), (_) => _sendPosition());
-  }
+  /// On the way: the position is shared in the background until the truck checks in at the pre-gate.
+  void _startTracking() => unawaited(widget.api.tracker.follow(_a.appointmentNo, widget.lang));
 
-  Future<void> _sendPosition() async {
-    try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever || !await Geolocator.isLocationServiceEnabled()) {
-        if (mounted) setState(() => _locationProblem = t('locationOff'));
-        return;
-      }
-      final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
-      final update = await widget.api.reportPosition(_a.appointmentNo, position.latitude, position.longitude, position.speed >= 0 ? position.speed : null);
-      if (!mounted) return;
-      setState(() {
-        _locationProblem = null;
+  void _onTracking() {
+    final tracker = widget.api.tracker;
+    if (!mounted) return;
+    setState(() {
+      _locationProblem = tracker.problem == null ? null : t('locationOff');
+      final update = tracker.last;
+      if (update != null && tracker.lastAppointmentNo == _a.appointmentNo) {
         _a = _a.copyWith(status: update.status, eta: update.eta);
         if (update.checkedIn) _done = t('checkedIn');
-      });
-      if (update.status != 'EnRoute') _tracking?.cancel();
-    } on ApiException catch (e) {
-      if (e.status == 409) _tracking?.cancel(); // no longer on the way
-    } catch (_) {
-      // No fix or no network: try again next minute.
-    }
+      }
+    });
   }
 
   Future<void> _startTrip() async {

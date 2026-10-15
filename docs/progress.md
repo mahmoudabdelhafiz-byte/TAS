@@ -234,6 +234,16 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | API: change an area (`PUT /geofences/{id}`), read the saved roads; yard blocks need a unique TOS block name |
 | ✅ | Tests: routing, map check, snapping, projection and import (web); area edits and roads read-back (API) |
 
+### 21. Background tracking and spoken directions (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Position on the way keeps going with the phone locked or another app open: Android foreground service with a visible "sharing your location" notification, iOS background location with the blue indicator |
+| ✅ | Starts when the trip starts (or when the app opens with a trip on the way), stops by itself at the pre-gate check-in, when the trip ends or on sign-out; sends every minute, sooner after 500 m, never more than every 15 s |
+| ✅ | Spoken directions in the yard in the driver's language: block, row / bay / tier and distance; said again when the next stop comes or the container moves; repeat and mute buttons (mute remembered) |
+| ✅ | Urdu: phones without an Urdu voice speak the Hindi text with the Hindi voice; no voice at all → stays silent rather than reading in a wrong voice |
+| ✅ | While the truck moves (over ~9 km/h) the "Done here" button waits: "Stop the truck to confirm" |
+| ✅ | Tests: spoken texts in four languages, distance rounding, position sending rules |
+
 ---
 
 ## Remaining
@@ -272,13 +282,12 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | | Item | Notes |
 |---|---|---|
 | 🔜 | Push notifications (traffic light changes, slot closed, reminder) to the app instead of SMS when the driver has it | Firebase / APNs account needed |
-| 🔜 | App identity: package name, icon, signing keys, store listings; commit the Android / iOS folders; release builds with HTTPS only | |
+| 🔜 | App identity: package name, icon, signing keys, store listings; commit the Android / iOS folders; release builds with HTTPS only | iOS Info.plist: location texts (when in use / always) and background mode "location"; Android 13+: ask for the notification permission so the tracking notice shows; Play Store background-location declaration |
 | ⬜ | National e-ID verification as a per-terminal option | Nafath in Saudi Arabia |
 | ⬜ | Reasons from the TOS in the driver's language (English today) | |
-| 🔜 | Background position while on the way (Android foreground service / iOS background location), so the app needn't stay open | |
 | ⬜ | Transfer points (lane / TP) as stops when N4 assigns them instead of a block | `yard_instruction.lane_or_tp` ready |
 | ⬜ | Speed zones and no-go lanes on the terminal roads; DXF import (GeoJSON import exists) | ❓ decision 10 |
-| ⬜ | Turn-by-turn and voice prompts in the driver's language; the screen does not take input while the truck moves | ❓ decision 11 (phone use inside the terminal) |
+| ⬜ | Turn-by-turn prompts at junctions ("turn left at block A1"); spoken stops exist | ❓ decision 11 (phone use inside the terminal) |
 | ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
 | ⬜ | Arrived at the block (geofence) → shown to the control room / gate board; time per stop for turn-time analysis | `geofence`, `geofence_event` tables |
 | ⬜ | Chat / call request to the control room, templated messages | `appointment_message` table |
