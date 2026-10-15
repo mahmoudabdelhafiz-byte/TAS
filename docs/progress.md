@@ -268,6 +268,13 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | The app's last position is kept on the appointment (on the way and inside only; migration 009) |
 | ✅ | Tests: board from the gate to the block and out, turn-time target setting |
 
+### 25. Yard times in the KPIs, control-room alerts (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | KPI screen "Inside the terminal": gate to block, at the block, block to gate-out, share of visits the app followed; time at the block by day; by block, slowest first (drive there, time there) |
+| ✅ | Control room: a bar listing trucks that need attention (inside longer than the target, app gone quiet), each opening the truck |
+| ✅ | Tests: yard KPI calculation, report through the API |
+
 ---
 
 ## Remaining
@@ -313,7 +320,6 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | Speed zones and no-go lanes on the terminal roads; DXF import (GeoJSON import exists) | ❓ decision 10 |
 | ⬜ | Turn-by-turn prompts at junctions ("turn left at block A1"); spoken stops exist | |
 | ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
-| ⬜ | Time per block / per stop in the KPI screen (history by day), alerts to the control room (overdue, no signal) | control room shows today |
 | ⬜ | N4 write-back of arrival at block (instead of / besides the webhook) | ❓ customer's N4 |
 | ⬜ | Chat / call request to the control room, templated messages | `appointment_message` table |
 | ⬜ | Backend for messages | `appointment_message` table |

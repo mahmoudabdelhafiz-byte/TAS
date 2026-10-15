@@ -517,6 +517,14 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         Assert.Null(leaving.CurrentStop);
         Assert.Equal("DONE", leaving.Stops[0].Status);
 
+        // The KPI report has the times inside the terminal (the app saw the arrival; confirmed straight after).
+        var day = Tomorrow.ToString("yyyy-MM-dd");
+        var kpi = await Read<Tas.Application.Reports.KpiReport>(await planner.GetAsync($"{Terminal}/kpis?from={day}&to={day}"));
+        Assert.NotNull(kpi.Yard);
+        Assert.Equal(1, kpi.Yard!.Visits);
+        Assert.Equal(1.0, kpi.Yard.AppSeenShare);
+        Assert.Equal("B2", Assert.Single(kpi.Yard.Blocks).Block);
+
         // A turn-time target from the terminal's settings.
         using (var scope = Factory.Services.CreateScope())
         {

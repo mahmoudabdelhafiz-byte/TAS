@@ -47,6 +47,7 @@ export function ControlRoom() {
       </header>
 
       {board.error && <LoadError error={board.error} retry={board.reload} />}
+      {b && <Attention trucks={b.trucks} target={b.turnTargetMinutes} onSelect={setSelected} />}
       {!b && !board.error && <p className="muted">{t('common.loading')}</p>}
 
       {b && (
@@ -80,6 +81,28 @@ export function ControlRoom() {
         </div>
       )}
     </section>
+  );
+}
+
+/** Trucks that need someone to look: inside too long, or the app went quiet. */
+function Attention({ trucks, target, onSelect }: { trucks: ControlTruck[]; target: number; onSelect: (no: string) => void }) {
+  const { t } = useApp();
+  const flagged = trucks.filter(x => x.overdue || x.silent);
+  if (flagged.length === 0) return null;
+  return (
+    <div className="attention" role="status">
+      <strong>{t('control.attention', { n: flagged.length })}</strong>
+      <ul>
+        {flagged.map(x => (
+          <li key={x.appointmentNo}>
+            <button type="button" className="link-btn" onClick={() => onSelect(x.appointmentNo)}>
+              <bdi>{x.truckPlate ?? x.appointmentNo}</bdi>
+            </button>{' '}
+            <span>{x.overdue ? t('control.overdueFor', { time: duration(x.minutesInside ?? 0, t('unit.min'), t('unit.h')), m: target }) : t('control.silentFor')}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

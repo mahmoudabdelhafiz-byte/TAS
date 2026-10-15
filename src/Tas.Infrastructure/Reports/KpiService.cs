@@ -44,9 +44,18 @@ public sealed class KpiService(TasDbContext db, TimeProvider clock)
         var settings = TerminalSettings.From(
             await db.TerminalSettings.AsNoTracking().Where(s => s.TerminalId == terminalId).ToListAsync(ct));
 
-        return KpiCalculator.Compute(
+        var report = KpiCalculator.Compute(
             from, to, slots,
             visits.Select(v => new KpiVisit(v.StartAt, v.EndAt, v.Status, v.ArrivedAt, v.GateInAt, v.GateOutAt, walkInSet.Contains(v.AppointmentId))).ToList(),
             timeZone, settings.EarlyGraceMinutes, settings.LateGraceMinutes, clock.GetUtcNow());
+
+        // Inside the terminal: the stops the driver app followed.
+        var stops = await db.YardInstructions.AsNoTracking()
+            .Where(y => y.StopType != "EXIT" && y.Status != "CANCELLED")
+            .Join(db.Appointments.Where(a => a.TerminalId == terminalId && a.Slot.StartAt >= start && a.Slot.StartAt < end),
+                y => y.AppointmentId, a => a.AppointmentId,
+                (y, a) => new KpiStop(a.AppointmentId, a.Slot.StartAt, a.GateInAt, a.GateOutAt, y.Sequence, y.Block, y.ArrivedAt, y.CompletedAt))
+            .ToListAsync(ct);
+        return stops.Count == 0 ? report : report with { Yard = YardKpiCalculator.Compute(from, to, stops, timeZone) };
     }
 }
