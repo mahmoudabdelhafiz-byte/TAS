@@ -68,6 +68,7 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         Assert.Equal(number, mine.AppointmentNo);
         Assert.Equal("استلام حاوية وارد", Assert.Single(mine.Moves).CategoryAr);
         Assert.NotNull(mine.GateCode);
+        Assert.Equal(180, mine.UtcOffsetMinutes);
 
         Assert.Equal(HttpStatusCode.OK, (await driver.GetAsync($"/api/driver/appointments/{number}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await driver.GetAsync("/api/driver/appointments/DEMO-000000-NOPE1")).StatusCode);

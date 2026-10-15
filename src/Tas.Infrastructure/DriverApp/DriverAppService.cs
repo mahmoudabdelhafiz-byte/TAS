@@ -9,12 +9,14 @@ namespace Tas.Infrastructure.DriverApp;
 
 public sealed record DriverMove(string Category, string CategoryEn, string CategoryAr, string? ContainerNo, string? BookingRef, string? CargoRef);
 
+/// <param name="UtcOffsetMinutes">The terminal's UTC offset at the slot, so the app shows terminal time without a time-zone database.</param>
 /// <param name="GateCode">What the lane reads (QR) — only while the appointment can still pass the gate.</param>
 public sealed record DriverAppointment(
     string AppointmentNo,
     int TerminalId,
     string TerminalName,
     string TimeZone,
+    int UtcOffsetMinutes,
     DateTimeOffset SlotStart,
     DateTimeOffset SlotEnd,
     AppointmentStatus Status,
@@ -97,7 +99,8 @@ public sealed class DriverAppService(TasDbContext db, AppointmentQueryService qu
 
         var live = dto.Status is AppointmentStatus.Confirmed or AppointmentStatus.EnRoute or AppointmentStatus.Arrived;
         return new DriverAppointment(
-            dto.AppointmentNo, terminalId, terminal.Name, terminal.TimeZone, dto.SlotStart, dto.SlotEnd, dto.Status,
+            dto.AppointmentNo, terminalId, terminal.Name, terminal.TimeZone,
+            (int)TimeZoneInfo.FindSystemTimeZoneById(terminal.TimeZone).GetUtcOffset(dto.SlotStart).TotalMinutes, dto.SlotStart, dto.SlotEnd, dto.Status,
             dto.TrafficLight, dto.TrafficReason, dto.CompanyName, dto.TruckPlate,
             dto.Items.Select(i => new DriverMove(
                 i.Category,
