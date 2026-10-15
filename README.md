@@ -92,8 +92,8 @@ Screens by role:
 
 | Role | Screens |
 |---|---|
-| Company admin / dispatcher | Book a truck, Appointments (own company) |
-| Planner, terminal admin | Slot board (with capacity changes), Appointments (all companies), Book a truck (on behalf of a company), Gate |
+| Company admin / dispatcher | Book a truck (one, or several by BL / container list), Bulk upload, Appointments (own company), Fleet & users |
+| Planner, terminal admin | Slot board, KPIs, Capacity setup, Appointments (all companies), Book a truck / Bulk upload (on behalf of a company), Gate, Fleet & users (companies for terminal admins) |
 | Gate clerk | Gate (board, truck check, gate in/out, trouble desk), Appointments |
 
 Arabic and English, right-to-left in Arabic. Times are shown in the terminal's time zone. Messages that come from the server (check results, errors) are in English for now.
@@ -352,5 +352,5 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Navis N4 adapter (read-only checks via genericInvoke + Groovy code extension), outage handling
 - [x] Notifications: on hold / cleared / reminder / slot closed in 4 languages; Unifonic, Twilio (SMS, WhatsApp), SMTP; retries
 - [x] Web portal, round 1: sign-in, booking, appointments, slot board with capacity changes, gate and trouble desk; Arabic / English
-- [ ] Web portal, round 2: weekly template editor, bulk upload, fleet and users, KPI dashboard
+- [x] Web portal, round 2: capacity setup (weekly plan grid, seasonal plans, reserved places, rules), bulk upload, fleet and users, KPI dashboard
 - [ ] Driver app (Flutter): appointments, gate pass, ETA, yard navigation to the container's block

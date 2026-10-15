@@ -185,6 +185,14 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Bulk upload screen: template download, check the file (nothing booked), book the visits that passed, result per visit |
 | ✅ | Tests: plan grid ↔ windows, selection, local time → instant in the terminal's zone |
 
+### 16. Web portal — round 2, part 2 (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | KPI dashboard for terminal staff: slot use, appointments, no-shows, on-time arrivals, turn and gate waiting time, walk-ins; slot use by day and by hour of the day, turn time by day; table view; last 7 / 30 days, next 7 days or any range |
+| ✅ | API: `GET /api/terminals/{id}/kpis?from&to` (up to 92 days) |
+| ✅ | Fleet & users: trucks and drivers (add; block / unblock by terminal admins), users (add with a first password, activate / deactivate), companies for terminal admins (register, suspend, activate) |
+| ✅ | Tests: KPI calculation (rates, on-time window, turn and wait times, closed slots), KPI API access and range |
+
 ---
 
 ## Remaining
@@ -215,13 +223,12 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| 🔜 | Fleet (trucks, drivers) and user management screens; companies for terminal admins |
-| 🔜 | KPI dashboard: slot utilization, no-show rate, turn time, appointment vs walk-in |
+| ⬜ | Edit truck plates / driver details and change user roles in the portal (API exists); password reset by the user (Phase A) |
 | ⬜ | Walk-in booking from the trouble desk; appointment search by container / plate across days |
 | ⬜ | Arabic texts for server messages (check results and errors are English today) |
 | ⬜ | Native review of the portal's Arabic wording |
 
-### Phase E — Driver app (Flutter) — next after portal round 2
+### Phase E — Driver app (Flutter) — next
 | | Item | Notes |
 |---|---|---|
 | 🔜 | App skeleton in `mobile/`: Flutter (Android first, iOS after), Arabic / English / Urdu / Hindi, right-to-left; CI job (analyze, tests, build APK) | Same repository and CI as the API and portal |

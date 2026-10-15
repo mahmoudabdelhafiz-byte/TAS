@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<BookingService>();
         services.AddScoped<BulkBookingService>();
         services.AddScoped<ContainerLookupService>();
+        services.AddScoped<Tas.Infrastructure.Reports.KpiService>();
         services.AddScoped<NoShowService>();
         services.AddScoped<RevalidationService>();
         services.AddHostedService<RevalidationWorker>();
