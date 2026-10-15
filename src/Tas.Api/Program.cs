@@ -347,6 +347,7 @@ appointments.MapPut("/{appointmentNo}/assignment", async (
 
 app.MapMasterData();
 app.MapGate();
+app.MapDriverApp();
 
 // ================================================================ development helpers
 

@@ -44,6 +44,9 @@ public static class DependencyInjection
         services.AddScoped<BookingService>();
         services.AddScoped<BulkBookingService>();
         services.AddScoped<ContainerLookupService>();
+        services.Configure<Tas.Infrastructure.DriverApp.DriverLoginOptions>(config.GetSection("DriverLogin"));
+        services.AddScoped<Tas.Infrastructure.DriverApp.DriverLoginService>();
+        services.AddScoped<Tas.Infrastructure.DriverApp.DriverAppService>();
         services.AddScoped<Tas.Infrastructure.Reports.KpiService>();
         services.AddScoped<NoShowService>();
         services.AddScoped<RevalidationService>();

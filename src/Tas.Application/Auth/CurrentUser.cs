@@ -14,6 +14,31 @@ public static class TasClaims
     public const string TerminalId = "terminal_id";
 }
 
+/// <summary>Claim names in driver-app tokens (a separate audience: they never open staff or company endpoints).</summary>
+public static class DriverClaims
+{
+    public const string DriverId = "sub";
+    public const string DeviceId = "dev";
+    public const string Mobile = "mob";
+    public const string Type = "typ";
+    public const string DriverType = "driver";
+}
+
+/// <summary>The signed-in driver: one phone, identified by mobile number (a driver may work for several companies).</summary>
+public sealed record CurrentDriver(int DriverId, long DeviceId, string Mobile)
+{
+    public static CurrentDriver? FromClaims(ClaimsPrincipal principal)
+    {
+        if (principal.Identity?.IsAuthenticated != true || principal.FindFirst(DriverClaims.Type)?.Value != DriverClaims.DriverType)
+            return null;
+        if (!int.TryParse(principal.FindFirst(DriverClaims.DriverId)?.Value, out var driverId)
+            || !long.TryParse(principal.FindFirst(DriverClaims.DeviceId)?.Value, out var deviceId)
+            || principal.FindFirst(DriverClaims.Mobile)?.Value is not { Length: > 0 } mobile)
+            return null;
+        return new CurrentDriver(driverId, deviceId, mobile);
+    }
+}
+
 /// <summary>The signed-in user as read from the access token.</summary>
 public sealed record CurrentUser(int UserId, UserRole Role, int? CompanyId, int? TerminalId)
 {
