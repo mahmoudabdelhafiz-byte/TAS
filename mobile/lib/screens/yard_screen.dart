@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../api.dart';
 import '../strings.dart';
 import '../theme.dart';
+import '../voice.dart';
 import '../yard.dart';
 import 'common.dart';
 
@@ -28,47 +29,115 @@ class _YardScreenState extends State<YardScreen> {
   int _current = 0;
   List<double>? _truck; // [lon, lat]
   Timer? _timer;
+  Timer? _tick;
+  final _voice = Voice();
+  bool _voiceOn = true;
+  String? _spokenKey;
+  Position? _position;
+  StreamSubscription<Position>? _positions;
 
   String t(String key, [Map<String, String> values = const {}]) => tr(widget.lang, key, values);
 
   @override
   void initState() {
     super.initState();
+    widget.api.voiceOn().then((on) {
+      if (mounted) setState(() => _voiceOn = on);
+    });
+    _follow();
     _load();
     // Re-read every 30 s: a container moved in the yard shows up here.
     _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+    // Re-check "driving" every few seconds, so the button comes back soon after the truck stops.
+    _tick = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && _position != null) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _tick?.cancel();
+    _positions?.cancel();
+    _voice.stop();
     super.dispose();
   }
 
   Future<void> _load() async {
     try {
-      Position? position;
-      try {
-        final permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
-          position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high))
-              .timeout(const Duration(seconds: 8));
+      Position? position = _position;
+      if (position == null) {
+        try {
+          final permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+            position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high))
+                .timeout(const Duration(seconds: 8));
+          }
+        } catch (_) {
+          // No position: the route starts at the gate.
         }
-      } catch (_) {
-        // No position: the route starts at the gate.
       }
       final guidance = await widget.api.yard(widget.appointmentNo, latitude: position?.latitude, longitude: position?.longitude);
       if (!mounted) return;
       setState(() {
         _guidance = guidance;
         _error = null;
-        if (position != null) _truck = [position.longitude, position.latitude];
+        if (position != null) {
+          _truck = [position.longitude, position.latitude];
+          _position ??= position;
+        }
         if (_current >= guidance.stops.length) _current = guidance.stops.length - 1;
       });
+      _speak();
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
       if (mounted) setState(() => _error = t('offline'));
+    }
+  }
+
+  /// Driving: faster than about 9 km/h on a fix from the last 15 s.
+  bool get _moving {
+    final p = _position;
+    return p != null && p.speed > 2.5 && DateTime.now().difference(p.timestamp) < const Duration(seconds: 15);
+  }
+
+  /// The truck's dot on the map and whether it is moving, live while this screen is open.
+  Future<void> _follow() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission != LocationPermission.always && permission != LocationPermission.whileInUse) return;
+      _positions = Geolocator.getPositionStream(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high))
+          .listen((p) {
+        if (!mounted) return;
+        setState(() {
+          _position = p;
+          _truck = [p.longitude, p.latitude];
+        });
+      }, onError: (Object _) {});
+    } catch (_) {
+      // No location: the route starts at the gate and the button stays available.
+    }
+  }
+
+  /// Speaks the current stop when it is new or changed (next stop, container moved); [again] repeats it.
+  void _speak({bool again = false}) {
+    final g = _guidance;
+    if (g == null || g.stops.isEmpty || !_voiceOn) return;
+    final stop = g.stops[_current];
+    final key = '${stop.sequence}|${stop.block}|${stop.slot}|${stop.moved}';
+    if (!again && key == _spokenKey) return;
+    _spokenKey = key;
+    _voice.sayStop(widget.lang, stop, meters: g.legTo(stop.sequence)?.meters);
+  }
+
+  void _toggleVoice() {
+    setState(() => _voiceOn = !_voiceOn);
+    widget.api.saveVoiceOn(_voiceOn);
+    if (_voiceOn) {
+      _speak(again: true);
+    } else {
+      _voice.stop();
     }
   }
 
@@ -90,7 +159,14 @@ class _YardScreenState extends State<YardScreen> {
   Widget build(BuildContext context) {
     final g = _guidance;
     return Scaffold(
-      appBar: AppBar(title: Text(t('whereToGo'))),
+      appBar: AppBar(title: Text(t('whereToGo')), actions: [
+        if (_voiceOn && g != null) IconButton(tooltip: t('sayAgain'), icon: const Icon(Icons.replay), onPressed: () => _speak(again: true)),
+        IconButton(
+          tooltip: _voiceOn ? t('voiceOn') : t('voiceOff'),
+          icon: Icon(_voiceOn ? Icons.volume_up : Icons.volume_off),
+          onPressed: _toggleVoice,
+        ),
+      ]),
       body: g == null
           ? Center(child: _error == null ? const CircularProgressIndicator() : Padding(padding: const EdgeInsets.all(20), child: ErrorBox(message: _error!)))
           : Column(
@@ -122,7 +198,16 @@ class _YardScreenState extends State<YardScreen> {
                 if (_current < g.stops.length - 1)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                    child: FilledButton(onPressed: () => setState(() => _current++), child: Text(t('doneHere'))),
+                    // Not while driving: the next stop is spoken, nothing needs a tap until the truck stands.
+                    child: FilledButton(
+                      onPressed: _moving
+                          ? null
+                          : () {
+                              setState(() => _current++);
+                              _speak();
+                            },
+                      child: Text(_moving ? t('stopToConfirm') : t('doneHere')),
+                    ),
                   ),
               ],
             ),

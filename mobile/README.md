@@ -1,8 +1,9 @@
 # Yardsyncs driver app (Flutter)
 
 For truck drivers: sign in with the mobile number the trucking company registered (one-time code by SMS),
-see upcoming appointments with the traffic light, show the gate code (QR) at the lane, and press
-"I am leaving now" when the truck sets off (the terminal re-checks the containers first).
+see upcoming appointments with the traffic light, show the gate code (QR) at the lane, press
+"I am leaving now" when the truck sets off (the terminal re-checks the containers first), and follow
+spoken directions to the container's block inside the terminal.
 Arabic, English, Urdu and Hindi; right-to-left for Arabic and Urdu.
 
 ## Run
@@ -12,7 +13,7 @@ Requires Flutter 3.27 or later.
 ```bash
 cd mobile
 flutter create --platforms=android,ios --org com.yardsyncs --project-name yardsyncs_driver .   # once: adds the platform folders
-bash tool/configure_android.sh                                    # internet and location permissions
+bash tool/configure_android.sh                                    # internet, location (also in the background), text-to-speech
 flutter pub get
 flutter test
 flutter run --dart-define=YARDSYNCS_API=http://10.0.2.2:5000      # Android emulator → API on your machine
@@ -28,9 +29,14 @@ committed once app identity (package name, icons, signing) is settled.
 - **My appointments** — next first; day, hour (terminal time), terminal, traffic light, containers. Refreshes every minute and on pull.
 - **Appointment** — reason behind the light, moves, company and truck, gate QR code (only while the appointment can still pass the gate), "I am leaving now".
 - **Gate pass** — the QR changes every 30 seconds and is made on the phone from a secret received at sign-in, so it works without mobile data at the gate; signing in on another phone revokes it.
-- **On the way** — after "I am leaving now", while the appointment screen is open, the position is sent every minute: the terminal sees an arrival estimate, and the truck is checked in when it enters the pre-gate area. Positions are only accepted while on the way. (Background tracking needs a foreground service — next step.)
+- **On the way** — after "I am leaving now" the position is sent about every minute, also with the phone locked or another app open (Android: foreground service with a "sharing your location" notification; iOS: background location). The terminal sees an arrival estimate, and the truck is checked in when it enters the pre-gate area; sharing stops there, when the trip ends, or on sign-out. Positions are only accepted while on the way.
+- **Where to go** — after gate-in: the next stop in large text (block, row / bay / tier), the yard map with the route, and the stop spoken in the driver's language (repeat and mute in the top bar). "Done here" waits while the truck is moving.
+
+iOS (when the `ios/` folder is committed): `Info.plist` needs `NSLocationWhenInUseUsageDescription`,
+`NSLocationAlwaysAndWhenInUseUsageDescription` and `UIBackgroundModes` → `location`.
 
 ## API
 
 `/api/driver/login/start`, `/api/driver/login/verify`, `/api/driver/me`, `/api/driver/appointments`,
-`/api/driver/appointments/{no}`, `/api/driver/appointments/{no}/start-trip`, `/api/driver/logout` — see the main README.
+`/api/driver/appointments/{no}`, `/api/driver/appointments/{no}/start-trip`, `/api/driver/appointments/{no}/position`,
+`/api/driver/appointments/{no}/yard`, `/api/driver/gate-pass`, `/api/driver/logout` — see the main README.

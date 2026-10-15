@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'gate_pass.dart';
 import 'models.dart';
+import 'trip_tracker.dart';
 import 'yard.dart';
 
 /// The API address; set at build time: flutter build apk --dart-define=YARDSYNCS_API=https://tas.example.com
@@ -58,6 +59,10 @@ class DriverApi {
   static const _installKey = 'install.id';
   static const _languageKey = 'language';
   static const _passKey = 'gate.pass';
+  static const _voiceKey = 'voice';
+
+  /// Shares the position while on the way (one per app).
+  late final TripTracker tracker = TripTracker(this);
 
   /// Loads a saved session; true when the app is signed in.
   Future<bool> restore() async {
@@ -67,6 +72,10 @@ class DriverApi {
 
   Future<String?> savedLanguage() => _store.read(_languageKey);
   Future<void> saveLanguage(String lang) => _store.write(_languageKey, lang);
+
+  /// Spoken directions in the yard: on unless the driver turned them off.
+  Future<bool> voiceOn() async => await _store.read(_voiceKey) != 'off';
+  Future<void> saveVoiceOn(bool on) => _store.write(_voiceKey, on ? null : 'off');
 
   /// A random id for this install, made once (the server binds the session to it).
   Future<String> installId() async {
@@ -134,6 +143,7 @@ class DriverApi {
   }
 
   Future<void> signOut() async {
+    await tracker.stop();
     try {
       if (_token != null) await _send('POST', '/api/driver/logout');
     } catch (_) {

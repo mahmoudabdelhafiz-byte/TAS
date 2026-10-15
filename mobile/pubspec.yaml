@@ -1,5 +1,5 @@
 name: yardsyncs_driver
-description: Yardsyncs driver app — appointments, gate code and trip start for truck drivers.
+description: Yardsyncs driver app — appointments, gate code, trip tracking and spoken directions in the yard for truck drivers.
 publish_to: none
 version: 0.1.0+1
 
@@ -17,6 +17,7 @@ dependencies:
   qr_flutter: ^4.1.0
   crypto: ^3.0.6
   geolocator: ^13.0.2
+  flutter_tts: ^4.2.0
 
 dev_dependencies:
   flutter_test:

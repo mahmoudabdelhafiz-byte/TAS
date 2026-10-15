@@ -388,4 +388,5 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Rotating gate pass, positions on the way with arrival estimate, automatic check-in at the pre-gate, terminal areas
 - [x] Yard navigation: container's yard position from the TOS, routes on the terminal's roads, where-to-go screen in the app
 - [x] Terminal map editor in the portal: areas and roads, GeoJSON import, reachability check, route preview
-- [ ] Driver app, next: push notifications, background tracking, voice prompts
+- [x] Driver app: trip position in the background (Android foreground service, iOS background location), spoken directions in the yard
+- [ ] Driver app, next: push notifications, app identity and store release
