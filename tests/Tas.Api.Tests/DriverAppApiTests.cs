@@ -253,7 +253,6 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
 
         var created = (await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.Name == "Block C");
         Assert.Equal("C", created.YardBlock);
-        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"{areas}/{created.GeofenceId}/deactivate", null)).StatusCode);
 
         // Editing an area: reshape, rename, block names are unique among the yard blocks.
         var block = $"{areas}/{created.GeofenceId}";
@@ -269,7 +268,8 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync(areas, new { name = "Another A1", zoneType = "YARD_ZONE", ring, yardBlock = "A1" })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync($"{areas}/999999", new { name = "X", zoneType = "GATE", ring })).StatusCode);
 
-        Assert.False((await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.Name == "Block C").IsActive);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"{areas}/{created.GeofenceId}/deactivate", null)).StatusCode);
+        Assert.False((await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.GeofenceId == created.GeofenceId).IsActive);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync(block, new { name = "Block C", zoneType = "YARD_ZONE", ring = bigger, yardBlock = "C" })).StatusCode);
     }
 
