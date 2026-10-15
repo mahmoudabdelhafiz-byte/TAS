@@ -214,16 +214,21 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | Arabic texts for server messages (check results and errors are English today) |
 | ⬜ | Native review of the portal's Arabic wording |
 
-### Phase E — Driver app (Flutter)
-| | Item |
-|---|---|
-| ⬜ | Login with mobile OTP; driver verification (OTP / Nafath ❓) |
-| ⬜ | My appointments with traffic light and reason; Arabic, English, Urdu, Hindi |
-| ⬜ | Digital gate pass (rotating QR) |
-| ⬜ | Start trip → geofence ETA and auto check-in (reuse truck tracking work) |
-| ⬜ | Yard guidance after gate-in (block / lane / transfer point from N4) |
-| ⬜ | Chat / call request to control room, templated messages |
-| ⬜ | Backend for the above: devices, verification, gate pass, geofences, ETA, yard instructions, messages (tables already in the schema) |
+### Phase E — Driver app (Flutter) — next after portal round 2
+| | Item | Notes |
+|---|---|---|
+| 🔜 | App skeleton in `mobile/`: Flutter (Android first, iOS after), Arabic / English / Urdu / Hindi, right-to-left; CI job (analyze, tests, build APK) | Same repository and CI as the API and portal |
+| ⬜ | Login with mobile OTP (SMS through the notification providers); driver verification | ❓ Nafath (decision 5) |
+| ⬜ | My appointments: hour, moves, traffic light and reason in the driver's language; push when it changes | Replaces SMS for drivers who have the app |
+| ⬜ | Gate pass: rotating QR for the lane reader; after gate-in it shows where to go (block, row, bay or transfer point) | `gate_pass` table |
+| ⬜ | Start trip → ETA to the terminal, auto check-in at the pre-gate geofence | Reuse the truck tracking work; location only while EN_ROUTE / inside |
+| ⬜ | **Yard navigation:** at gate-in TAS reads the container's yard position from N4 and turns it into stops (`yard_instruction`): import pickup → block / row / bay; export drop / empty return → block or transfer point N4 assigns; dual moves → stops in order, then exit | N4 TasLookup adds the position; ❓ decision 9 |
+| ⬜ | **Terminal map:** blocks, roads (one-way, speed zones), transfer points, gates and exits as a map layer; routes computed on the terminal's own road network (public maps don't know internal roads); works without mobile data inside the yard | Built from the terminal's CAD drawing / survey; editor in the portal ❓ decision 10 |
+| ⬜ | Route on the map from the gate to the block, next turn in large text, voice prompts in the driver's language; the screen does not take input while the truck moves | ❓ decision 11 (phone use inside the terminal) |
+| ⬜ | Container moved in the yard (rehandle / housekeeping) → new position pushed to the driver, route redrawn | N4 change detected by re-reading the position on a short interval while the truck is inside |
+| ⬜ | Arrived at the block (geofence) → shown to the control room / gate board; time per stop for turn-time analysis | `geofence`, `geofence_event` tables |
+| ⬜ | Chat / call request to the control room, templated messages | `appointment_message` table |
+| ⬜ | Backend for the above: devices, verification, gate pass, ETA, yard instructions, map data, messages | Tables already in the schema |
 
 ### Phase F — Production readiness
 | | Item |
@@ -247,4 +252,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | 6 | Gate check-in: QR scan at lane, or geofence + OCR plate match only? | Phases B, E |
 | 7 | Fees: free booking, paid booking, or penalties for no-show / late only? | Phase A, billing |
 | 8 | Slot length: fixed per terminal, or different lengths by time of day? | Capacity engine |
-| 9 | Can N4 provide yard positions per truck visit in real time? | Yard guidance |
+| 9 | Can N4 provide yard positions per truck visit in real time? For exports and empty returns the block is only known once N4 plans the receipt — at gate-in, or earlier if TAS pre-advises the truck visit in N4 (needs the N4 write-back go-ahead) | Yard navigation |
+| 10 | Terminal map source: CAD drawing / survey of blocks, roads and transfer points — who provides it, and who keeps it up to date when the layout changes? | Yard navigation |
+| 11 | Phone use while driving inside the terminal: does the terminal's safety policy allow a phone in a holder with voice prompts, or only a view when the truck is stopped? | Yard navigation |
+| 12 | Show the yard position only after gate-in (recommended: the container's location is not given to trucks outside the terminal)? | Yard navigation, security |

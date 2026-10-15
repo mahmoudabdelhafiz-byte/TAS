@@ -352,4 +352,4 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Notifications: on hold / cleared / reminder / slot closed in 4 languages; Unifonic, Twilio (SMS, WhatsApp), SMTP; retries
 - [x] Web portal, round 1: sign-in, booking, appointments, slot board with capacity changes, gate and trouble desk; Arabic / English
 - [ ] Web portal, round 2: weekly template editor, bulk upload, fleet and users, KPI dashboard
-- [ ] Driver app (Flutter)
+- [ ] Driver app (Flutter): appointments, gate pass, ETA, yard navigation to the container's block
