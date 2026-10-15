@@ -7,7 +7,7 @@ public sealed record N4LookupRequest(
     [property: JsonPropertyName("units")] IReadOnlyList<string> Units,
     [property: JsonPropertyName("orders")] IReadOnlyList<string> Orders,
     [property: JsonPropertyName("bls")] IReadOnlyList<string> Bls,
-    [property: JsonPropertyName("blUnits")] IReadOnlyList<string>? BlUnits = null);
+    [property: JsonPropertyName("blUnits"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<string>? BlUnits = null);
 
 /// <summary>A container as N4 sees it now.</summary>
 /// <param name="Category">N4 unit category key: IMPRT, EXPRT, STRGE, TRSHP, THRGH.</param>
