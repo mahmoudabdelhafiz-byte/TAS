@@ -23,6 +23,26 @@ export function addDays(date: string, days: number): string {
   return utc.toISOString().slice(0, 10);
 }
 
+/** The instant of a local date and time in a time zone, as ISO 8601 with offset ("2026-10-20T10:00:00+03:00"). */
+export function zonedIso(date: string, time: string, timeZone: string): string {
+  const [y, mo, d] = date.split('-').map(Number);
+  const [h, mi] = time.split(':').map(Number);
+  const wall = Date.UTC(y, mo - 1, d, h, mi);
+  // The zone's offset at that moment: format a UTC guess in the zone and compare (twice, for DST edges).
+  const offsetAt = (utc: number) => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    }).formatToParts(new Date(utc));
+    const get = (t: string) => Number(parts.find(p => p.type === t)?.value);
+    return (Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute')) - utc) / 60000;
+  };
+  let offset = offsetAt(wall);
+  offset = offsetAt(wall - offset * 60000);
+  const sign = offset >= 0 ? '+' : '-';
+  const abs = Math.abs(offset);
+  return `${date}T${time.length === 5 ? time : time.padStart(5, '0')}:00${sign}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
+}
+
 /** "10:00" in the terminal's zone. */
 export function clock(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })

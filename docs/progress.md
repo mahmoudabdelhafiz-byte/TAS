@@ -176,6 +176,15 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | API: `POST /api/terminals/{id}/containers/lookup`; TOS adapter lists containers of a BL (fake TOS config, N4 `blUnits` in TasLookup — VERIFY on the customer's N4) |
 | ✅ | Tests: lookup API (BL, pasted list, other company's booking hidden), N4 answer parsing, ISO sizes, truck grouping and hour allocation |
 
+### 15. Web portal — round 2, part 1 (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Capacity setup — weekly plans: the week as a grid (day × slot) coloured by capacity; drag to select hours, set trucks per slot, overbooking and a limit per move type, or close hours; saved as plan windows, slots regenerated and over-capacity reported |
+| ✅ | Seasonal plans (dates, priority) started as a copy of the default plan; remove a seasonal plan |
+| ✅ | Reserved places for a company or the walk-in reserve, with release before the slot; release rules per move type; booking rules (early / late grace, cancel cut-off, appointments per truck per day) |
+| ✅ | Bulk upload screen: template download, check the file (nothing booked), book the visits that passed, result per visit |
+| ✅ | Tests: plan grid ↔ windows, selection, local time → instant in the terminal's zone |
+
 ---
 
 ## Remaining
@@ -206,8 +215,6 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| 🔜 | Capacity setup: weekly template grid, seasonal templates, reservations, release rules |
-| 🔜 | Bulk upload screen (dry run, results per row, template download) |
 | 🔜 | Fleet (trucks, drivers) and user management screens; companies for terminal admins |
 | 🔜 | KPI dashboard: slot utilization, no-show rate, turn time, appointment vs walk-in |
 | ⬜ | Walk-in booking from the trouble desk; appointment search by container / plate across days |
