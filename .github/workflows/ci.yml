@@ -90,3 +90,32 @@ jobs:
           dotnet build TAS.slnx --no-restore -c Release 2>&1 | grep -E "error [A-Z]+[0-9]+" | sort -u | head -30 | while read -r line; do
             echo "::error title=Build::$line"
           done
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Type-check and build
+        run: npm run build
+
+      - name: Publish errors
+        if: failure()
+        run: |
+          npx tsc -p tsconfig.json --pretty false 2>&1 | head -30 | while read -r line; do echo "::error title=web typecheck::$line"; done
+          npm test 2>&1 | grep -E "not ok|Error|expected|actual" | head -20 | while read -r line; do echo "::error title=web test::$line"; done
+          npx vite build 2>&1 | grep -iE "error" | head -20 | while read -r line; do echo "::error title=web build::$line"; done

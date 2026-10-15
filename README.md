@@ -36,6 +36,7 @@ tests/Tas.Infrastructure.Tests integration tests against PostgreSQL (run when TA
 tests/Tas.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)
 db/migrations/                scripts to upgrade an existing database
 integrations/n4/              Navis N4: Groovy code extension (TasLookup) and setup guide
+web/                          web portal (React + TypeScript, Vite) for trucking companies and terminal staff
 ```
 
 ## Running locally
@@ -73,6 +74,28 @@ dotnet test tests/Tas.Api.Tests
 ```
 
 CI (GitHub Actions) builds the solution and runs both test projects against a PostGIS container on every push.
+
+### Web portal
+
+Requires Node.js 22.
+
+```bash
+cd web
+npm install
+npm run dev        # http://localhost:5173, forwards /api to the API on http://localhost:5000 (TAS_API_URL to change)
+npm test           # unit tests
+npm run build      # type-check, then build into src/Tas.Api/wwwroot — the API then serves the portal at /
+```
+
+Screens by role:
+
+| Role | Screens |
+|---|---|
+| Company admin / dispatcher | Book a truck, Appointments (own company) |
+| Planner, terminal admin | Slot board (with capacity changes), Appointments (all companies), Book a truck (on behalf of a company), Gate |
+| Gate clerk | Gate (board, truck check, gate in/out, trouble desk), Appointments |
+
+Arabic and English, right-to-left in Arabic. Times are shown in the terminal's time zone. Messages that come from the server (check results, errors) are in English for now.
 
 ## API (so far)
 
@@ -155,6 +178,7 @@ How an arrival is handled:
 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
+| `GET` | `/api/terminals` | all signed-in users | Terminals the user can work at (companies: all active; staff: their own) |
 | `GET` / `POST` | `/api/companies` | all (companies see only themselves) / TerminalAdmin | List & search / register a company |
 | `GET` / `PUT` | `/api/companies/{id}` | own company or staff / TerminalAdmin | View / edit |
 | `POST` | `/api/companies/{id}/status` | TerminalAdmin | Activate / suspend (reason required); suspended companies cannot book |
@@ -325,5 +349,6 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Gate: lane arrivals (QR / number / plate / container), re-check, admit or trouble desk, walk-ins, gate in/out, turn time, gate board
 - [x] Navis N4 adapter (read-only checks via genericInvoke + Groovy code extension), outage handling
 - [x] Notifications: on hold / cleared / reminder / slot closed in 4 languages; Unifonic, Twilio (SMS, WhatsApp), SMTP; retries
-- [ ] Operator portal (React)
+- [x] Web portal, round 1: sign-in, booking, appointments, slot board with capacity changes, gate and trouble desk; Arabic / English
+- [ ] Web portal, round 2: weekly template editor, bulk upload, fleet and users, KPI dashboard
 - [ ] Driver app (Flutter)

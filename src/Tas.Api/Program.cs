@@ -33,6 +33,12 @@ builder.Services.AddRateLimiter(o =>
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+// The web portal (web/, built into wwwroot by `npm run build`) is served from the same address as the API.
+// It uses hash routes (/#/appointments), so only "/" needs index.html — no fallback route that could shadow /api.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

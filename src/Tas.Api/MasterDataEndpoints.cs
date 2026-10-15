@@ -4,10 +4,15 @@ using Tas.Application.MasterData;
 using Tas.Domain.Booking;
 using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.MasterData;
+using Tas.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Tas.Api;
 
 public sealed record ActiveBody(bool Active, string? Reason);
+
+public sealed record TerminalView(
+    int TerminalId, string Code, string Name, Tas.Domain.TerminalType TerminalType, string TimeZone, int SlotMinutes, int BookingHorizonDays);
 
 /// <summary>Companies, trucks, drivers, categories, cargo releases and users.</summary>
 public static class MasterDataEndpoints
@@ -87,6 +92,23 @@ public static class MasterDataEndpoints
             !AccessRules.CanBlockFleet(TasApi.User(http)!)
                 ? TasApi.Forbidden("Only terminal admins can block or unblock drivers.")
                 : TasApi.Admin(await service.SetDriverBlockedAsync(TasApi.User(http)!, companyId, driverId, body, ct)));
+
+        // ================================================================ terminals
+
+        // The terminals the signed-in user can work at (the portal's terminal picker).
+        // Companies and system admins see every active terminal; terminal staff see their own.
+        app.MapGet("/api/terminals", async (HttpContext http, TasDbContext db, CancellationToken ct) =>
+        {
+            var user = TasApi.User(http)!;
+            var query = db.Terminals.AsNoTracking().Where(t => t.IsActive);
+            if (user.IsTerminalStaff && !user.IsSysAdmin)
+                query = query.Where(t => t.TerminalId == user.TerminalId);
+
+            return Results.Ok(await query
+                .OrderBy(t => t.Code)
+                .Select(t => new TerminalView(t.TerminalId, t.Code, t.Name, t.TerminalType, t.TimeZone, t.SlotMinutes, t.BookingHorizonDays))
+                .ToListAsync(ct));
+        }).RequireAuthorization();
 
         // ================================================================ terminal: categories & cargo
 
