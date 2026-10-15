@@ -38,6 +38,7 @@ tests/Tas.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_
 db/migrations/                scripts to upgrade an existing database
 integrations/n4/              Navis N4: Groovy code extension (TasLookup) and setup guide
 web/                          web portal (React + TypeScript, Vite) for trucking companies and terminal staff
+mobile/                       driver app (Flutter)
 ```
 
 ## Running locally
@@ -59,6 +60,7 @@ Production settings (environment variables):
 | `ConnectionStrings__Tas` | PostgreSQL connection string |
 | `Jwt__SigningKey` | **Required.** Random secret, at least 32 characters. The API refuses to start without it |
 | `Bootstrap__AdminEmail`, `Bootstrap__AdminPassword` | Creates the first SysAdmin on start if none exists; remove afterwards |
+| `DriverLogin__SessionDays`, `DriverLogin__CodeMinutes` | Driver app session length (default 30 days, ends earlier when the driver signs in on another phone) and sign-in code lifetime (5 min) |
 
 Upgrading an existing database: run the scripts in `db/migrations/` in order.
 
@@ -269,6 +271,22 @@ Delivery is retried after 1, 5, 15 and 60 minutes on temporary errors; invalid n
 messages not sent within 12 h are dropped. The sender ID ("Yardsyncs") must be registered with the SMS provider
 (CITC rules in Saudi Arabia). Put secrets in environment variables, e.g. `Notifications__Unifonic__AppSid`.
 
+### Driver app
+
+Drivers sign in with the mobile number their company registered; the code arrives by SMS (through the SMS provider in `Notifications`). One person may drive for several companies — the app shows the appointments of every driver record with that number. Driver tokens have their own audience: they open only `/api/driver/*`, and staff / company tokens don't open those.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/driver/login/start` | `{mobile, installId}` → code by SMS. Same answer for unknown numbers; at most 3 codes per number in 15 minutes |
+| `POST` | `/api/driver/login/verify` | `{mobile, installId, code, platform, appVersion}` → session token bound to this phone (signing in elsewhere ends it); 5 tries per code |
+| `GET` | `/api/driver/me` | Name, mobile, language, companies |
+| `GET` | `/api/driver/appointments` | Upcoming and live appointments (and those finished in the last 12 h): terminal time offset, traffic light and reason, moves, gate code |
+| `GET` | `/api/driver/appointments/{no}` | One of them |
+| `POST` | `/api/driver/appointments/{no}/start-trip` | The truck is leaving: re-check, then on the way; refused while anything is red |
+| `POST` | `/api/driver/logout` | Signs this phone out |
+
+The Flutter app is in `mobile/` (see `mobile/README.md`). CI analyzes, tests and builds a debug APK, kept for 14 days as a download on the CI run (`yardsyncs-driver-debug-apk`).
+
 ### Bulk booking
 
 Dispatchers can upload a sheet of truck visits instead of booking one by one:
@@ -353,4 +371,5 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Notifications: on hold / cleared / reminder / slot closed in 4 languages; Unifonic, Twilio (SMS, WhatsApp), SMTP; retries
 - [x] Web portal, round 1: sign-in, booking, appointments, slot board with capacity changes, gate and trouble desk; Arabic / English
 - [x] Web portal, round 2: capacity setup (weekly plan grid, seasonal plans, reserved places, rules), bulk upload, fleet and users, KPI dashboard
-- [ ] Driver app (Flutter): appointments, gate pass, ETA, yard navigation to the container's block
+- [x] Driver app, part 1: sign-in by SMS code, my appointments with traffic light, gate QR code, start trip (Arabic, English, Urdu, Hindi)
+- [ ] Driver app, next: push notifications, rotating gate pass, ETA and auto check-in, yard navigation to the container's block
