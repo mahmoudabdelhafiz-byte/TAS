@@ -243,6 +243,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | Security review; PDPL privacy (location only during active visits, consent) |
 | ⬜ | Load test for peak booking times |
 | ⬜ | User guides (Arabic / English) and onboarding for trucking companies |
+| ⬜ | **Reminder for Mahmoud when development is finished:** make the GitHub repository private (Settings → Danger Zone → Change visibility) |
 
 ### Phase G — Generic product (any terminal operator)
 | | Item | Notes |
@@ -297,4 +298,4 @@ Former open questions, now options each terminal chooses. Default in **bold**.
 ## Open decisions
 | ❓ | Question | Affects |
 |---|---|---|
-| 1 | Make the GitHub repository private — to be done in GitHub settings (Settings → Danger Zone → Change visibility); this workspace cannot change repository settings | Code confidentiality |
+| 1 | Make the GitHub repository private — decided: do it when development is finished (reminder in Phase F); this workspace cannot change repository settings | Code confidentiality |
