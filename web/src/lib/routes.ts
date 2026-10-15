@@ -2,7 +2,7 @@
 
 import type { UserRole } from './types.ts';
 
-export type Screen = 'book' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'gate';
+export type Screen = 'book' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'gate' | 'kpi' | 'fleet';
 
 export interface Route {
   screen: Screen | null;
@@ -14,7 +14,7 @@ export function parseHash(hash: string): Route {
   const [path, query = ''] = clean.split('?');
   const params: Record<string, string> = {};
   for (const [key, value] of new URLSearchParams(query)) params[key] = value;
-  const screen = (['book', 'bulk', 'appointments', 'slots', 'setup', 'gate'] as const).find(s => s === path) ?? null;
+  const screen = (['book', 'bulk', 'appointments', 'slots', 'setup', 'gate', 'kpi', 'fleet'] as const).find(s => s === path) ?? null;
   return { screen, params };
 }
 
@@ -30,13 +30,13 @@ export function screensFor(role: UserRole): Screen[] {
   switch (role) {
     case 'CompanyAdmin':
     case 'CompanyUser':
-      return ['book', 'bulk', 'appointments'];
+      return ['book', 'bulk', 'appointments', 'fleet'];
     case 'GateClerk':
       return ['gate', 'appointments'];
     case 'Planner':
     case 'TerminalAdmin':
     case 'SysAdmin':
-      return ['slots', 'setup', 'appointments', 'book', 'bulk', 'gate'];
+      return ['slots', 'kpi', 'setup', 'appointments', 'book', 'bulk', 'gate', 'fleet'];
   }
 }
 

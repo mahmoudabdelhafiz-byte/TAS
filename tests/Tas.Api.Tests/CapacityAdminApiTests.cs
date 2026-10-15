@@ -224,4 +224,27 @@ public sealed class CapacityAdminApiTests(TasApiFactory factory) : ApiTestBase(f
         using var json = JsonDocument.Parse(audit.First(a => a.Entity == "terminal_setting").NewValues!);
         Assert.Equal(45, json.RootElement.GetProperty("early_grace_min").GetInt32());
     }
+
+    [Fact]
+    public async Task Kpis_for_staff_only_with_a_bounded_range()
+    {
+        if (!Enabled) return;
+
+        var alNoor = await As(DemoDataSeeder.DispatcherEmail);
+        var planner = await As(DemoDataSeeder.PlannerEmail);
+        Assert.Equal(HttpStatusCode.Created, (await alNoor.PostAsJsonAsync(Appointments, ImportBooking())).StatusCode);
+
+        var kpis = $"{Terminal}/kpis?from={Tomorrow:yyyy-MM-dd}&to={Tomorrow:yyyy-MM-dd}";
+        Assert.Equal(HttpStatusCode.Forbidden, (await alNoor.GetAsync(kpis)).StatusCode);
+
+        var report = await Read<Tas.Application.Reports.KpiReport>(await planner.GetAsync(kpis));
+        var day = Assert.Single(report.Days);
+        Assert.Equal(Tomorrow, day.Date);
+        Assert.True(day.Capacity > 0);
+        Assert.True(day.Booked >= 1);
+        Assert.True(report.Totals.Appointments >= 1);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await planner.GetAsync($"{Terminal}/kpis?from={Tomorrow:yyyy-MM-dd}&to={Tomorrow.AddDays(-1):yyyy-MM-dd}")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await planner.GetAsync($"{Terminal}/kpis?from={Tomorrow:yyyy-MM-dd}&to={Tomorrow.AddDays(100):yyyy-MM-dd}")).StatusCode);
+    }
 }

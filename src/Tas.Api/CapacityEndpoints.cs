@@ -103,6 +103,25 @@ public static class CapacityEndpoints
             CanManage(http, terminalId)
             ?? ToResult(await service.UpdateSettingsAsync(TasApi.User(http)!, terminalId, body.Values ?? new Dictionary<string, int>(), body.Reason, ct)));
 
+        // Terminal KPIs for local dates from..to (at most 92 days): slot use, no-shows, punctuality, walk-ins, turn time.
+        terminal.MapGet("/kpis", async (int terminalId, DateOnly from, DateOnly to, HttpContext http, Tas.Infrastructure.Reports.KpiService service, CancellationToken ct) =>
+        {
+            if (CanView(http, terminalId) is { } denied)
+                return denied;
+            if (to < from)
+                return TasApi.Problem(StatusCodes.Status400BadRequest, "'to' must be on or after 'from'.");
+            if (to.DayNumber - from.DayNumber + 1 > Tas.Application.Reports.KpiCalculator.MaxDays)
+                return TasApi.Problem(StatusCodes.Status400BadRequest, $"The range can be at most {Tas.Application.Reports.KpiCalculator.MaxDays} days.");
+            try
+            {
+                return Results.Ok(await service.ReportAsync(terminalId, from, to, ct));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return TasApi.Problem(StatusCodes.Status404NotFound, ex.Message);
+            }
+        });
+
         terminal.MapGet("/audit", async (int terminalId, string? entity, int? limit, HttpContext http, CapacityAdminService service, CancellationToken ct) =>
             CanManage(http, terminalId) ?? Results.Ok(await service.AuditAsync(terminalId, entity, limit ?? 100, ct)));
 
