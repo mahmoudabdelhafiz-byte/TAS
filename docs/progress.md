@@ -189,7 +189,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase B — Gate
 | | Item | Notes |
 |---|---|---|
-| ⬜ | Autogate / OCR adapter | Connect the customer's specific lane system to the gate API (push from lanes or polling) ❓ which system |
+| ⬜ | Third-party Autogate / OCR connector | For terminals that keep their existing lane system: push its reads into the gate API. Our own Autogate is Phase H |
 | ⬜ | Gate pass for drivers | Rotating QR in the driver app instead of the static appointment QR (Phase E) |
 
 ### Phase C — Integrations
@@ -244,24 +244,57 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | Load test for peak booking times |
 | ⬜ | User guides (Arabic / English) and onboarding for trucking companies |
 
+### Phase G — Generic product (any terminal operator)
+| | Item | Notes |
+|---|---|---|
+| ⬜ | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Today `Tos:Adapter` and the providers are set once per installation |
+| ⬜ | Tenants: terminal operator → terminals; operator admins; data separated per operator in the cloud | Terminal scope already exists |
+| ⬜ | Country packs: plate formats (Saudi Arabic plates today), mobile number rules (+966 today), national holidays, currencies, ID types | Plate and mobile rules become per-country |
+| ⬜ | Languages as packs: portal and messages in more languages without code changes | Arabic, English, Urdu, Hindi today |
+| ⬜ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | |
+| ⬜ | TOS adapter kit: documented interface + test suite any new TOS adapter must pass | `ITosAdapter` today |
+| ⬜ | Terminal onboarding wizard: terminal, move types, weekly plan, lanes, TOS connection, settings above | |
+| ⬜ | Product name in the code and repository: "TAS" → Yardsyncs | |
+
+### Phase H — Yardsyncs Autogate (next module)
+| | Item | Notes |
+|---|---|---|
+| ⬜ | Lane model: lanes, devices per lane (cameras, OCR, RFID reader, kiosk, barrier, traffic light, intercom, weighbridge), lane states | `gate_lane` today |
+| ⬜ | Device adapters, vendor-neutral: OCR results in (plate, container numbers, ISO code, seal, damage photos), barrier / light / display commands out | The gate API already takes plate and container reads |
+| ⬜ | Lane controller service at the terminal: one transaction per truck — identify, match appointment, re-check, decide, open barrier or send to remote clerk | On-premise next to the lanes, keeps working if the cloud link drops |
+| ⬜ | Remote clerk station: live lane view, photos, OCR corrections, intercom, admit / refer / reject — grows out of today's trouble desk | |
+| ⬜ | TOS gate transaction: create the truck visit and gate-in / gate-out in the TOS (N4 gate API), print or send the EIR / gate ticket | Needs TOS write access |
+| ⬜ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | |
+| ⬜ | Exit gate: match outbound container, check delivered against booked, close the visit, turn time | Gate-out exists in the API |
+| ⬜ | Lane KPIs: transaction time, OCR read rate, exception rate per lane | |
+| ⬜ | Gate pass from the driver app read at the kiosk; yard position printed or pushed at gate-in | Phase E |
+
 ---
 
 ## Decided
 | Date | Decision |
 |---|---|
 | 2026-10-15 | Hosting: both are supported — cloud service from us and on-premise at the terminal (Phase F) |
+| 2026-10-15 | **Yardsyncs is a generic product** sold to many terminal operators. A customer's choice never goes into the code: it is a per-terminal setting (or a pluggable adapter), with a sensible default. The first customer is the first configuration (Phase G) |
+| 2026-10-15 | **Autogate is the next Yardsyncs module** after the TAS: our own lane application on top of the gate API, vendor-neutral towards cameras, OCR, RFID, kiosks and barriers (Phase H). Everything built for the gate now must stay usable by it |
+
+## Per-terminal settings (asked when a terminal is set up)
+Former open questions, now options each terminal chooses. Default in **bold**.
+
+| Setting | Options | Status |
+|---|---|---|
+| TOS | **Navis N4 (web services + TasLookup)** · fake TOS for demos · further adapters per customer (other TOS, EDI, database views) | N4 + fake done; adapter chosen per terminal → Phase G |
+| National appointment / port community platform | **none** · integration module per country / port when required | Phase C, per customer |
+| Driver identity | **mobile one-time code** · national e-ID where available (e.g. Nafath in Saudi Arabia) · ID + selfie check | Phase E |
+| Gate identification | **appointment number / QR** · plate OCR · container OCR · RFID tag · geofence check-in — any combination per lane | Gate API accepts all reads today; lane setup → Phase H |
+| Fees | **free** · booking fee · no-show / late penalty · paid priority slots; payment gateway per country | Phase F (billing) |
+| Slot length | **60 min**, 15 / 30 / 120 per terminal; different lengths by time of day as an option | Per terminal done; by time of day ⬜ |
+| Yard position source | **TOS position at gate-in** · earlier when the TOS has a pre-advised truck visit (needs TOS write-back) | Phase E |
+| Terminal map | drawn in the portal's map editor · imported from CAD / GeoJSON | Phase E |
+| Driving with the phone | **voice prompts, screen locked while moving** · view only when stopped | Phase E |
+| When the driver sees the yard position | **after gate-in** · when the trip starts | Phase E |
 
 ## Open decisions
 | ❓ | Question | Affects |
 |---|---|---|
-| 1 | Make the GitHub repository private? (currently public) | Code confidentiality |
-| 3 | N4 integration path: built on web services (genericInvoke + Groovy) — confirm this suits the customer, or EDI / DB views instead? | Phase C |
-| 4 | Is a national appointment platform mandatory at the customer's port? | Phase C |
-| 5 | Driver identity: mobile OTP enough, or Nafath / liveness required for ISPS? | Phase E |
-| 6 | Gate check-in: QR scan at lane, or geofence + OCR plate match only? | Phases B, E |
-| 7 | Fees: free booking, paid booking, or penalties for no-show / late only? | Phase A, billing |
-| 8 | Slot length: fixed per terminal, or different lengths by time of day? | Capacity engine |
-| 9 | Can N4 provide yard positions per truck visit in real time? For exports and empty returns the block is only known once N4 plans the receipt — at gate-in, or earlier if TAS pre-advises the truck visit in N4 (needs the N4 write-back go-ahead) | Yard navigation |
-| 10 | Terminal map source: CAD drawing / survey of blocks, roads and transfer points — who provides it, and who keeps it up to date when the layout changes? | Yard navigation |
-| 11 | Phone use while driving inside the terminal: does the terminal's safety policy allow a phone in a holder with voice prompts, or only a view when the truck is stopped? | Yard navigation |
-| 12 | Show the yard position only after gate-in (recommended: the container's location is not given to trucks outside the terminal)? | Yard navigation, security |
+| 1 | Make the GitHub repository private — to be done in GitHub settings (Settings → Danger Zone → Change visibility); this workspace cannot change repository settings | Code confidentiality |

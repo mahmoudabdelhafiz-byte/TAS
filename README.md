@@ -1,7 +1,8 @@
 # TAS — Truck Appointment System
 
-Truck appointment and landside management for **container and multipurpose terminals**.
-Multi-terminal by design: one deployment serves many terminals.
+Truck appointment and landside management for **container and multipurpose terminals** — the first module of **Yardsyncs**.
+A generic product: one deployment serves many terminals and operators, hosted by us or installed on-premise; each terminal's choices (TOS, gate identification, driver identity, fees…) are settings, not code.
+Next module: **Yardsyncs Autogate**, built on the same gate API.
 
 ## Scope
 
