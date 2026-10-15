@@ -40,6 +40,9 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<DriverDevice> DriverDevices => Set<DriverDevice>();
     public DbSet<DriverVerification> DriverVerifications => Set<DriverVerification>();
     public DbSet<DriverOtp> DriverOtps => Set<DriverOtp>();
+    public DbSet<GatePass> GatePasses => Set<GatePass>();
+    public DbSet<AppointmentEta> AppointmentEtas => Set<AppointmentEta>();
+    public DbSet<GeofenceEvent> GeofenceEvents => Set<GeofenceEvent>();
     public DbSet<CargoAllocation> CargoAllocations => Set<CargoAllocation>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<AppointmentItem> AppointmentItems => Set<AppointmentItem>();
@@ -189,6 +192,20 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
             e.HasKey(x => x.OtpId);
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
+
+        b.Entity<GatePass>(e =>
+        {
+            e.HasKey(x => x.GatePassId);
+            e.Property(x => x.IssuedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<AppointmentEta>(e =>
+        {
+            e.HasKey(x => x.EtaId);
+            e.Property(x => x.RecordedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<GeofenceEvent>(e => e.HasKey(x => x.GeofenceEventId));
 
         // ---------- Booking ----------
 

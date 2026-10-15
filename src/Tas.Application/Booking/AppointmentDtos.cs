@@ -20,7 +20,8 @@ public sealed record AppointmentDto(
     string TrafficReason,
     string QrToken,
     IReadOnlyList<AppointmentItemDto> Items,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? Eta = null);
 
 public sealed record AppointmentItemDto(
     string Category,

@@ -116,6 +116,7 @@ export interface Appointment {
   qrToken: string;
   items: AppointmentItem[];
   createdAt: string;
+  eta?: string | null;
 }
 
 export interface BookingItemInput {

@@ -44,4 +44,12 @@ void main() {
     expect(dayWord(a, DateTime.utc(2026, 10, 17, 12)), isNull);
     expect(shortDate(a), '20/10');
   });
+
+  test('arrival estimate in terminal time', () {
+    final json = sample()..['status'] = 'EnRoute'..['eta'] = '2026-10-20T06:42:00+00:00';
+    final a = DriverAppointment.fromJson(json);
+    expect(a.etaClock(), '09:42');
+    expect(a.copyWith(status: 'Arrived').status, 'Arrived');
+    expect(DriverAppointment.fromJson(sample()).etaClock(), isNull);
+  });
 }

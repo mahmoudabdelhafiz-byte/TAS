@@ -57,6 +57,11 @@ const Map<String, Map<String, String>> texts = {
     'status.NoShow': 'Missed',
     'status.RejectedAtGate': 'Turned away at the gate',
     'status.Draft': 'Draft',
+    'codeChanges': 'The code changes in {s} s',
+    'eta': 'Expected at the gate around {time}',
+    'checkedIn': 'Checked in at the pre-gate. Wait to be called to the gate.',
+    'locationOff': 'Turn on location so the terminal knows when you will arrive.',
+    'sharing': 'Your position is shared with the terminal only while you are on the way.',
   },
   'ar': {
     'appName': 'Yardsyncs',
@@ -101,6 +106,11 @@ const Map<String, Map<String, String>> texts = {
     'status.NoShow': 'فائت',
     'status.RejectedAtGate': 'رُدّ من البوابة',
     'status.Draft': 'مسودة',
+    'codeChanges': 'يتغيّر الرمز خلال {s} ث',
+    'eta': 'الوصول المتوقع إلى البوابة نحو {time}',
+    'checkedIn': 'تم تسجيل وصولك في منطقة ما قبل البوابة. انتظر النداء إلى البوابة.',
+    'locationOff': 'شغّل خدمة الموقع لتعرف المحطة موعد وصولك.',
+    'sharing': 'يُشارك موقعك مع المحطة فقط أثناء الطريق إليها.',
   },
   'ur': {
     'appName': 'Yardsyncs',
@@ -145,6 +155,11 @@ const Map<String, Map<String, String>> texts = {
     'status.NoShow': 'چھوٹ گئی',
     'status.RejectedAtGate': 'گیٹ سے واپس',
     'status.Draft': 'مسودہ',
+    'codeChanges': 'کوڈ {s} سیکنڈ میں بدل جائے گا',
+    'eta': 'گیٹ پر متوقع آمد تقریباً {time}',
+    'checkedIn': 'پری گیٹ پر چیک اِن ہو گیا۔ گیٹ پر بلائے جانے کا انتظار کریں۔',
+    'locationOff': 'لوکیشن آن کریں تاکہ ٹرمینل کو آپ کی آمد کا علم ہو۔',
+    'sharing': 'آپ کی لوکیشن صرف راستے میں ہوتے ہوئے ٹرمینل کے ساتھ شیئر ہوتی ہے۔',
   },
   'hi': {
     'appName': 'Yardsyncs',
@@ -189,6 +204,11 @@ const Map<String, Map<String, String>> texts = {
     'status.NoShow': 'छूट गई',
     'status.RejectedAtGate': 'गेट से लौटाया गया',
     'status.Draft': 'ड्राफ़्ट',
+    'codeChanges': 'कोड {s} सेकंड में बदलेगा',
+    'eta': 'गेट पर अनुमानित पहुँच लगभग {time}',
+    'checkedIn': 'प्री-गेट पर चेक-इन हो गया। गेट पर बुलाए जाने का इंतज़ार करें।',
+    'locationOff': 'लोकेशन चालू करें ताकि टर्मिनल को पता रहे कि आप कब पहुँचेंगे।',
+    'sharing': 'आपकी लोकेशन सिर्फ़ रास्ते में होने पर टर्मिनल के साथ साझा होती है।',
   },
 };
 

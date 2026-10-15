@@ -124,6 +124,14 @@ public sealed class DemoDataSeeder(TasDbContext db, SlotGenerationService slotGe
         db.Companies.AddRange(company, otherCompany);
         await db.SaveChangesAsync(ct);
 
+        // Demo terminal areas: approach, pre-gate (checks trucks in) and gate, around 21.470 N 39.170 E.
+        await db.Database.ExecuteSqlAsync($"""
+            INSERT INTO geofence (terminal_id, name, zone_type, area, triggers_check_in) VALUES
+              ({tid}, 'Approach roads', 'APPROACH', ST_GeogFromText('POLYGON((39.140 21.440, 39.200 21.440, 39.200 21.500, 39.140 21.500, 39.140 21.440))'), false),
+              ({tid}, 'Pre-gate parking', 'PRE_GATE', ST_GeogFromText('POLYGON((39.169 21.471, 39.171 21.471, 39.171 21.4725, 39.169 21.4725, 39.169 21.471))'), true),
+              ({tid}, 'Main gate', 'GATE', ST_GeogFromText('POLYGON((39.1695 21.470, 39.1705 21.470, 39.1705 21.471, 39.1695 21.471, 39.1695 21.470))'), false)
+            """, ct);
+
         AppUser WithPassword(AppUser user)
         {
             user.PasswordHash = passwords.Hash(user, DemoPassword);

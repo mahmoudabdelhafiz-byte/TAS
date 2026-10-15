@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'gate_pass.dart';
 import 'models.dart';
 
 /// The API address; set at build time: flutter build apk --dart-define=YARDSYNCS_API=https://tas.example.com
@@ -55,6 +56,7 @@ class DriverApi {
   static const _tokenKey = 'session.token';
   static const _installKey = 'install.id';
   static const _languageKey = 'language';
+  static const _passKey = 'gate.pass';
 
   /// Loads a saved session; true when the app is signed in.
   Future<bool> restore() async {
@@ -89,6 +91,7 @@ class DriverApi {
     }, auth: false) as Map<String, dynamic>;
     _token = json['token'] as String;
     await _store.write(_tokenKey, _token);
+    await _store.write(_passKey, null); // a new sign-in means a new gate pass
     return DriverProfile.fromJson(json['driver'] as Map<String, dynamic>);
   }
 
@@ -102,6 +105,27 @@ class DriverApi {
   Future<DriverAppointment> startTrip(String appointmentNo) async => DriverAppointment.fromJson(
       await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/start-trip') as Map<String, dynamic>);
 
+  /// The gate pass secret; kept on the phone so the QR works without mobile data at the gate.
+  Future<GatePass?> gatePass({bool refresh = false}) async {
+    if (!refresh) {
+      final saved = await _store.read(_passKey);
+      if (saved != null) return GatePass.fromJson(jsonDecode(saved) as Map<String, dynamic>);
+    }
+    try {
+      final json = await _send('GET', '/api/driver/gate-pass') as Map<String, dynamic>;
+      await _store.write(_passKey, jsonEncode(json));
+      return GatePass.fromJson(json);
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      return null; // offline: the static gate code is shown instead
+    }
+  }
+
+  Future<TripUpdate> reportPosition(String appointmentNo, double latitude, double longitude, double? speed) async =>
+      TripUpdate.fromJson(await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/position',
+          body: {'latitude': latitude, 'longitude': longitude, 'speed': speed}) as Map<String, dynamic>);
+
   Future<void> signOut() async {
     try {
       if (_token != null) await _send('POST', '/api/driver/logout');
@@ -110,6 +134,7 @@ class DriverApi {
     }
     _token = null;
     await _store.write(_tokenKey, null);
+    await _store.write(_passKey, null);
   }
 
   Future<dynamic> _send(String method, String path, {Map<String, dynamic>? body, bool auth = true}) async {

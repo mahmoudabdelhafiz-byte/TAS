@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Tas.Infrastructure;
+using Tas.Application.Gate;
 using Tas.Infrastructure.Persistence;
 using Tas.Infrastructure.DriverApp;
 
@@ -132,5 +133,127 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         Assert.Null(code); // treated like an unknown number
         Assert.Equal(HttpStatusCode.Unauthorized, (await Factory.CreateClient().PostAsJsonAsync("/api/driver/login/verify",
             new { mobile = Abdullah, installId = "install-phone-0001", code = "123456" })).StatusCode);
+    }
+
+    private async Task<string> BookWithAbdullahAsync()
+    {
+        var alNoor = await As(DemoDataSeeder.DispatcherEmail);
+        var booked = await alNoor.PostAsJsonAsync(Appointments, new
+        {
+            slotId = SlotId,
+            driverId = Demo.DriverIds[0],
+            items = new[] { new { category = "IMP_PICKUP", containerNo = "MSCU1234566" } },
+        });
+        Assert.Equal(HttpStatusCode.Created, booked.StatusCode);
+        return (await Read<Tas.Application.Booking.AppointmentDto>(booked)).AppointmentNo;
+    }
+
+    private static async Task<(long PassId, byte[] Secret)> PassAsync(HttpClient driver)
+    {
+        var pass = await Read<GatePassView>(await driver.GetAsync("/api/driver/gate-pass"));
+        Assert.Equal(GatePassCode.StepSeconds, pass.StepSeconds);
+        return (pass.PassId, Convert.FromBase64String(pass.Secret));
+    }
+
+    private async Task<Tas.Application.Gate.ArrivalResult> ArriveAsync(string qrToken)
+    {
+        var planner = await As(DemoDataSeeder.PlannerEmail);
+        var response = await planner.PostAsJsonAsync($"{Terminal}/gate/arrivals", new { laneCode = "IN-1", qrToken });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return (await Read<Tas.Api.AdminResponse<Tas.Application.Gate.ArrivalResult>>(response)).Data;
+    }
+
+    [Fact]
+    public async Task The_rotating_gate_pass_identifies_the_appointment_at_the_lane()
+    {
+        if (!Enabled) return;
+
+        var number = await BookWithAbdullahAsync();
+        var phone = await SignInAsync("install-phone-0001");
+        var (passId, secret) = await PassAsync(phone);
+        Assert.Equal(passId, (await PassAsync(phone)).PassId); // same pass until the next sign-in
+
+        var live = GatePassCode.Payload(passId, number, GatePassCode.Compute(secret, GatePassCode.Step(DateTimeOffset.UtcNow)));
+        var matched = await ArriveAsync(live);
+        Assert.Equal(number, matched.AppointmentNo);
+        Assert.Equal(MatchMethod.AppointmentNo, matched.MatchedBy);
+
+        var stale = GatePassCode.Payload(passId, number, GatePassCode.Compute(secret, GatePassCode.Step(DateTimeOffset.UtcNow) - 10));
+        var refused = await ArriveAsync(stale);
+        Assert.Null(refused.AppointmentNo);
+        Assert.Contains(refused.Warnings, w => w.Contains("expired"));
+
+        // Signing in on another phone revokes the old pass.
+        await SignInAsync("install-phone-0002");
+        var revoked = await ArriveAsync(GatePassCode.Payload(passId, number, GatePassCode.Compute(secret, GatePassCode.Step(DateTimeOffset.UtcNow))));
+        Assert.Null(revoked.AppointmentNo);
+        Assert.Contains(revoked.Warnings, w => w.Contains("no longer valid"));
+    }
+
+    [Fact]
+    public async Task Positions_on_the_way_give_an_arrival_estimate_and_check_in_at_the_pre_gate()
+    {
+        if (!Enabled) return;
+
+        var number = await BookWithAbdullahAsync();
+        var phone = await SignInAsync("install-phone-0001");
+        var position = $"/api/driver/appointments/{number}/position";
+
+        // Not on the way yet: no position accepted.
+        Assert.Equal(HttpStatusCode.Conflict, (await phone.PostAsJsonAsync(position, new { latitude = 21.30, longitude = 39.10 })).StatusCode);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            await db.Appointments.Where(a => a.AppointmentNo == number)
+                .ExecuteUpdateAsync(x => x.SetProperty(a => a.Status, Tas.Domain.Booking.AppointmentStatus.EnRoute));
+        }
+
+        // About 20 km away: an estimate, still on the way.
+        var far = await Read<TripUpdate>(await phone.PostAsJsonAsync(position, new { latitude = 21.30, longitude = 39.10, speed = 15.0 }));
+        Assert.Equal(Tas.Domain.Booking.AppointmentStatus.EnRoute, far.Status);
+        Assert.NotNull(far.Eta);
+        Assert.InRange(far.DistanceKm!.Value, 15, 25);
+        Assert.False(far.CheckedIn);
+
+        var staff = await As(DemoDataSeeder.PlannerEmail);
+        var seen = await Read<Tas.Application.Booking.AppointmentDto>(await staff.GetAsync($"{Appointments}/{number}"));
+        Assert.Equal(far.Eta!.Value.ToUnixTimeSeconds(), seen.Eta!.Value.ToUnixTimeSeconds());
+
+        // In the pre-gate parking: checked in.
+        var there = await Read<TripUpdate>(await phone.PostAsJsonAsync(position, new { latitude = 21.4717, longitude = 39.1700 }));
+        Assert.True(there.CheckedIn);
+        Assert.Equal(Tas.Domain.Booking.AppointmentStatus.Arrived, there.Status);
+        Assert.Contains("PRE_GATE", there.Areas);
+        Assert.Contains("APPROACH", there.Areas);
+
+        // Arrived: positions are no longer taken.
+        Assert.Equal(HttpStatusCode.Conflict, (await phone.PostAsJsonAsync(position, new { latitude = 21.4717, longitude = 39.1700 })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Terminal_admins_draw_areas()
+    {
+        if (!Enabled) return;
+
+        var admin = await As(DemoDataSeeder.TerminalAdminEmail);
+        var planner = await As(DemoDataSeeder.PlannerEmail);
+        var areas = $"{Terminal}/geofences";
+
+        var list = await Read<List<GeofenceView>>(await planner.GetAsync(areas));
+        Assert.Equal(3, list.Count);
+        Assert.Contains("Polygon", list[0].GeoJson);
+        Assert.True(list.Single(a => a.ZoneType == "PRE_GATE").TriggersCheckIn);
+
+        var ring = new[] { new[] { 39.18, 21.48 }, new[] { 39.19, 21.48 }, new[] { 39.19, 21.49 }, new[] { 39.18, 21.49 } };
+        Assert.Equal(HttpStatusCode.Forbidden, (await planner.PostAsJsonAsync(areas, new { name = "Block C", zoneType = "YARD_ZONE", ring })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await admin.PostAsJsonAsync(areas, new { name = "Block C", zoneType = "YARD_ZONE", ring, yardBlock = "C" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync(areas, new { name = "Bad", zoneType = "YARD_ZONE", ring = ring.Take(2) })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync(areas, new { name = "Bad", zoneType = "MOON", ring })).StatusCode);
+
+        var created = (await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.Name == "Block C");
+        Assert.Equal("C", created.YardBlock);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"{areas}/{created.GeofenceId}/deactivate", null)).StatusCode);
+        Assert.False((await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.Name == "Block C").IsActive);
     }
 }

@@ -611,3 +611,5 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 @media (max-width: 760px) {
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.eta { display: block; font-size: 13px; color: var(--teal-dark); margin-top: 2px; }
