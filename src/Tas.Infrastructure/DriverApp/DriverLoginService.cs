@@ -201,9 +201,26 @@ public sealed partial class DriverLoginService(
             new DriverProfile(driver.DriverId, driver.FullName, mobile, driver.PreferredLanguage.Trim(), companies)));
     }
 
+    /// <summary>Stores the app's push token for this phone (null clears it). Returns an error, or null.</summary>
+    public async Task<string?> SetPushTokenAsync(long deviceId, string? token, CancellationToken ct = default)
+    {
+        token = string.IsNullOrWhiteSpace(token) ? null : token.Trim();
+        if (token is { Length: > 400 })
+            return "The push token is too long.";
+
+        // A token belongs to one install: if the app was reinstalled, the old row must not get pushes.
+        if (token is not null)
+            await db.DriverDevices.Where(d => d.PushToken == token && d.DeviceId != deviceId)
+                .ExecuteUpdateAsync(s => s.SetProperty(d => d.PushToken, (string?)null), ct);
+        await db.DriverDevices.Where(d => d.DeviceId == deviceId)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.PushToken, token).SetProperty(d => d.LastSeenAt, clock.GetUtcNow()), ct);
+        return null;
+    }
+
     /// <summary>Signs this phone out.</summary>
     public Task LogoutAsync(long deviceId, CancellationToken ct = default) =>
-        db.DriverDevices.Where(d => d.DeviceId == deviceId).ExecuteUpdateAsync(s => s.SetProperty(d => d.IsActive, false), ct);
+        db.DriverDevices.Where(d => d.DeviceId == deviceId)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.IsActive, false).SetProperty(d => d.PushToken, (string?)null), ct);
 
     private static byte[] Hash(string mobile, string installId, string code) =>
         SHA256.HashData(Encoding.UTF8.GetBytes($"{mobile}|{installId}|{code}"));

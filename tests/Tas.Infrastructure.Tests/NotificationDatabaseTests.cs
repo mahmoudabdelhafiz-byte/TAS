@@ -30,6 +30,7 @@ public sealed class NotificationDatabaseTests : IAsyncLifetime
     private readonly FakeTosOptions _tos = new();
     private readonly RecordingSender _sms = new(NotificationChannel.Sms);
     private readonly RecordingSender _email = new(NotificationChannel.Email);
+    private readonly RecordingSender _push = new(NotificationChannel.Push);
     private DemoSeedResult _demo = null!;
 
     private static TimeProvider Clock(int day, int hour, int minute = 0) =>
@@ -88,7 +89,7 @@ public sealed class NotificationDatabaseTests : IAsyncLifetime
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
 
-    private Services At(TimeProvider clock) => new(clock, _tos, new NotificationSenders([_sms, _email]));
+    private Services At(TimeProvider clock) => new(clock, _tos, new NotificationSenders([_sms, _email, _push]));
 
     public async Task InitializeAsync()
     {
@@ -134,6 +135,83 @@ public sealed class NotificationDatabaseTests : IAsyncLifetime
     {
         await using var s = At(Monday);
         return await s.Db.NotificationLogs.AsNoTracking().OrderBy(n => n.NotificationId).ToListAsync();
+    }
+
+    /// <summary>Signs driver Abdullah in to the app on a phone with a push token.</summary>
+    private async Task<long> AppWithPushAsync(string token)
+    {
+        await using var s = At(Monday);
+        var device = new DriverDevice { DriverId = _demo.DriverIds[0], InstallId = "install-push-0001", Platform = "ANDROID", PushToken = token, IsActive = true, RegisteredAt = Monday.GetUtcNow() };
+        s.Db.DriverDevices.Add(device);
+        await s.Db.SaveChangesAsync();
+        return device.DeviceId;
+    }
+
+    [Fact]
+    public async Task Drivers_with_the_app_get_push_and_others_sms()
+    {
+        if (ConnectionString is null)
+            return;
+
+        var (id, no) = await BookAsync();
+        var values = new Dictionary<string, string> { [NotificationText.Keys.AppointmentNo] = no, [NotificationText.Keys.Stops] = "B2 (14.03.2)" };
+
+        await using (var s = At(Monday))
+        {
+            // Push only when switched on and the driver is signed in to the app.
+            await NotificationQueue.ForAppointmentAsync(s.Db, id, NotificationTemplates.GateIn, values, NotificationChannel.Sms, Monday.GetUtcNow(), default, includeBooker: false, pushFirst: true);
+            await s.Db.SaveChangesAsync();
+        }
+        await AppWithPushAsync("fcm-token-abdullah");
+        await using (var s = At(Monday))
+        {
+            await NotificationQueue.ForAppointmentAsync(s.Db, id, NotificationTemplates.GateIn, values, NotificationChannel.Sms, Monday.GetUtcNow(), default, includeBooker: false, pushFirst: false);
+            await NotificationQueue.ForAppointmentAsync(s.Db, id, NotificationTemplates.GateIn, values, NotificationChannel.Sms, Monday.GetUtcNow(), default, includeBooker: false, pushFirst: true);
+            await s.Db.SaveChangesAsync();
+        }
+        Assert.Equal(new[] { NotificationChannel.Sms, NotificationChannel.Sms, NotificationChannel.Push }, (await LogAsync()).Select(n => n.Channel).ToArray());
+
+        await using (var s = At(Clock(19, 12, 1)))
+            Assert.Equal(new DispatchResult(3, 0, 0), await s.Dispatcher.DispatchDueAsync());
+        var (to, push) = Assert.Single(_push.Sent);
+        Assert.Equal("fcm-token-abdullah", to);
+        Assert.Contains("B2 (14.03.2)", push.Body);
+        Assert.Equal(NotificationTemplates.GateIn, push.Data!["template"]);
+        Assert.Equal(no, push.Data["appointmentNo"]);
+    }
+
+    [Fact]
+    public async Task A_push_to_a_removed_app_goes_by_sms_instead_and_the_token_is_dropped()
+    {
+        if (ConnectionString is null)
+            return;
+
+        var (id, no) = await BookAsync();
+        var deviceId = await AppWithPushAsync("fcm-token-gone");
+        await using (var s = At(Monday))
+        {
+            await NotificationQueue.ForAppointmentAsync(s.Db, id, NotificationTemplates.GateIn,
+                new Dictionary<string, string> { [NotificationText.Keys.AppointmentNo] = no, [NotificationText.Keys.Stops] = "B2" },
+                NotificationChannel.Sms, Monday.GetUtcNow(), default, includeBooker: false, pushFirst: true);
+            await s.Db.SaveChangesAsync();
+        }
+
+        _push.FailWith = new NotificationSendException("UNREGISTERED", permanent: true, invalidRecipient: true);
+        await using (var s = At(Clock(19, 12, 1)))
+            Assert.Equal(new DispatchResult(0, 0, 1), await s.Dispatcher.DispatchDueAsync());
+
+        var log = await LogAsync();
+        Assert.Equal(NotificationStatus.Failed, log[0].Status);
+        Assert.Contains("Sent by Sms instead", log[0].LastError);
+        Assert.Equal((NotificationChannel.Sms, NotificationStatus.Queued), (log[1].Channel, log[1].Status));
+        await using (var s = At(Monday))
+            Assert.Null(await s.Db.DriverDevices.Where(d => d.DeviceId == deviceId).Select(d => d.PushToken).SingleAsync());
+
+        await using (var s = At(Clock(19, 12, 2)))
+            Assert.Equal(new DispatchResult(1, 0, 0), await s.Dispatcher.DispatchDueAsync());
+        var (to, sms) = Assert.Single(_sms.Sent);
+        Assert.Equal("+966500000001", to);
+        Assert.Contains("B2", sms.Body);
     }
 
     [Fact]

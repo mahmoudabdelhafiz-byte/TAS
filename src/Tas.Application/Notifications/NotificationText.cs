@@ -4,7 +4,11 @@ using Tas.Domain;
 
 namespace Tas.Application.Notifications;
 
-public sealed record RenderedMessage(string Subject, string Body);
+public sealed record RenderedMessage(string Subject, string Body)
+{
+    /// <summary>Extra values for app push messages (template, appointment number), so the app can react to them.</summary>
+    public IReadOnlyDictionary<string, string>? Data { get; init; }
+}
 
 /// <summary>
 /// Message texts in Arabic, English, Urdu and Hindi. Placeholders in {braces} are filled from the notification's
@@ -23,6 +27,9 @@ public static partial class NotificationText
         public const string Reason = "reason";
         public const string GateOpens = "gateOpens";
         public const string Items = "items";
+
+        /// <summary>Where to go inside the terminal, e.g. "B2 (14.03.2) → E1".</summary>
+        public const string Stops = "stops";
     }
 
     private static readonly Dictionary<string, Dictionary<string, (string Subject, string Body)>> Templates = new()
@@ -70,6 +77,17 @@ public static partial class NotificationText
                 "Yardsyncs: ٹرمینل نے آپ کا سلاٹ {slot} (اپوائنٹمنٹ {appointmentNo}) بند کر دیا ہے: {reason}۔ براہ کرم دوبارہ وقت لیں۔"),
             ["hi"] = ("स्लॉट बंद: अपॉइंटमेंट {appointmentNo}",
                 "Yardsyncs: टर्मिनल ने आपका स्लॉट {slot} (अपॉइंटमेंट {appointmentNo}) बंद कर दिया है: {reason}। कृपया दोबारा समय लें।"),
+        },
+        [NotificationTemplates.GateIn] = new()
+        {
+            ["en"] = ("You are in: appointment {appointmentNo}",
+                "Yardsyncs: appointment {appointmentNo}, you are inside the terminal. Go to {stops}. Open Yardsyncs mobile for the map."),
+            ["ar"] = ("دخلت المحطة: الموعد {appointmentNo}",
+                "Yardsyncs: الموعد {appointmentNo}، أنت داخل المحطة. توجّه إلى {stops}. افتح تطبيق Yardsyncs mobile لرؤية الخريطة."),
+            ["ur"] = ("آپ اندر ہیں: اپوائنٹمنٹ {appointmentNo}",
+                "Yardsyncs: اپوائنٹمنٹ {appointmentNo}، آپ ٹرمینل کے اندر ہیں۔ {stops} جائیں۔ نقشے کے لیے Yardsyncs mobile کھولیں۔"),
+            ["hi"] = ("आप अंदर हैं: अपॉइंटमेंट {appointmentNo}",
+                "Yardsyncs: अपॉइंटमेंट {appointmentNo}, आप टर्मिनल के अंदर हैं। {stops} जाएँ। नक्शे के लिए Yardsyncs mobile खोलें।"),
         },
     };
 

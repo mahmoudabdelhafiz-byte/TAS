@@ -9,10 +9,15 @@ using Tas.Domain;
 
 namespace Tas.Infrastructure.Notifications;
 
-/// <summary>Delivery failed. <see cref="Permanent"/> = retrying won't help (bad number, rejected sender, no address).</summary>
-public sealed class NotificationSendException(string message, bool permanent, Exception? inner = null) : Exception(message, inner)
+/// <summary>
+/// Delivery failed. <see cref="Permanent"/> = retrying won't help (bad number, rejected sender, no address);
+/// <see cref="InvalidRecipient"/> = the address itself is dead (e.g. an app push token after the app was removed).
+/// </summary>
+public sealed class NotificationSendException(string message, bool permanent, Exception? inner = null, bool invalidRecipient = false)
+    : Exception(message, inner)
 {
-    public bool Permanent { get; } = permanent;
+    public bool Permanent { get; } = permanent || invalidRecipient;
+    public bool InvalidRecipient { get; } = invalidRecipient;
 }
 
 /// <summary>Sends one rendered message on one channel; returns the provider's message id.</summary>

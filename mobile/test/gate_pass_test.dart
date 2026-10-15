@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yardsyncs_driver/gate_pass.dart';
+import 'package:yardsyncs_mobile/gate_pass.dart';
 
 void main() {
   // Same vectors as tests/Tas.Application.Tests/GatePassCodeTests.cs: the app and the gate must agree.

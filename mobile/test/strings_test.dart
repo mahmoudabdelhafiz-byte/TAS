@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yardsyncs_driver/strings.dart';
+import 'package:yardsyncs_mobile/strings.dart';
 
 void main() {
   test('every language has every English text, with the same placeholders', () {

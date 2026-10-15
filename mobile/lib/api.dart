@@ -136,6 +136,9 @@ class DriverApi {
       TripUpdate.fromJson(await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/position',
           body: {'latitude': latitude, 'longitude': longitude, 'speed': speed}) as Map<String, dynamic>);
 
+  /// Where the terminal sends push messages for this phone; null stops them.
+  Future<void> registerPushToken(String? token) async => _send('PUT', '/api/driver/push-token', body: {'token': token});
+
   Future<YardGuidance> yard(String appointmentNo, {double? latitude, double? longitude}) async {
     final query = latitude == null || longitude == null ? '' : '?lat=$latitude&lon=$longitude';
     return YardGuidance.fromJson(

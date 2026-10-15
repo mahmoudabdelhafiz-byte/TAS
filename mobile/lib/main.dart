@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
+import 'push.dart';
 import 'screens/appointments.dart';
 import 'screens/login.dart';
 import 'strings.dart';
@@ -25,6 +26,7 @@ class YardsyncsDriverApp extends StatefulWidget {
 class _YardsyncsDriverAppState extends State<YardsyncsDriverApp> {
   String _lang = 'ar';
   bool? _signedIn; // null while loading
+  late final PushService _push = PushService(widget.api);
 
   @override
   void initState() {
@@ -40,6 +42,7 @@ class _YardsyncsDriverAppState extends State<YardsyncsDriverApp> {
       if (lang != null && supportedLanguages.contains(lang)) _lang = lang;
       _signedIn = signedIn;
     });
+    if (signedIn) _push.start();
   }
 
   void _setLang(String lang) {
@@ -50,7 +53,7 @@ class _YardsyncsDriverAppState extends State<YardsyncsDriverApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Yardsyncs',
+      title: 'Yardsyncs mobile',
       debugShowCheckedModeBanner: false,
       theme: yardsyncsTheme(),
       locale: Locale(_lang),
@@ -66,10 +69,14 @@ class _YardsyncsDriverAppState extends State<YardsyncsDriverApp> {
             api: widget.api,
             lang: _lang,
             onLanguage: _setLang,
-            onSignedIn: (_) => setState(() => _signedIn = true),
+            onSignedIn: (_) {
+              setState(() => _signedIn = true);
+              _push.start();
+            },
           ),
         true => AppointmentsScreen(
             api: widget.api,
+            push: _push,
             lang: _lang,
             onLanguage: _setLang,
             onSignedOut: () => setState(() => _signedIn = false),

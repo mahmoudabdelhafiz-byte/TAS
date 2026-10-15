@@ -28,9 +28,13 @@ public sealed record MapArea(string Name, string Kind, string? Block, IReadOnlyL
 /// <param name="Bounds">[minLon, minLat, maxLon, maxLat] of everything on the map.</param>
 public sealed record YardMapView(IReadOnlyList<MapArea> Areas, IReadOnlyList<IReadOnlyList<double[]>> Roads, double[] Bounds);
 
+/// <summary>The in-gate ticket shown in the app: when and where the truck passed the gate.</summary>
+public sealed record GateTicket(string TerminalName, DateTimeOffset? GateInAt, string? Lane, string? TruckPlate);
+
 /// <param name="Live">False when the terminal system could not be reached and the last known positions are shown.</param>
 public sealed record YardGuidance(
-    string AppointmentNo, AppointmentStatus Status, IReadOnlyList<GuidanceStop> Stops, IReadOnlyList<GuidanceLeg> Legs, YardMapView Map, bool Live);
+    string AppointmentNo, AppointmentStatus Status, IReadOnlyList<GuidanceStop> Stops, IReadOnlyList<GuidanceLeg> Legs, YardMapView Map, bool Live,
+    GateTicket? Ticket = null);
 
 public sealed record RoadsInput(JsonElement Roads);
 
@@ -58,7 +62,40 @@ public sealed class YardGuidanceService(TasDbContext db, ITosAdapter tos, TripTr
             return (null, "Directions in the yard appear after you pass the gate.", false);
 
         var start = latitude is { } lat && longitude is { } lon ? new GeoPoint(lon, lat) : (GeoPoint?)null;
-        return (await BuildAsync(appointment, start, ct), null, false);
+        var guidance = await BuildAsync(appointment, start, ct);
+        return (guidance with { Ticket = await TicketAsync(appointment, ct) }, null, false);
+    }
+
+    /// <summary>
+    /// At gate-in: reads the yard positions from the TOS and issues the stops (yard_instruction), so the in-gate
+    /// ticket and the push to the driver carry the block to drive to. Null when the appointment isn't inside.
+    /// </summary>
+    public async Task<YardGuidance?> IssueAtGateInAsync(long appointmentId, CancellationToken ct = default)
+    {
+        var appointment = await db.Appointments
+            .Include(a => a.Slot)
+            .Include(a => a.Items).ThenInclude(i => i.Category)
+            .SingleOrDefaultAsync(a => a.AppointmentId == appointmentId && a.Status == AppointmentStatus.GateIn, ct);
+        return appointment is null ? null : await BuildAsync(appointment, null, ct);
+    }
+
+    /// <summary>"B2 (14.03.2) → E1": the blocks in driving order, the same in every language.</summary>
+    public static string StopsText(IEnumerable<GuidanceStop> stops) =>
+        string.Join(" → ", stops.Where(s => s.Kind != "EXIT" && s.Block is not null)
+            .Select(s => s.Slot is null ? s.Block! : $"{s.Block} ({s.Slot})"));
+
+    private async Task<GateTicket> TicketAsync(Appointment appointment, CancellationToken ct)
+    {
+        var terminal = await db.Terminals.AsNoTracking().Where(t => t.TerminalId == appointment.TerminalId).Select(t => t.Name).SingleAsync(ct);
+        var lane = await db.GateEvents.AsNoTracking()
+            .Where(e => e.AppointmentId == appointment.AppointmentId && e.EventType == Tas.Domain.Gate.GateEventType.GateIn && e.LaneId != null)
+            .OrderByDescending(e => e.OccurredAt)
+            .Select(e => db.GateLanes.Where(l => l.LaneId == e.LaneId).Select(l => l.LaneCode).FirstOrDefault())
+            .FirstOrDefaultAsync(ct);
+        var plate = appointment.TruckId is { } truckId
+            ? await db.Trucks.AsNoTracking().Where(t => t.TruckId == truckId).Select(t => t.PlateNumber).SingleOrDefaultAsync(ct)
+            : null;
+        return new GateTicket(terminal, appointment.GateInAt, lane, plate);
     }
 
     private async Task<YardGuidance> BuildAsync(Appointment appointment, GeoPoint? position, CancellationToken ct)

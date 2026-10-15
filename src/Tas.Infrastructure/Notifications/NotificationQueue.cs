@@ -16,6 +16,24 @@ public static class NotificationQueue
     public static NotificationChannel DriverChannel(IConfiguration? config) =>
         config?.GetValue("Notifications:DriverChannel", NotificationChannel.Sms) ?? NotificationChannel.Sms;
 
+    /// <summary>Push first for drivers with the app: a push provider is set and "Notifications:DriverPush" is not off.</summary>
+    public static bool PushFirst(IConfiguration? config)
+    {
+        var o = new NotificationOptions();
+        config?.GetSection("Notifications").Bind(o);
+        return o.PushFirst;
+    }
+
+    /// <summary>The push token of the app the driver (any of their driver records, by mobile) is signed in to.</summary>
+    public static Task<string?> PushTokenAsync(TasDbContext db, int driverId, CancellationToken ct) =>
+        db.DriverDevices.AsNoTracking()
+            .Where(d => d.IsActive && d.PushToken != null
+                        && db.Drivers.Any(x => x.DriverId == d.DriverId
+                                               && x.Mobile == db.Drivers.Where(y => y.DriverId == driverId).Select(y => y.Mobile).FirstOrDefault()))
+            .OrderByDescending(d => d.LastSeenAt)
+            .Select(d => d.PushToken)
+            .FirstOrDefaultAsync(ct);
+
     /// <summary>
     /// Queues <paramref name="template"/> for the appointment's driver (if assigned and not blocked) on
     /// <paramref name="driverChannel"/>, and for the user who booked (if active) by email.
@@ -28,7 +46,8 @@ public static class NotificationQueue
         NotificationChannel driverChannel,
         DateTimeOffset now,
         CancellationToken ct,
-        bool includeBooker = true)
+        bool includeBooker = true,
+        bool pushFirst = false)
     {
         var target = await db.Appointments.AsNoTracking()
             .Where(a => a.AppointmentId == appointmentId)
@@ -48,7 +67,8 @@ public static class NotificationQueue
 
         if (target.DriverId is { } driverId && !target.DriverBlocked)
         {
-            db.NotificationLogs.Add(New(appointmentId, template, driverChannel, target.DriverLanguage, json, now, driverId: driverId));
+            var channel = pushFirst && await PushTokenAsync(db, driverId, ct) is not null ? NotificationChannel.Push : driverChannel;
+            db.NotificationLogs.Add(New(appointmentId, template, channel, target.DriverLanguage, json, now, driverId: driverId));
             queued++;
         }
 

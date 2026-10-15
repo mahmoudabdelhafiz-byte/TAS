@@ -141,6 +141,54 @@ class _YardScreenState extends State<YardScreen> {
     }
   }
 
+  String _clock(DateTime? at) {
+    if (at == null) return '';
+    final l = at.toLocal();
+    return '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// The full in-gate ticket: appointment, truck, lane and time, and every stop with its position.
+  void _showTicket(YardGuidance g) {
+    final ticket = g.ticket!;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          children: [
+            Text(t('gateTicket'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: ink)),
+            const SizedBox(height: 4),
+            Text(ticket.terminalName, style: const TextStyle(fontSize: 15, color: muted)),
+            const SizedBox(height: 12),
+            _TicketRow(label: t('appointment'), value: g.appointmentNo, ltr: true),
+            if (ticket.truckPlate != null) _TicketRow(label: t('truck'), value: ticket.truckPlate!, ltr: true),
+            if (ticket.lane != null) _TicketRow(label: t('lane'), value: ticket.lane!, ltr: true),
+            if (ticket.gateInAt != null) _TicketRow(label: t('gateInTime'), value: _clock(ticket.gateInAt), ltr: true),
+            const SizedBox(height: 12),
+            Text(t('yourStops'), style: const TextStyle(fontSize: 15, color: muted)),
+            for (final s in g.stops)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  SizedBox(width: 28, child: Text('${s.sequence}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: ink))),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(_title(s), style: const TextStyle(fontSize: 17, color: ink)),
+                      if (_slotText(s) != null) Text(_slotText(s)!, style: const TextStyle(fontSize: 15, color: muted)),
+                      if (s.containers.isNotEmpty)
+                        Text(s.containers.join('  '), textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 15, color: muted, letterSpacing: 0.5)),
+                    ]),
+                  ),
+                ]),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _title(YardStop stop) => switch (stop.kind) {
         'EXIT' => t('exitStop'),
         _ when stop.block == null => t('noPosition'),
@@ -181,6 +229,7 @@ class _YardScreenState extends State<YardScreen> {
                   lang: widget.lang,
                   t: t,
                 ),
+                if (g.ticket != null) _TicketStrip(ticket: g.ticket!, t: t, onOpen: () => _showTicket(g)),
                 if (!g.live) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(t('yardOffline'), style: const TextStyle(color: red))),
                 Expanded(
                   child: Container(
@@ -211,6 +260,54 @@ class _YardScreenState extends State<YardScreen> {
                   ),
               ],
             ),
+    );
+  }
+}
+
+class _TicketStrip extends StatelessWidget {
+  const _TicketStrip({required this.ticket, required this.t, required this.onOpen});
+
+  final GateTicket ticket;
+  final String Function(String, [Map<String, String>]) t;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFE3F1F2),
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(children: [
+            const Icon(Icons.confirmation_number_outlined, color: ink, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(t('gateTicket'), style: const TextStyle(fontSize: 15, color: ink, fontWeight: FontWeight.w600))),
+            if (ticket.lane != null) Text(ticket.lane!, textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 15, color: ink)),
+            const SizedBox(width: 6),
+            const Icon(Icons.expand_more, color: ink),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _TicketRow extends StatelessWidget {
+  const _TicketRow({required this.label, required this.value, this.ltr = false});
+
+  final String label;
+  final String value;
+  final bool ltr;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(children: [
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 15, color: muted))),
+        Text(value, textDirection: ltr ? TextDirection.ltr : null, style: const TextStyle(fontSize: 17, color: ink, fontWeight: FontWeight.w600)),
+      ]),
     );
   }
 }
