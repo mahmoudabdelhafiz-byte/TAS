@@ -233,7 +233,12 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase F — Production readiness
 | | Item |
 |---|---|
-| ⬜ | Hosting & deployment (Docker, environments: dev / staging / production) |
+| ⬜ | One set of Docker images (API + portal) for both hosting modes; environments dev / staging / production |
+| ⬜ | **Cloud (hosted by us):** one installation serving several terminals, managed PostgreSQL, TLS, automatic updates |
+| ⬜ | **On-premise (at the terminal):** install package for the terminal's servers (Docker Compose or Kubernetes), runs without internet except for SMS / WhatsApp / push and updates; upgrade and rollback guide |
+| ⬜ | N4 reach from the cloud: secure link to the terminal's N4 (site-to-site VPN, or a small relay agent installed at the terminal that calls N4 and connects out to the cloud) |
+| ⬜ | Driver app and trucking companies reach an on-premise installation: public address in the terminal's DMZ, or a cloud relay |
+| ⬜ | Licensing for on-premise installations; SQL Server support if a terminal does not allow PostgreSQL ❓ |
 | ⬜ | Backups, monitoring, logging, alerting |
 | ⬜ | Security review; PDPL privacy (location only during active visits, consent) |
 | ⬜ | Load test for peak booking times |
@@ -241,11 +246,15 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
 ---
 
+## Decided
+| Date | Decision |
+|---|---|
+| 2026-10-15 | Hosting: both are supported — cloud service from us and on-premise at the terminal (Phase F) |
+
 ## Open decisions
 | ❓ | Question | Affects |
 |---|---|---|
 | 1 | Make the GitHub repository private? (currently public) | Code confidentiality |
-| 2 | Customer hosting: cloud service from us, or on-premise at the terminal? | Database, deployment, pricing |
 | 3 | N4 integration path: built on web services (genericInvoke + Groovy) — confirm this suits the customer, or EDI / DB views instead? | Phase C |
 | 4 | Is a national appointment platform mandatory at the customer's port? | Phase C |
 | 5 | Driver identity: mobile OTP enough, or Nafath / liveness required for ISPS? | Phase E |
