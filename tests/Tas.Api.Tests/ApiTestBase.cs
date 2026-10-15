@@ -29,6 +29,7 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("NoShow:Enabled", "false");
         builder.UseSetting("Revalidation:Enabled", "false");
         builder.UseSetting("Notifications:Enabled", "false");
+        builder.UseSetting("DriverLogin:ExposeCodeForTesting", "true");
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
         builder.UseSetting("FakeTos:PaymentWarning:0", "CMAU5100028");
         builder.UseSetting("FakeTos:BillsOfLading:MEDUJD260001:0", "MSCU1234566:22G1");
@@ -70,7 +71,7 @@ public abstract class ApiTestBase(TasApiFactory factory) : IClassFixture<TasApiF
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
-        await db.Database.ExecuteSqlRawAsync("TRUNCATE terminal, company, app_user RESTART IDENTITY CASCADE");
+        await db.Database.ExecuteSqlRawAsync("TRUNCATE terminal, company, app_user, driver_otp RESTART IDENTITY CASCADE");
         Demo = await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
 
         Tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Riyadh).DateTime).AddDays(1);

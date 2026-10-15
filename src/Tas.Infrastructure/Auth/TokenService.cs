@@ -72,6 +72,38 @@ public sealed class TokenService(IOptions<JwtOptions> options, TimeProvider cloc
         return (new JsonWebTokenHandler().CreateToken(descriptor), expires);
     }
 
+    /// <summary>Audience of driver-app tokens; staff endpoints only accept <see cref="JwtOptions.Audience"/>.</summary>
+    public static string DriverAudience(JwtOptions o) => $"{o.Audience}-driver";
+
+    /// <summary>A driver-app session, bound to one device (checked on every request, so signing in elsewhere ends it).</summary>
+    public (string Token, DateTimeOffset ExpiresAt) CreateDriverToken(int driverId, long deviceId, string mobile, int days)
+    {
+        var o = options.Value;
+        if (!o.HasValidKey)
+            throw new InvalidOperationException("Jwt:SigningKey must be at least 32 bytes.");
+
+        var now = clock.GetUtcNow();
+        var expires = now.AddDays(days);
+        var descriptor = new SecurityTokenDescriptor
+        {
+            Issuer = o.Issuer,
+            Audience = DriverAudience(o),
+            IssuedAt = now.UtcDateTime,
+            NotBefore = now.UtcDateTime,
+            Expires = expires.UtcDateTime,
+            Claims = new Dictionary<string, object>
+            {
+                [DriverClaims.DriverId] = driverId.ToString(CultureInfo.InvariantCulture),
+                [DriverClaims.DeviceId] = deviceId.ToString(CultureInfo.InvariantCulture),
+                [DriverClaims.Mobile] = mobile,
+                [DriverClaims.Type] = DriverClaims.DriverType,
+                ["jti"] = Guid.NewGuid().ToString("N"),
+            },
+            SigningCredentials = new SigningCredentials(o.Key(), SecurityAlgorithms.HmacSha256),
+        };
+        return (new JsonWebTokenHandler().CreateToken(descriptor), expires);
+    }
+
     /// <summary>A random, URL-safe refresh token (256 bits).</summary>
     public static string NewRefreshToken() =>
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');

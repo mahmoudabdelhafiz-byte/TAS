@@ -193,6 +193,16 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Fleet & users: trucks and drivers (add; block / unblock by terminal admins), users (add with a first password, activate / deactivate), companies for terminal admins (register, suspend, activate) |
 | ✅ | Tests: KPI calculation (rates, on-time window, turn and wait times, closed slots), KPI API access and range |
 
+### 17. Driver app — part 1 (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | API: driver sign-in with a 6-digit code by SMS (hashed, 5 minutes, 5 tries, 3 codes per 15 minutes, same answer for unknown numbers); session bound to one phone; own token audience |
+| ✅ | API: my appointments across companies (by mobile number), one appointment, start trip, sign out; terminal time offset for display |
+| ✅ | Database: `driver_otp` (migration `006_driver_login.sql`); driver devices and verifications in use |
+| ✅ | Flutter app `mobile/`: sign in, my appointments (traffic light, terminal time, containers), appointment with reason, gate QR code and "I am leaving now"; Arabic / English / Urdu / Hindi with right-to-left |
+| ✅ | CI job: analyze, tests, debug APK as a download for testers |
+| ✅ | Tests: sign-in flow, limits, one phone at a time, blocked drivers, token separation (API); texts, parsing, terminal time, sign-in screen (app) |
+
 ---
 
 ## Remaining
@@ -231,9 +241,10 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase E — Driver app (Flutter) — next
 | | Item | Notes |
 |---|---|---|
-| 🔜 | App skeleton in `mobile/`: Flutter (Android first, iOS after), Arabic / English / Urdu / Hindi, right-to-left; CI job (analyze, tests, build APK) | Same repository and CI as the API and portal |
-| ⬜ | Login with mobile OTP (SMS through the notification providers); driver verification | ❓ Nafath (decision 5) |
-| ⬜ | My appointments: hour, moves, traffic light and reason in the driver's language; push when it changes | Replaces SMS for drivers who have the app |
+| 🔜 | Push notifications (traffic light changes, slot closed, reminder) to the app instead of SMS when the driver has it | Firebase / APNs account needed |
+| 🔜 | App identity: package name, icon, signing keys, store listings; commit the Android / iOS folders; release builds with HTTPS only | |
+| ⬜ | National e-ID verification as a per-terminal option | Nafath in Saudi Arabia |
+| ⬜ | Reasons from the TOS in the driver's language (English today) | |
 | ⬜ | Gate pass: rotating QR for the lane reader; after gate-in it shows where to go (block, row, bay or transfer point) | `gate_pass` table |
 | ⬜ | Start trip → ETA to the terminal, auto check-in at the pre-gate geofence | Reuse the truck tracking work; location only while EN_ROUTE / inside |
 | ⬜ | **Yard navigation:** at gate-in TAS reads the container's yard position from N4 and turns it into stops (`yard_instruction`): import pickup → block / row / bay; export drop / empty return → block or transfer point N4 assigns; dual moves → stops in order, then exit | N4 TasLookup adds the position; ❓ decision 9 |

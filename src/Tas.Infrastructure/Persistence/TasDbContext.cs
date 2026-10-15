@@ -37,6 +37,9 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<GateTrouble> GateTroubles => Set<GateTrouble>();
     public DbSet<Truck> Trucks => Set<Truck>();
     public DbSet<Driver> Drivers => Set<Driver>();
+    public DbSet<DriverDevice> DriverDevices => Set<DriverDevice>();
+    public DbSet<DriverVerification> DriverVerifications => Set<DriverVerification>();
+    public DbSet<DriverOtp> DriverOtps => Set<DriverOtp>();
     public DbSet<CargoAllocation> CargoAllocations => Set<CargoAllocation>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<AppointmentItem> AppointmentItems => Set<AppointmentItem>();
@@ -168,6 +171,24 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
 
         b.Entity<Truck>(e => e.HasKey(x => x.TruckId));
         b.Entity<Driver>(e => e.HasKey(x => x.DriverId));
+
+        b.Entity<DriverDevice>(e =>
+        {
+            e.HasKey(x => x.DeviceId);
+            e.Property(x => x.RegisteredAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<DriverVerification>(e =>
+        {
+            e.HasKey(x => x.VerificationId);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<DriverOtp>(e =>
+        {
+            e.HasKey(x => x.OtpId);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
 
         // ---------- Booking ----------
 

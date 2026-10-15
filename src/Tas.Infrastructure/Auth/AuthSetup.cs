@@ -9,6 +9,13 @@ using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.Auth;
 
+/// <summary>Names of the driver-app authentication scheme and policy.</summary>
+public static class DriverAuth
+{
+    public const string Scheme = "Driver";
+    public const string Policy = "Driver";
+}
+
 public static class AuthSetup
 {
     /// <summary>JWT bearer authentication for the API, plus the auth services.</summary>
@@ -68,7 +75,48 @@ public static class AuthSetup
                 };
             });
 
-        services.AddAuthorization();
+        // Driver app: its own scheme and audience; the token is only valid while its device is the driver's active one.
+        services.AddAuthentication().AddJwtBearer(DriverAuth.Scheme);
+        services.AddOptions<JwtBearerOptions>(DriverAuth.Scheme)
+            .Configure<IOptions<JwtOptions>>((bearer, jwtOptions) =>
+            {
+                var jwt = jwtOptions.Value;
+                bearer.MapInboundClaims = false;
+                bearer.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwt.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = TokenService.DriverAudience(jwt),
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = jwt.Key(),
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromSeconds(30),
+                };
+                bearer.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var driver = CurrentDriver.FromClaims(context.Principal!);
+                        if (driver is null)
+                        {
+                            context.Fail("Malformed token.");
+                            return;
+                        }
+
+                        var db = context.HttpContext.RequestServices.GetRequiredService<TasDbContext>();
+                        var ok = await db.DriverDevices.AsNoTracking()
+                            .AnyAsync(d => d.DeviceId == driver.DeviceId && d.IsActive && d.DriverId == driver.DriverId
+                                           && db.Drivers.Any(x => x.DriverId == d.DriverId && !x.IsBlocked && x.Mobile == driver.Mobile),
+                                context.HttpContext.RequestAborted);
+                        if (!ok)
+                            context.Fail("Signed in on another phone, or the driver was blocked. Please sign in again.");
+                    },
+                };
+            });
+
+        services.AddAuthorization(o => o.AddPolicy(DriverAuth.Policy, p => p.AddAuthenticationSchemes(DriverAuth.Scheme).RequireAuthenticatedUser()));
 
         services.AddSingleton<PasswordService>();
         services.AddSingleton<TokenService>();

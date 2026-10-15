@@ -1,0 +1,214 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Tas.Application.MasterData;
+using Tas.Application.Notifications;
+using Tas.Domain;
+using Tas.Domain.Parties;
+using Tas.Infrastructure.Auth;
+using Tas.Infrastructure.Notifications;
+using Tas.Infrastructure.Persistence;
+
+namespace Tas.Infrastructure.DriverApp;
+
+/// <summary>Configuration section "DriverLogin".</summary>
+public sealed class DriverLoginOptions
+{
+    public int CodeMinutes { get; set; } = 5;
+
+    /// <summary>Codes one mobile number may ask for within 15 minutes.</summary>
+    public int MaxCodesPer15Minutes { get; set; } = 3;
+
+    /// <summary>Wrong tries before a code stops working.</summary>
+    public int MaxAttempts { get; set; } = 5;
+
+    /// <summary>How long the app stays signed in on its phone (ends earlier if the driver signs in on another phone).</summary>
+    public int SessionDays { get; set; } = 30;
+
+    /// <summary>Tests only: return the code in the response instead of relying on SMS. Never enable in production.</summary>
+    public bool ExposeCodeForTesting { get; set; }
+}
+
+public enum DriverLoginStatus
+{
+    Ok,
+    Invalid,
+    TooMany,
+}
+
+/// <param name="TestCode">Only set when <see cref="DriverLoginOptions.ExposeCodeForTesting"/> is on.</param>
+public sealed record DriverLoginStart(DriverLoginStatus Status, string? Error = null, string? TestCode = null);
+
+public sealed record DriverSession(string Token, DateTimeOffset ExpiresAt, DriverProfile Driver);
+
+public sealed record DriverProfile(int DriverId, string FullName, string Mobile, string PreferredLanguage, IReadOnlyList<string> Companies);
+
+public sealed record DriverLoginResult(DriverLoginStatus Status, DriverSession? Session = null, string? Error = null);
+
+/// <summary>
+/// Driver sign-in with a one-time code by SMS. The answer to "send me a code" is the same whether or not the number
+/// belongs to a driver, so the endpoint can't be used to find out who drives for whom.
+/// </summary>
+public sealed partial class DriverLoginService(
+    TasDbContext db,
+    TokenService tokens,
+    NotificationSenders senders,
+    IOptions<DriverLoginOptions> options,
+    TimeProvider clock,
+    ILogger<DriverLoginService> logger)
+{
+    public const string WrongCode = "The code is wrong or has expired. Ask for a new one.";
+
+    [GeneratedRegex("^[A-Za-z0-9_-]{8,64}$")]
+    private static partial Regex InstallIdFormat();
+
+    public async Task<DriverLoginStart> StartAsync(string? mobileInput, string? installId, CancellationToken ct = default)
+    {
+        var o = options.Value;
+        var mobile = PhoneNumber.Normalize(mobileInput);
+        if (mobile is null)
+            return new DriverLoginStart(DriverLoginStatus.Invalid, "Enter a valid mobile number.");
+        if (installId is null || !InstallIdFormat().IsMatch(installId))
+            return new DriverLoginStart(DriverLoginStatus.Invalid, "Unknown app install.");
+
+        var now = clock.GetUtcNow();
+        var recent = await db.DriverOtps.CountAsync(x => x.Mobile == mobile && x.CreatedAt > now.AddMinutes(-15), ct);
+        if (recent >= o.MaxCodesPer15Minutes)
+            return new DriverLoginStart(DriverLoginStatus.TooMany, "Too many codes asked for this number. Try again in 15 minutes.");
+
+        var driver = await db.Drivers.AsNoTracking()
+            .Where(d => d.Mobile == mobile && !d.IsBlocked)
+            .OrderBy(d => d.DriverId)
+            .FirstOrDefaultAsync(ct);
+
+        // Every request counts against the limit, known number or not.
+        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
+        db.DriverOtps.Add(new DriverOtp
+        {
+            Mobile = mobile,
+            InstallId = installId,
+            CodeHash = Hash(mobile, installId, code),
+            ExpiresAt = now.AddMinutes(o.CodeMinutes),
+            CreatedAt = now,
+        });
+        await db.SaveChangesAsync(ct);
+
+        if (driver is null)
+            return new DriverLoginStart(DriverLoginStatus.Ok);
+
+        var sender = senders.For(NotificationChannel.Sms);
+        if (sender is null)
+        {
+            logger.LogWarning("No SMS sender configured; driver sign-in code not sent");
+        }
+        else
+        {
+            try
+            {
+                await sender.SendAsync(mobile, CodeMessage(driver.PreferredLanguage.Trim(), code, o.CodeMinutes), ct);
+            }
+            catch (NotificationSendException ex)
+            {
+                logger.LogWarning(ex, "Sign-in code could not be sent to driver {DriverId}", driver.DriverId);
+            }
+        }
+
+        return new DriverLoginStart(DriverLoginStatus.Ok, TestCode: o.ExposeCodeForTesting ? code : null);
+    }
+
+    public async Task<DriverLoginResult> VerifyAsync(
+        string? mobileInput, string? installId, string? code, string? platform, string? appVersion, CancellationToken ct = default)
+    {
+        var o = options.Value;
+        var mobile = PhoneNumber.Normalize(mobileInput);
+        if (mobile is null || installId is null || !InstallIdFormat().IsMatch(installId) || code is null || code.Trim().Length != 6)
+            return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
+
+        var now = clock.GetUtcNow();
+        var otp = await db.DriverOtps
+            .Where(x => x.Mobile == mobile && x.InstallId == installId && x.ConsumedAt == null && x.ExpiresAt > now)
+            .OrderByDescending(x => x.OtpId)
+            .FirstOrDefaultAsync(ct);
+        if (otp is null || otp.Attempts >= o.MaxAttempts)
+            return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
+
+        otp.Attempts++;
+        var match = CryptographicOperations.FixedTimeEquals(otp.CodeHash, Hash(mobile, installId, code.Trim()));
+        if (!match)
+        {
+            await db.SaveChangesAsync(ct);
+            return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
+        }
+
+        var drivers = await db.Drivers.Where(d => d.Mobile == mobile && !d.IsBlocked).OrderBy(d => d.DriverId).ToListAsync(ct);
+        if (drivers.Count == 0)
+        {
+            await db.SaveChangesAsync(ct);
+            return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
+        }
+
+        otp.ConsumedAt = now;
+        var driverIds = drivers.Select(d => d.DriverId).ToList();
+        var driver = drivers[0];
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // One phone per driver: signing in here signs the other phone out.
+        await db.DriverDevices
+            .Where(d => driverIds.Contains(d.DriverId) && d.IsActive && d.InstallId != installId)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.IsActive, false), ct);
+
+        var device = await db.DriverDevices.SingleOrDefaultAsync(d => d.InstallId == installId, ct);
+        if (device is null)
+        {
+            device = new DriverDevice { InstallId = installId, RegisteredAt = now };
+            db.DriverDevices.Add(device);
+        }
+        device.DriverId = driver.DriverId;
+        device.Platform = string.Equals(platform, "ios", StringComparison.OrdinalIgnoreCase) ? "IOS" : "ANDROID";
+        device.AppVersion = appVersion is { Length: > 0 and <= 20 } ? appVersion : null;
+        device.IsActive = true;
+        device.LastSeenAt = now;
+
+        db.DriverVerifications.Add(new DriverVerification
+        {
+            DriverId = driver.DriverId,
+            Method = "MOBILE_OTP",
+            Status = "VERIFIED",
+            VerifiedAt = now,
+            CreatedAt = now,
+        });
+
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        var companyIds = drivers.Select(d => d.CompanyId).Distinct().ToList();
+        var companies = await db.Companies.AsNoTracking()
+            .Where(c => companyIds.Contains(c.CompanyId))
+            .Select(c => c.Name)
+            .ToListAsync(ct);
+
+        var (token, expires) = tokens.CreateDriverToken(driver.DriverId, device.DeviceId, mobile, o.SessionDays);
+        return new DriverLoginResult(DriverLoginStatus.Ok, new DriverSession(token, expires,
+            new DriverProfile(driver.DriverId, driver.FullName, mobile, driver.PreferredLanguage.Trim(), companies)));
+    }
+
+    /// <summary>Signs this phone out.</summary>
+    public Task LogoutAsync(long deviceId, CancellationToken ct = default) =>
+        db.DriverDevices.Where(d => d.DeviceId == deviceId).ExecuteUpdateAsync(s => s.SetProperty(d => d.IsActive, false), ct);
+
+    private static byte[] Hash(string mobile, string installId, string code) =>
+        SHA256.HashData(Encoding.UTF8.GetBytes($"{mobile}|{installId}|{code}"));
+
+    /// <summary>The SMS with the code, in the driver's language.</summary>
+    public static RenderedMessage CodeMessage(string language, string code, int minutes) => language switch
+    {
+        "ar" => new("Yardsyncs", $"Yardsyncs: رمز الدخول {code}. صالح لمدة {minutes} دقائق. لا تشاركه مع أحد."),
+        "ur" => new("Yardsyncs", $"Yardsyncs: لاگ اِن کوڈ {code}۔ {minutes} منٹ کے لیے درست۔ کسی کو نہ بتائیں۔"),
+        "hi" => new("Yardsyncs", $"Yardsyncs: लॉगिन कोड {code}। {minutes} मिनट तक मान्य। किसी को न बताएं।"),
+        _ => new("Yardsyncs", $"Yardsyncs: sign-in code {code}. Valid for {minutes} minutes. Do not share it."),
+    };
+}

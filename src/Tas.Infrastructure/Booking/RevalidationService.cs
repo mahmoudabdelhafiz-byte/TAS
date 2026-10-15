@@ -213,6 +213,23 @@ public sealed class RevalidationService(
         if (appointment is null)
             return BookingOutcome.NotFound($"Appointment {number} not found.");
 
+        return await StartTripCoreAsync(appointment, user.UserId, "Trip started", ct);
+    }
+
+    /// <summary>Start trip from the driver app (the caller has checked the appointment is this driver's).</summary>
+    public async Task<BookingOutcome> StartTripForDriverAsync(long appointmentId, CancellationToken ct = default)
+    {
+        var appointment = await db.Appointments.AsNoTracking().Include(a => a.Slot)
+            .SingleOrDefaultAsync(a => a.AppointmentId == appointmentId, ct);
+        return appointment is null
+            ? BookingOutcome.NotFound("Appointment not found.")
+            : await StartTripCoreAsync(appointment, null, "Trip started (driver app)", ct);
+    }
+
+    private async Task<BookingOutcome> StartTripCoreAsync(Appointment appointment, int? actorUserId, string reason, CancellationToken ct)
+    {
+        var terminalId = appointment.TerminalId;
+        var number = appointment.AppointmentNo;
         if (appointment.Status is not (AppointmentStatus.Confirmed or AppointmentStatus.EnRoute))
             return BookingOutcome.Conflict($"A trip can't be started for an appointment in status {appointment.Status}.");
 
@@ -246,8 +263,8 @@ public sealed class RevalidationService(
                     AppointmentId = appointment.AppointmentId,
                     FromStatus = AppointmentStatus.Confirmed,
                     ToStatus = AppointmentStatus.EnRoute,
-                    ChangedBy = user.UserId,
-                    Reason = "Trip started",
+                    ChangedBy = actorUserId,
+                    Reason = reason,
                     ChangedAt = now,
                 });
                 await db.SaveChangesAsync(ct);
