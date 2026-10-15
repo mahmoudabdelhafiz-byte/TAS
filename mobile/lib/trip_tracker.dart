@@ -1,8 +1,10 @@
-// Position while on the way to the terminal, also with the phone locked or another app in front.
+// Position on the way to the terminal and inside it, also with the phone locked or another app in front.
 //
 // Android runs it as a foreground service with a notification the driver can see ("sharing your location");
-// iOS keeps location updates on in the background with the blue location indicator. It stops by itself when the
-// truck checks in at the pre-gate, the trip ends, or the driver signs out. Nothing is tracked outside a trip.
+// iOS keeps location updates on in the background with the blue location indicator.
+// On the way it gives the terminal the arrival estimate and checks the truck in at the pre-gate, then pauses while
+// the truck waits at the gate. After gate-in it starts again: the terminal sees when the truck reaches the
+// container's block. It stops at gate-out, or when the driver signs out. Nothing is tracked outside a visit.
 
 import 'dart:async';
 
@@ -61,11 +63,17 @@ class TripTracker extends ChangeNotifier {
 
   bool get active => _subscription != null;
 
-  /// Starts sharing the position for this trip (no-op when it already runs for it).
-  Future<void> follow(String appointmentNo, String lang) async {
-    if (_appointmentNo == appointmentNo && _subscription != null) return;
+  /// Inside the terminal positions go out more often: arrival at the block should be seen within seconds.
+  static const insidePolicy = ReportPolicy(every: Duration(seconds: 15), atLeast: Duration(seconds: 5), farMeters: 30);
+
+  bool _inside = false;
+
+  /// Starts sharing the position for this visit (no-op when it already runs for it): [inside] after gate-in.
+  Future<void> follow(String appointmentNo, String lang, {bool inside = false}) async {
+    if (_appointmentNo == appointmentNo && _subscription != null && _inside == inside) return;
     await stop();
     _appointmentNo = appointmentNo;
+    _inside = inside;
     last = null;
 
     var permission = await Geolocator.checkPermission();
@@ -88,7 +96,7 @@ class TripTracker extends ChangeNotifier {
     problem = null;
     notifyListeners();
 
-    _subscription = Geolocator.getPositionStream(locationSettings: settingsFor(lang)).listen(
+    _subscription = Geolocator.getPositionStream(locationSettings: settingsFor(lang, inside: inside)).listen(
       _onPosition,
       onError: (Object e) {
         if (e is LocationServiceDisabledException) _setProblem(TrackingProblem.locationOff);
@@ -111,7 +119,7 @@ class TripTracker extends ChangeNotifier {
     final moved = _lastSent == null
         ? null
         : Geolocator.distanceBetween(_lastSent!.latitude, _lastSent!.longitude, position.latitude, position.longitude);
-    if (!policy.due(now: now, lastAt: _lastAt, movedMeters: moved)) return;
+    if (!(_inside ? insidePolicy : policy).due(now: now, lastAt: _lastAt, movedMeters: moved)) return;
 
     _sending = true;
     try {
@@ -122,8 +130,8 @@ class TripTracker extends ChangeNotifier {
       lastAppointmentNo = no;
       problem = null;
       notifyListeners();
-      // Checked in at the pre-gate or no longer on the way: stop sharing.
-      if (update.status != 'EnRoute') await stop();
+      // Checked in at the pre-gate (waiting at the gate) or left the terminal: stop sharing.
+      if (update.status != 'EnRoute' && update.status != 'GateIn') await stop();
     } on ApiException catch (e) {
       if (e.status == 409 || e.signedOut) {
         await stop();
@@ -142,16 +150,16 @@ class TripTracker extends ChangeNotifier {
   }
 
   /// Location settings that keep updates coming in the background.
-  static LocationSettings settingsFor(String lang) {
+  static LocationSettings settingsFor(String lang, {bool inside = false}) {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return AndroidSettings(
           accuracy: LocationAccuracy.high,
-          distanceFilter: 50,
-          intervalDuration: const Duration(seconds: 20),
+          distanceFilter: inside ? 10 : 50,
+          intervalDuration: Duration(seconds: inside ? 5 : 20),
           foregroundNotificationConfig: ForegroundNotificationConfig(
             notificationTitle: tr(lang, 'trackingTitle'),
-            notificationText: tr(lang, 'trackingText'),
+            notificationText: tr(lang, inside ? 'trackingTextInside' : 'trackingText'),
             notificationChannelName: tr(lang, 'trackingChannel'),
             enableWakeLock: true,
             setOngoing: true,
@@ -160,14 +168,14 @@ class TripTracker extends ChangeNotifier {
       case TargetPlatform.iOS:
         return AppleSettings(
           accuracy: LocationAccuracy.high,
-          distanceFilter: 50,
+          distanceFilter: inside ? 10 : 50,
           activityType: ActivityType.automotiveNavigation,
           pauseLocationUpdatesAutomatically: false,
           showBackgroundLocationIndicator: true,
           allowBackgroundLocationUpdates: true,
         );
       default:
-        return const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 50);
+        return LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: inside ? 10 : 50);
     }
   }
 }

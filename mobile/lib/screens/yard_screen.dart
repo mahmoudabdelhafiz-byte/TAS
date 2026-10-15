@@ -35,6 +35,8 @@ class _YardScreenState extends State<YardScreen> {
   String? _spokenKey;
   Position? _position;
   StreamSubscription<Position>? _positions;
+  bool _started = false; // first load picks the stop to resume at
+  int? _arrivedAt; // the stop whose block the terminal saw the truck reach
 
   String t(String key, [Map<String, String> values = const {}]) => tr(widget.lang, key, values);
 
@@ -45,6 +47,9 @@ class _YardScreenState extends State<YardScreen> {
       if (mounted) setState(() => _voiceOn = on);
     });
     _follow();
+    // Inside the terminal the position keeps going to the terminal (also locked): it sees the truck reach the block.
+    widget.api.tracker.follow(widget.appointmentNo, widget.lang, inside: true);
+    widget.api.tracker.addListener(_onTracking);
     _load();
     // Re-read every 30 s: a container moved in the yard shows up here.
     _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
@@ -59,6 +64,7 @@ class _YardScreenState extends State<YardScreen> {
     _timer?.cancel();
     _tick?.cancel();
     _positions?.cancel();
+    widget.api.tracker.removeListener(_onTracking);
     _voice.stop();
     super.dispose();
   }
@@ -86,7 +92,12 @@ class _YardScreenState extends State<YardScreen> {
           _truck = [position.longitude, position.latitude];
           _position ??= position;
         }
+        if (!_started) {
+          _current = guidance.firstOpen;
+          _started = true;
+        }
         if (_current >= guidance.stops.length) _current = guidance.stops.length - 1;
+        if (guidance.stops[_current].arrived) _arrivedAt = guidance.stops[_current].sequence;
       });
       _speak();
     } on ApiException catch (e) {
@@ -94,6 +105,24 @@ class _YardScreenState extends State<YardScreen> {
     } catch (_) {
       if (mounted) setState(() => _error = t('offline'));
     }
+  }
+
+  /// The terminal saw the truck reach the current stop's block: say so once.
+  void _onTracking() {
+    final at = widget.api.tracker.last?.atStop;
+    final g = _guidance;
+    if (!mounted || at == null || g == null || at == _arrivedAt) return;
+    if (g.stops[_current].sequence != at) return;
+    setState(() => _arrivedAt = at);
+    if (_voiceOn) _voice.sayText(widget.lang, 'arrivedHere');
+  }
+
+  /// "Done here": the next stop becomes current; the terminal is told (if offline, the screen still moves on).
+  void _done(YardGuidance g) {
+    final stop = g.stops[_current];
+    setState(() => _current++);
+    widget.api.completeStop(widget.appointmentNo, stop.sequence).catchError((_) {});
+    _speak();
   }
 
   /// Driving: faster than about 9 km/h on a fix from the last 15 s.
@@ -226,6 +255,7 @@ class _YardScreenState extends State<YardScreen> {
                   slot: _slotText(g.stops[_current]),
                   progress: t('stopOf', {'n': '${_current + 1}', 'total': '${g.stops.length}'}),
                   meters: g.legTo(g.stops[_current].sequence)?.meters,
+                  arrived: _arrivedAt == g.stops[_current].sequence,
                   lang: widget.lang,
                   t: t,
                 ),
@@ -249,12 +279,7 @@ class _YardScreenState extends State<YardScreen> {
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
                     // Not while driving: the next stop is spoken, nothing needs a tap until the truck stands.
                     child: FilledButton(
-                      onPressed: _moving
-                          ? null
-                          : () {
-                              setState(() => _current++);
-                              _speak();
-                            },
+                      onPressed: _moving ? null : () => _done(g),
                       child: Text(_moving ? t('stopToConfirm') : t('doneHere')),
                     ),
                   ),
@@ -313,7 +338,9 @@ class _TicketRow extends StatelessWidget {
 }
 
 class _NextStop extends StatelessWidget {
-  const _NextStop({required this.stop, required this.title, required this.slot, required this.progress, required this.meters, required this.lang, required this.t});
+  const _NextStop({required this.stop, required this.title, required this.slot, required this.progress, required this.meters, required this.lang, required this.t, this.arrived = false});
+
+  final bool arrived;
 
   final YardStop stop;
   final String title;
@@ -342,6 +369,14 @@ class _NextStop extends StatelessWidget {
           Wrap(spacing: 8, children: [
             for (final c in stop.containers)
               Text(c, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white, fontSize: 16, letterSpacing: 0.5)),
+          ]),
+        ],
+        if (arrived) ...[
+          const SizedBox(height: 8),
+          Row(children: [
+            const Icon(Icons.check_circle, color: Color(0xFF7FD69B), size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(t('arrivedHere'), style: const TextStyle(color: Color(0xFF7FD69B), fontSize: 15, fontWeight: FontWeight.w600))),
           ]),
         ],
         if (stop.moved) ...[

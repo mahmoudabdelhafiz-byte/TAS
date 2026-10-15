@@ -52,4 +52,11 @@ void main() {
     expect(a.copyWith(status: 'Arrived').status, 'Arrived');
     expect(DriverAppointment.fromJson(sample()).etaClock(), isNull);
   });
+
+  test('position answer inside the terminal names the stop reached', () {
+    final u = TripUpdate.fromJson({'status': 'GateIn', 'eta': null, 'distanceKm': null, 'checkedIn': false, 'areas': ['YARD_ZONE'], 'atStop': 1});
+    expect(u.atStop, 1);
+    expect(TripUpdate.fromJson({'status': 'EnRoute', 'checkedIn': false}).atStop, isNull);
+  });
 }
+

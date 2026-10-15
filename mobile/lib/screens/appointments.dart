@@ -80,9 +80,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Future<void> _load() async {
     try {
       final items = await widget.api.appointments();
-      // A trip on the way keeps sharing its position, also after the app was closed and opened again.
+      // A visit on the way or inside the terminal keeps sharing its position, also after the app was reopened.
+      final inside = items.where((a) => a.status == 'GateIn').toList();
       final onTheWay = items.where((a) => a.status == 'EnRoute').toList();
-      if (onTheWay.isNotEmpty) {
+      if (inside.isNotEmpty) {
+        unawaited(widget.api.tracker.follow(inside.first.appointmentNo, widget.lang, inside: true));
+      } else if (onTheWay.isNotEmpty) {
         unawaited(widget.api.tracker.follow(onTheWay.first.appointmentNo, widget.lang));
       } else if (widget.api.tracker.appointmentNo != null) {
         unawaited(widget.api.tracker.stop());

@@ -52,4 +52,12 @@ void main() {
     expect(policy.due(now: t0.add(const Duration(seconds: 10)), lastAt: t0, movedMeters: 800), isFalse);
     expect(policy.due(now: t0.add(const Duration(seconds: 61)), lastAt: t0, movedMeters: 0), isTrue);
   });
+
+  test('inside the terminal positions go out more often', () {
+    final t0 = DateTime(2026, 10, 15, 8);
+    expect(TripTracker.insidePolicy.due(now: t0.add(const Duration(seconds: 16)), lastAt: t0), isTrue);
+    expect(TripTracker.insidePolicy.due(now: t0.add(const Duration(seconds: 6)), lastAt: t0, movedMeters: 40), isTrue);
+    expect(TripTracker.insidePolicy.due(now: t0.add(const Duration(seconds: 6)), lastAt: t0, movedMeters: 10), isFalse);
+  });
 }
+

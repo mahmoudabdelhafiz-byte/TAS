@@ -136,6 +136,10 @@ class DriverApi {
       TripUpdate.fromJson(await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/position',
           body: {'latitude': latitude, 'longitude': longitude, 'speed': speed}) as Map<String, dynamic>);
 
+  /// "Done here": the stop is confirmed and the terminal's systems are told.
+  Future<void> completeStop(String appointmentNo, int sequence) async =>
+      _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/stops/$sequence/done');
+
   /// Where the terminal sends push messages for this phone; null stops them.
   Future<void> registerPushToken(String? token) async => _send('PUT', '/api/driver/push-token', body: {'token': token});
 

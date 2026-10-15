@@ -1,15 +1,25 @@
 using Microsoft.EntityFrameworkCore;
+using Tas.Domain;
 using Tas.Application.Auth;
 using Tas.Domain.Booking;
 using Tas.Domain.Gate;
 using Tas.Domain.Parties;
+using Tas.Infrastructure.Integration;
 using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.DriverApp;
 
 /// <param name="Eta">Estimated arrival at the terminal gate; null once checked in or when the terminal has no gate area.</param>
 /// <param name="CheckedIn">The truck just entered a check-in area (pre-gate) and is now at the gate.</param>
-public sealed record TripUpdate(AppointmentStatus Status, DateTimeOffset? Eta, double? DistanceKm, bool CheckedIn, IReadOnlyList<string> Areas);
+/// <param name="AtStop">Inside the terminal: the stop the truck just reached (its block), if any.</param>
+public sealed record TripUpdate(
+    AppointmentStatus Status, DateTimeOffset? Eta, double? DistanceKm, bool CheckedIn, IReadOnlyList<string> Areas, int? AtStop = null);
+
+public sealed class BlockHit
+{
+    public int GeofenceId { get; set; }
+    public string Block { get; set; } = "";
+}
 
 /// <summary>A terminal area; <see cref="GeoJson"/> is the polygon as GeoJSON.</summary>
 public sealed class GeofenceView
@@ -46,6 +56,12 @@ public sealed class TripTrackingService(TasDbContext db, TimeProvider clock)
     public const double DefaultSpeedMps = 11;
     public const double RoadFactor = 1.3;
 
+    /// <summary>The truck counts as at its block within this distance of the block's area…</summary>
+    public const double ArrivalMeters = 10;
+
+    /// <summary>…and when slower than this (≈ 15 km/h), so driving past on the next road doesn't count.</summary>
+    public const double ArrivalMaxSpeedMps = 4;
+
     public async Task<(TripUpdate? Update, string? Error, bool NotFound)> ReportAsync(
         CurrentDriver driver, string appointmentNo, double latitude, double longitude, double? speedMps, CancellationToken ct = default)
     {
@@ -59,33 +75,13 @@ public sealed class TripTrackingService(TasDbContext db, TimeProvider clock)
             .SingleOrDefaultAsync(ct);
         if (appointment is null)
             return (null, $"Appointment {number} not found.", true);
+        if (appointment.Status == AppointmentStatus.GateIn)
+            return (await InsideAsync(appointment, latitude, longitude, speedMps, ct), null, false);
         if (appointment.Status != AppointmentStatus.EnRoute)
-            return (null, "Your position is only shared while you are on the way to the terminal.", false);
+            return (null, "Your position is only shared on the way to the terminal and inside it.", false);
 
         var now = clock.GetUtcNow();
-        var hits = await db.Database.SqlQuery<GeofenceHit>($"""
-            SELECT geofence_id AS "GeofenceId", zone_type AS "ZoneType", triggers_check_in AS "TriggersCheckIn"
-            FROM geofence
-            WHERE terminal_id = {appointment.TerminalId} AND is_active
-              AND ST_Covers(area, ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography)
-            """).ToListAsync(ct);
-
-        // Enter events, once per area per appointment.
-        var seen = await db.GeofenceEvents.Where(e => e.AppointmentId == appointment.AppointmentId && e.EventType == "ENTER")
-            .Select(e => e.GeofenceId).ToListAsync(ct);
-        foreach (var hit in hits.Where(h => !seen.Contains(h.GeofenceId)))
-        {
-            db.GeofenceEvents.Add(new GeofenceEvent
-            {
-                AppointmentId = appointment.AppointmentId,
-                DriverId = appointment.DriverId!.Value,
-                GeofenceId = hit.GeofenceId,
-                EventType = "ENTER",
-                Latitude = Math.Round((decimal)latitude, 6),
-                Longitude = Math.Round((decimal)longitude, 6),
-                OccurredAt = now,
-            });
-        }
+        var hits = await AreasAtAsync(appointment, latitude, longitude, now, ct);
 
         var checkedIn = false;
         if (hits.Any(h => h.TriggersCheckIn))
@@ -110,6 +106,8 @@ public sealed class TripTrackingService(TasDbContext db, TimeProvider clock)
                 Details = "Entered the pre-gate area",
                 OccurredAt = now,
             });
+            IntegrationEventQueue.Add(db, appointment.TerminalId, IntegrationEventTypes.TruckCheckedIn, appointment.AppointmentId,
+                await EventBaseAsync(appointment, latitude, longitude, now, ct), now);
             checkedIn = true;
         }
 
@@ -146,6 +144,119 @@ public sealed class TripTrackingService(TasDbContext db, TimeProvider clock)
 
         await db.SaveChangesAsync(ct);
         return (new TripUpdate(appointment.Status, eta, distanceKm, checkedIn, hits.Select(h => h.ZoneType).Distinct().ToList()), null, false);
+    }
+
+    /// <summary>The areas the position is in; an ENTER event the first time for each.</summary>
+    private async Task<List<GeofenceHit>> AreasAtAsync(Appointment appointment, double latitude, double longitude, DateTimeOffset now, CancellationToken ct)
+    {
+        var hits = await db.Database.SqlQuery<GeofenceHit>($"""
+            SELECT geofence_id AS "GeofenceId", zone_type AS "ZoneType", triggers_check_in AS "TriggersCheckIn"
+            FROM geofence
+            WHERE terminal_id = {appointment.TerminalId} AND is_active
+              AND ST_Covers(area, ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography)
+            """).ToListAsync(ct);
+
+        var seen = await db.GeofenceEvents.Where(e => e.AppointmentId == appointment.AppointmentId && e.EventType == "ENTER")
+            .Select(e => e.GeofenceId).ToListAsync(ct);
+        foreach (var hit in hits.Where(h => !seen.Contains(h.GeofenceId)))
+        {
+            db.GeofenceEvents.Add(new GeofenceEvent
+            {
+                AppointmentId = appointment.AppointmentId,
+                DriverId = appointment.DriverId!.Value,
+                GeofenceId = hit.GeofenceId,
+                EventType = "ENTER",
+                Latitude = Math.Round((decimal)latitude, 6),
+                Longitude = Math.Round((decimal)longitude, 6),
+                OccurredAt = now,
+            });
+        }
+        return hits;
+    }
+
+    // ================================================================ inside the terminal
+
+    /// <summary>
+    /// After gate-in: when the truck reaches the block of its current stop (the first one not done), the stop is
+    /// marked ARRIVED and a TRUCK_AT_BLOCK event goes to the terminal's systems.
+    /// </summary>
+    private async Task<TripUpdate> InsideAsync(Appointment appointment, double latitude, double longitude, double? speedMps, CancellationToken ct)
+    {
+        var now = clock.GetUtcNow();
+        var hits = await AreasAtAsync(appointment, latitude, longitude, now, ct);
+
+        int? atStop = null;
+        var current = await db.YardInstructions
+            .Where(y => y.AppointmentId == appointment.AppointmentId && y.StopType != "EXIT" && y.Status != "DONE" && y.Status != "CANCELLED")
+            .OrderBy(y => y.Sequence)
+            .FirstOrDefaultAsync(ct);
+        var slow = speedMps is null or < 0 || speedMps < ArrivalMaxSpeedMps;
+        if (current is { ArrivedAt: null, Block: not null } && slow)
+        {
+            var near = await db.Database.SqlQuery<BlockHit>($"""
+                SELECT geofence_id AS "GeofenceId", upper(yard_block) AS "Block"
+                FROM geofence
+                WHERE terminal_id = {appointment.TerminalId} AND is_active AND zone_type IN ('YARD_ZONE', 'CFS') AND yard_block IS NOT NULL
+                  AND ST_DWithin(area, ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography, {ArrivalMeters})
+                """).ToListAsync(ct);
+            if (near.FirstOrDefault(n => n.Block == current.Block.ToUpperInvariant()) is { } block)
+            {
+                current.ArrivedAt = now;
+                current.Status = "ARRIVED";
+                current.GeofenceId = block.GeofenceId;
+                atStop = current.Sequence;
+                IntegrationEventQueue.Add(db, appointment.TerminalId, IntegrationEventTypes.TruckAtBlock, appointment.AppointmentId,
+                    await StopEventAsync(appointment, current, latitude, longitude, now, ct), now);
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
+        return new TripUpdate(appointment.Status, null, null, false, hits.Select(h => h.ZoneType).Distinct().ToList(), atStop);
+    }
+
+    /// <summary>What every event says: when, which terminal, appointment, truck, and where the phone was.</summary>
+    internal async Task<Dictionary<string, object?>> EventBaseAsync(Appointment appointment, double? latitude, double? longitude, DateTimeOffset now, CancellationToken ct)
+    {
+        var info = await db.Appointments.AsNoTracking()
+            .Where(a => a.AppointmentId == appointment.AppointmentId)
+            .Select(a => new
+            {
+                Terminal = db.Terminals.Where(t => t.TerminalId == a.TerminalId).Select(t => t.Code).FirstOrDefault(),
+                Plate = a.Truck != null ? a.Truck.PlateNumber : null,
+                Company = a.Company.Name,
+            })
+            .SingleAsync(ct);
+        return new Dictionary<string, object?>
+        {
+            ["occurredAt"] = now,
+            ["terminal"] = info.Terminal,
+            ["appointmentNo"] = appointment.AppointmentNo,
+            ["truckPlate"] = info.Plate,
+            ["company"] = info.Company,
+            ["position"] = latitude is null || longitude is null ? null : new { latitude, longitude },
+        };
+    }
+
+    /// <summary>An event about one stop: block, row.bay.tier and the containers / cargo of the stop.</summary>
+    internal async Task<Dictionary<string, object?>> StopEventAsync(
+        Appointment appointment, YardInstruction stop, double? latitude, double? longitude, DateTimeOffset now, CancellationToken ct)
+    {
+        var payload = await EventBaseAsync(appointment, latitude, longitude, now, ct);
+        var item = stop.ItemId is null ? null : await db.AppointmentItems.AsNoTracking()
+            .Where(i => i.ItemId == stop.ItemId)
+            .Select(i => new { i.ContainerNo, i.BookingRef, i.Category })
+            .SingleOrDefaultAsync(ct);
+        payload["stop"] = new
+        {
+            sequence = stop.Sequence,
+            kind = item is null ? stop.StopType : YardGuidanceService.IsPickup(item.Category) ? "PICKUP" : "DROP",
+            block = stop.Block,
+            slot = stop.Bay,
+            category = item?.Category.Code,
+            container = item?.ContainerNo,
+            bookingRef = item?.BookingRef,
+        };
+        return payload;
     }
 
     // ================================================================ terminal areas

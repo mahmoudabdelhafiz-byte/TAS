@@ -146,17 +146,21 @@ String shortDate(DriverAppointment a) => '${two(a.localStart.day)}/${two(a.local
 
 /// What the server answers to a position while on the way.
 class TripUpdate {
-  const TripUpdate({required this.status, required this.eta, required this.distanceKm, required this.checkedIn});
+  const TripUpdate({required this.status, required this.eta, required this.distanceKm, required this.checkedIn, this.atStop});
 
   final String status;
   final DateTime? eta;
   final double? distanceKm;
   final bool checkedIn;
 
+  /// Inside the terminal: the stop whose block the truck just reached.
+  final int? atStop;
+
   factory TripUpdate.fromJson(Map<String, dynamic> json) => TripUpdate(
         status: json['status'] as String,
         eta: json['eta'] == null ? null : DateTime.parse(json['eta'] as String).toUtc(),
         distanceKm: (json['distanceKm'] as num?)?.toDouble(),
         checkedIn: json['checkedIn'] as bool? ?? false,
+        atStop: (json['atStop'] as num?)?.toInt(),
       );
 }

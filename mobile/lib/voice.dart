@@ -65,6 +65,20 @@ class Voice {
     }
   }
 
+  /// Says one of the app's texts (by key) in the driver's language.
+  Future<void> sayText(String lang, String key) async {
+    try {
+      if (_appLang != lang) {
+        _textLang = await _pickVoice(lang);
+        _appLang = lang;
+      }
+      final textLang = _textLang;
+      if (textLang == null) return;
+      await _tts.stop();
+      await _tts.speak(tr(textLang, key));
+    } catch (_) {}
+  }
+
   Future<void> stop() async {
     try {
       await _tts.stop();
