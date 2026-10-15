@@ -1,5 +1,5 @@
 /* =====================================================================
-   Truck Appointment System (TAS) — PostgreSQL schema, draft v0.5
+   Truck Appointment System (TAS) — PostgreSQL schema, draft v0.6
    Requires PostgreSQL 15+ and PostGIS (for geofences).
    Multi-terminal. See docs/data-model.md for the design.
 
@@ -480,8 +480,16 @@ CREATE TABLE notification_log (   -- outbound push / SMS / WhatsApp / email
     status           varchar(10)  NOT NULL CHECK (status IN ('QUEUED','SENT','DELIVERED','FAILED')),
     provider_ref     varchar(100) NULL,
     created_at       timestamptz  NOT NULL DEFAULT now(),
-    sent_at          timestamptz  NULL
+    sent_at          timestamptz  NULL,
+    -- delivery (the dispatcher renders the template with params in the recipient's language)
+    params           jsonb        NULL,       -- template values, e.g. {"appointmentNo": "...", "slot": "...", "reason": "..."}
+    recipient        varchar(200) NULL,       -- phone or email actually used
+    attempts         integer      NOT NULL DEFAULT 0,
+    last_error       varchar(400) NULL,
+    next_attempt_at  timestamptz  NULL        -- NULL = as soon as possible
 );
+CREATE INDEX ix_notification_due ON notification_log(status, next_attempt_at);
+CREATE INDEX ix_notification_appt ON notification_log(appointment_id, template_code);
 
 /* ---------- 12. Trucking company API ---------- */
 

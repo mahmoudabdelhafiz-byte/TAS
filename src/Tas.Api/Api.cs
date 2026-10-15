@@ -27,6 +27,17 @@ public sealed record RescheduleBody(long SlotId);
 
 public sealed record AssignBody(int? TruckId, int? DriverId);
 
+public sealed record NotificationView(
+    string Template,
+    Tas.Domain.NotificationChannel Channel,
+    string Language,
+    Tas.Domain.NotificationStatus Status,
+    string? Recipient,
+    int Attempts,
+    string? LastError,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? SentAt);
+
 public sealed record TokenResponse(
     string AccessToken,
     DateTimeOffset AccessTokenExpiresAt,

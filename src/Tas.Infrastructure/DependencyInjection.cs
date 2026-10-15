@@ -1,12 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Tas.Domain;
 using Tas.Application.Tos;
 using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
 using Tas.Infrastructure.Gate;
 using Tas.Infrastructure.MasterData;
+using Tas.Infrastructure.Notifications;
 using Tas.Infrastructure.Persistence;
 using Tas.Infrastructure.Tos;
 using Tas.Infrastructure.Tos.N4;
@@ -48,6 +52,15 @@ public static class DependencyInjection
         // Gate
         services.AddScoped<GateService>();
 
+        // Notifications: outbox delivery; provider per channel from "Notifications" (default: Log = not sent).
+        services.Configure<NotificationOptions>(config.GetSection("Notifications"));
+        services.AddHttpClient("notifications", c => c.Timeout = TimeSpan.FromSeconds(20));
+        foreach (var channel in new[] { NotificationChannel.Sms, NotificationChannel.Whatsapp, NotificationChannel.Email })
+            services.AddSingleton<INotificationSender>(sp => CreateSender(sp, channel));
+        services.AddSingleton<NotificationSenders>();
+        services.AddScoped<NotificationDispatcher>();
+        services.AddHostedService<NotificationWorker>();
+
         // TOS: "Tos:Adapter" = Fake (development / demos) or N4; "Tos:OnUnavailable" = Warn (default) or Reject.
         services.AddSingleton(new TosSettings(config.GetValue("Tos:OnUnavailable", TosUnavailablePolicy.Warn)));
         var adapter = config.GetValue("Tos:Adapter", "Fake");
@@ -68,5 +81,27 @@ public static class DependencyInjection
         }
 
         return services;
+    }
+
+    private static INotificationSender CreateSender(IServiceProvider sp, NotificationChannel channel)
+    {
+        var o = sp.GetRequiredService<IOptions<NotificationOptions>>().Value;
+        HttpClient Http() => sp.GetRequiredService<IHttpClientFactory>().CreateClient("notifications");
+
+        var provider = (channel switch
+        {
+            NotificationChannel.Sms => o.SmsProvider,
+            NotificationChannel.Whatsapp => o.WhatsappProvider,
+            _ => o.EmailProvider,
+        } ?? "Log").Trim().ToLowerInvariant();
+
+        return (channel, provider) switch
+        {
+            (_, "log" or "") => new LogSender(channel, sp.GetRequiredService<ILogger<LogSender>>()),
+            (NotificationChannel.Sms, "unifonic") => new UnifonicSmsSender(Http(), o.Unifonic),
+            (NotificationChannel.Sms or NotificationChannel.Whatsapp, "twilio") => new TwilioSender(Http(), o.Twilio, channel),
+            (NotificationChannel.Email, "smtp") => new SmtpEmailSender(o.Smtp),
+            _ => throw new InvalidOperationException($"Notification provider '{provider}' is not available for {channel}."),
+        };
     }
 }

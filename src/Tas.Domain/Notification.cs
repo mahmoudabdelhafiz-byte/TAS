@@ -36,6 +36,18 @@ public sealed class NotificationLog
     public string? ProviderRef { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? SentAt { get; set; }
+
+    /// <summary>Template values as JSON, e.g. {"appointmentNo": "...", "slot": "...", "reason": "..."}.</summary>
+    public string? Params { get; set; }
+
+    /// <summary>Phone number or email address the message was sent to.</summary>
+    public string? Recipient { get; set; }
+
+    public int Attempts { get; set; }
+    public string? LastError { get; set; }
+
+    /// <summary>When to try (again); null = as soon as possible.</summary>
+    public DateTimeOffset? NextAttemptAt { get; set; }
 }
 
 public static class NotificationTemplates
@@ -45,4 +57,10 @@ public static class NotificationTemplates
 
     /// <summary>A previously failed check has cleared: good to go.</summary>
     public const string StatusCleared = "STATUS_CLEARED";
+
+    /// <summary>Reminder shortly before the slot, with the time the gate opens for the truck.</summary>
+    public const string SlotReminder = "SLOT_REMINDER";
+
+    /// <summary>The terminal closed the slot (e.g. crane breakdown): please reschedule.</summary>
+    public const string SlotClosed = "SLOT_CLOSED";
 }

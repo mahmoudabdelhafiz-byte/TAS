@@ -8,6 +8,8 @@ using Tas.Application.Booking;
 using Tas.Application.Tos;
 using Tas.Domain;
 using Tas.Domain.Booking;
+using Tas.Application.Notifications;
+using Tas.Infrastructure.Notifications;
 using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.Booking;
@@ -116,10 +118,19 @@ public sealed class RevalidationService(
             });
 
             var anyFailing = items.Any(i => i.ValidationStatus == ValidationStatus.Fail);
-            if (turnedRed)
-                await QueueNotificationsAsync(a, NotificationTemplates.StatusRed, now, ct);
-            else if (cleared && !anyFailing)
-                await QueueNotificationsAsync(a, NotificationTemplates.StatusCleared, now, ct);
+            var template = turnedRed ? NotificationTemplates.StatusRed
+                : cleared && !anyFailing ? NotificationTemplates.StatusCleared
+                : null;
+            if (template is not null)
+            {
+                var values = new Dictionary<string, string>
+                {
+                    [NotificationText.Keys.AppointmentNo] = a.AppointmentNo,
+                    [NotificationText.Keys.Slot] = NotificationText.SlotLabel(a.Slot.StartAt, a.Slot.EndAt, timeZone),
+                    [NotificationText.Keys.Reason] = reason,
+                };
+                await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, template, values, NotificationQueue.DriverChannel(config), now, ct);
+            }
 
             logger.LogInformation("Re-check of {AppointmentNo} ({Trigger}): {Changes}", a.AppointmentNo, trigger, string.Join("; ", changes));
         }
@@ -244,40 +255,6 @@ public sealed class RevalidationService(
         }
 
         return BookingOutcome.Updated((await queries.GetAsync(terminalId, number, ct))!);
-    }
-
-    /// <summary>SMS to the driver (if assigned) and email to the person who booked; a sender delivers them later.</summary>
-    private async Task QueueNotificationsAsync(Appointment a, string template, DateTimeOffset now, CancellationToken ct)
-    {
-        if (a.Driver is not null)
-        {
-            db.NotificationLogs.Add(new NotificationLog
-            {
-                AppointmentId = a.AppointmentId,
-                DriverId = a.Driver.DriverId,
-                Channel = NotificationChannel.Sms,
-                TemplateCode = template,
-                Language = a.Driver.PreferredLanguage.Trim(),
-                CreatedAt = now,
-            });
-        }
-
-        var booker = await db.AppUsers.AsNoTracking()
-            .Where(u => u.UserId == a.CreatedBy && u.IsActive)
-            .Select(u => new { u.UserId, u.PreferredLanguage })
-            .SingleOrDefaultAsync(ct);
-        if (booker is not null)
-        {
-            db.NotificationLogs.Add(new NotificationLog
-            {
-                AppointmentId = a.AppointmentId,
-                UserId = booker.UserId,
-                Channel = NotificationChannel.Email,
-                TemplateCode = template,
-                Language = booker.PreferredLanguage.Trim(),
-                CreatedAt = now,
-            });
-        }
     }
 
     private static string Truncate(string value, int max) => value.Length <= max ? value : value[..max];

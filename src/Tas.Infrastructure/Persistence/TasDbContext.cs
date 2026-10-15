@@ -131,6 +131,7 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
             e.Property(x => x.Channel).HasUpperCaseConversion();
             e.Property(x => x.Status).HasUpperCaseConversion();
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(x => x.Params).HasColumnType("jsonb");
         });
 
         b.Entity<AuditLog>(e =>

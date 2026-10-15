@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Tas.Api;
@@ -7,6 +8,7 @@ using Tas.Infrastructure;
 using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
+using Tas.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -285,6 +287,30 @@ appointments.MapPost("/{appointmentNo}/revalidate", async (
     return !AccessRules.CanAccessTerminal(user, terminalId)
         ? TasApi.Forbidden("You have no access to this terminal.")
         : TasApi.ToResult(await service.RevalidateByNumberAsync(terminalId, appointmentNo, user, ct));
+});
+
+// Messages sent (or queued) for an appointment — for the help desk and dispatchers.
+appointments.MapGet("/{appointmentNo}/notifications", async (
+    int terminalId, string appointmentNo, HttpContext http, TasDbContext db, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    if (!AccessRules.CanAccessTerminal(user, terminalId))
+        return TasApi.Forbidden("You have no access to this terminal.");
+
+    var number = appointmentNo.Trim().ToUpperInvariant();
+    var query = db.Appointments.AsNoTracking().Where(a => a.TerminalId == terminalId && a.AppointmentNo == number);
+    if (user.IsCompanyUser)
+        query = query.Where(a => a.CompanyId == user.CompanyId);
+    var id = await query.Select(a => (long?)a.AppointmentId).SingleOrDefaultAsync(ct);
+    if (id is null)
+        return TasApi.Problem(StatusCodes.Status404NotFound, $"Appointment {number} not found.");
+
+    var messages = await db.NotificationLogs.AsNoTracking()
+        .Where(n => n.AppointmentId == id)
+        .OrderBy(n => n.NotificationId)
+        .Select(n => new NotificationView(n.TemplateCode, n.Channel, n.Language, n.Status, n.Recipient, n.Attempts, n.LastError, n.CreatedAt, n.SentAt))
+        .ToListAsync(ct);
+    return Results.Ok(messages);
 });
 
 // The truck is leaving: re-check now; refused (422) while anything is red, otherwise the appointment becomes EN_ROUTE.
