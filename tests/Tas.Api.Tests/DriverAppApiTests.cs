@@ -241,7 +241,7 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         var areas = $"{Terminal}/geofences";
 
         var list = await Read<List<GeofenceView>>(await planner.GetAsync(areas));
-        Assert.Equal(3, list.Count);
+        Assert.Equal(8, list.Count); // approach, pre-gate, gate, exit and four yard blocks
         Assert.Contains("Polygon", list[0].GeoJson);
         Assert.True(list.Single(a => a.ZoneType == "PRE_GATE").TriggersCheckIn);
 
