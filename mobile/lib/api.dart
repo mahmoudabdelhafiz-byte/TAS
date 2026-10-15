@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'gate_pass.dart';
 import 'models.dart';
+import 'yard.dart';
 
 /// The API address; set at build time: flutter build apk --dart-define=YARDSYNCS_API=https://tas.example.com
 const apiBase = String.fromEnvironment('YARDSYNCS_API', defaultValue: 'http://10.0.2.2:5000');
@@ -125,6 +126,12 @@ class DriverApi {
   Future<TripUpdate> reportPosition(String appointmentNo, double latitude, double longitude, double? speed) async =>
       TripUpdate.fromJson(await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/position',
           body: {'latitude': latitude, 'longitude': longitude, 'speed': speed}) as Map<String, dynamic>);
+
+  Future<YardGuidance> yard(String appointmentNo, {double? latitude, double? longitude}) async {
+    final query = latitude == null || longitude == null ? '' : '?lat=$latitude&lon=$longitude';
+    return YardGuidance.fromJson(
+        await _send('GET', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/yard$query') as Map<String, dynamic>);
+  }
 
   Future<void> signOut() async {
     try {

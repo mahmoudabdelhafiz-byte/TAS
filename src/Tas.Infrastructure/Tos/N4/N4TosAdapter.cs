@@ -47,6 +47,41 @@ public sealed class N4TosAdapter(
         return BlContainers(await LookupAsync(terminal.Code, n4, request, ct), nbr);
     }
 
+    public async Task<IReadOnlyList<TosYardPosition>> YardPositionsAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default)
+    {
+        var containers = items.Where(i => i.ContainerNo is not null).Select(i => i.ContainerNo!).Distinct().ToList();
+        if (containers.Count == 0)
+            return Array.Empty<TosYardPosition>();
+
+        var (terminal, n4, _) = await ConnectionAsync(terminalId, ct);
+        var result = await LookupAsync(terminal.Code, n4, new N4LookupRequest(containers, Array.Empty<string>(), Array.Empty<string>()), ct);
+        return Positions(items, result);
+    }
+
+    /// <summary>Yard positions from the lookup answer: block and the rest of the slot ("A01.12.03.2" → A01, 12.03.2).</summary>
+    public static IReadOnlyList<TosYardPosition> Positions(IReadOnlyList<TosItemQuery> items, N4LookupResult result)
+    {
+        var units = (result.Units ?? Array.Empty<N4Unit>()).Where(u => u.Found).ToDictionary(u => u.ContainerNo.ToUpperInvariant());
+        var positions = new List<TosYardPosition>();
+        foreach (var item in items)
+        {
+            if (item.ContainerNo is null || !units.TryGetValue(item.ContainerNo.ToUpperInvariant(), out var unit))
+                continue;
+            var slot = string.IsNullOrWhiteSpace(unit.Position) ? null : unit.Position.Trim();
+            var block = string.IsNullOrWhiteSpace(unit.Block) ? null : unit.Block.Trim();
+            if (slot is not null && slot.Contains('.'))
+            {
+                var parts = slot.Split('.', 2);
+                block ??= parts[0];
+                if (string.Equals(parts[0], block, StringComparison.OrdinalIgnoreCase))
+                    slot = parts[1];
+            }
+            if (block is not null || slot is not null)
+                positions.Add(new TosYardPosition(item.Index, block, slot, null));
+        }
+        return positions;
+    }
+
     /// <summary>The containers of one BL from the lookup answer; null when N4 does not know the BL.</summary>
     public static IReadOnlyList<TosBlUnit>? BlContainers(N4LookupResult result, string nbr)
     {

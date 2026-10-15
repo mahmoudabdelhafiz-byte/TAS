@@ -78,6 +78,33 @@ public static class DriverEndpoints
                 : TasApi.Problem(notFound ? StatusCodes.Status404NotFound : StatusCodes.Status409Conflict, error!);
         });
 
+        // Directions in the yard after gate-in: stops in order with routes along the terminal roads, and the map.
+        driver.MapGet("/appointments/{appointmentNo}/yard", async (
+            string appointmentNo, double? lat, double? lon, HttpContext http, YardGuidanceService service, CancellationToken ct) =>
+        {
+            var (guidance, error, notFound) = await service.ForDriverAsync(Me(http), appointmentNo, lat, lon, ct);
+            return guidance is not null
+                ? Results.Ok(guidance)
+                : TasApi.Problem(notFound ? StatusCodes.Status404NotFound : StatusCodes.Status409Conflict, error!);
+        });
+
+        // The terminal map (areas and roads): terminal staff read it, terminal admins draw the roads.
+        var yardMap = app.MapGroup("/api/terminals/{terminalId:int}/yard-map").RequireAuthorization();
+        yardMap.MapGet("/", async (int terminalId, HttpContext http, YardGuidanceService service, CancellationToken ct) =>
+            AccessRules.CanViewCapacity(TasApi.User(http)!, terminalId)
+                ? Results.Ok(await service.MapViewAsync(terminalId, ct))
+                : TasApi.Forbidden("Only terminal staff of this terminal can see its map."));
+        yardMap.MapPut("/roads", async (int terminalId, RoadsInput body, HttpContext http, YardGuidanceService service, CancellationToken ct) =>
+        {
+            var user = TasApi.User(http)!;
+            if (!AccessRules.CanManageCategories(user, terminalId))
+                return TasApi.Forbidden("Only terminal admins of this terminal can change the roads.");
+            var errors = await service.SaveRoadsAsync(terminalId, user.UserId, body.Roads, ct);
+            return errors.Count == 0
+                ? Results.NoContent()
+                : TasApi.Problem(StatusCodes.Status400BadRequest, string.Join(" ", errors), new Dictionary<string, object?> { ["errors"] = errors });
+        });
+
         // Terminal areas (approach, pre-gate, gate…): terminal staff read, terminal admins draw.
         var areas = app.MapGroup("/api/terminals/{terminalId:int}/geofences").RequireAuthorization();
         areas.MapGet("/", async (int terminalId, HttpContext http, TripTrackingService service, CancellationToken ct) =>

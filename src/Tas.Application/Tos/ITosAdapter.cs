@@ -17,6 +17,13 @@ public sealed record TosItemQuery(
 /// <summary>The result of one TOS check for one item.</summary>
 public sealed record TosCheck(int ItemIndex, CheckType Type, CheckResult Result, string? Message, string? TosRef = null);
 
+/// <summary>
+/// Where a move happens in the yard: the block and slot of an import / empty to pick up, or the block / transfer
+/// point planned for a container being delivered. Any part may be unknown (null).
+/// </summary>
+/// <param name="Slot">Row, bay and tier inside the block as the TOS writes them, e.g. "14.03.2".</param>
+public sealed record TosYardPosition(int ItemIndex, string? Block, string? Slot, string? TransferPoint);
+
 /// <summary>A container listed on a bill of lading, with its ISO type when the TOS knows it (e.g. "22G1", "45G1").</summary>
 public sealed record TosBlUnit(string ContainerNo, string? IsoType);
 
@@ -34,4 +41,7 @@ public interface ITosAdapter
 
     /// <summary>The containers on an import bill of lading, or null when the TOS does not know the BL.</summary>
     Task<IReadOnlyList<TosBlUnit>?> FindBlContainersAsync(int terminalId, string blNo, CancellationToken ct = default);
+
+    /// <summary>Yard positions for a visit's moves (for the driver's directions after gate-in).</summary>
+    Task<IReadOnlyList<TosYardPosition>> YardPositionsAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default);
 }

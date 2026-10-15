@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<Tas.Infrastructure.DriverApp.DriverAppService>();
         services.AddScoped<Tas.Infrastructure.DriverApp.GatePassService>();
         services.AddScoped<Tas.Infrastructure.DriverApp.TripTrackingService>();
+        services.AddScoped<Tas.Infrastructure.DriverApp.YardGuidanceService>();
         services.AddScoped<Tas.Infrastructure.Reports.KpiService>();
         services.AddScoped<NoShowService>();
         services.AddScoped<RevalidationService>();

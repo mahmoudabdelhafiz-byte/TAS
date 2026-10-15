@@ -32,6 +32,11 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("DriverLogin:ExposeCodeForTesting", "true");
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
         builder.UseSetting("FakeTos:PaymentWarning:0", "CMAU5100028");
+        builder.UseSetting("FakeTos:YardPositions:MSCU1234566", "B2.14.03.2");
+        builder.UseSetting("FakeTos:DefaultBlocks:0", "A1");
+        builder.UseSetting("FakeTos:DefaultBlocks:1", "B2");
+        builder.UseSetting("FakeTos:ReceivalBlocks:EXP_DROP", "E1");
+        builder.UseSetting("FakeTos:ReceivalBlocks:MTY_RETURN", "M1");
         builder.UseSetting("FakeTos:BillsOfLading:MEDUJD260001:0", "MSCU1234566:22G1");
         builder.UseSetting("FakeTos:BillsOfLading:MEDUJD260001:1", "MSCU5523417:22G1");
         builder.UseSetting("FakeTos:BillsOfLading:MEDUJD260001:2", "MEDU2601003:45G1");

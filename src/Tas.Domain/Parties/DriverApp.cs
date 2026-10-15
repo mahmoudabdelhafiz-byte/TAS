@@ -101,3 +101,41 @@ public sealed class GeofenceEvent
     public decimal? Longitude { get; set; }
     public DateTimeOffset OccurredAt { get; set; }
 }
+
+/// <summary>The terminal's internal roads as a GeoJSON FeatureCollection of LineStrings.</summary>
+public sealed class TerminalMap
+{
+    public int TerminalId { get; set; }
+    public string Roads { get; set; } = "";
+    public DateTimeOffset UpdatedAt { get; set; }
+    public int? UpdatedBy { get; set; }
+}
+
+/// <summary>One stop of a visit inside the terminal (block / transfer point / exit), shown to the driver.</summary>
+public sealed class YardInstruction
+{
+    public long InstructionId { get; set; }
+    public long AppointmentId { get; set; }
+    public long? ItemId { get; set; }
+    public int Sequence { get; set; }
+
+    /// <summary>TRANSFER_POINT, YARD_BLOCK, CFS, WEIGHBRIDGE, INSPECTION, BERTH or EXIT.</summary>
+    public string StopType { get; set; } = "YARD_BLOCK";
+
+    public string? Block { get; set; }
+    public string? LaneOrTp { get; set; }
+    public string? Bay { get; set; }
+    public int? GeofenceId { get; set; }
+    public string? TextEn { get; set; }
+    public string? TextAr { get; set; }
+
+    /// <summary>TOS, PLANNER or SYSTEM.</summary>
+    public string Source { get; set; } = "TOS";
+
+    /// <summary>PENDING, ACTIVE, ARRIVED, DONE or CANCELLED.</summary>
+    public string Status { get; set; } = "PENDING";
+
+    public DateTimeOffset IssuedAt { get; set; }
+    public DateTimeOffset? ArrivedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+}
