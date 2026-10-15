@@ -12,6 +12,7 @@ public class NotificationTextTests
         [NotificationText.Keys.Reason] = "Customs hold on MSCU1234566",
         [NotificationText.Keys.GateOpens] = "09:30",
         [NotificationText.Keys.Items] = "MSCU1234566",
+        [NotificationText.Keys.Stops] = "B2 (14.03.2) → E1",
     };
 
     public static TheoryData<string, string> AllTemplatesAndLanguages()

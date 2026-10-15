@@ -81,13 +81,13 @@ public static partial class NotificationText
         [NotificationTemplates.GateIn] = new()
         {
             ["en"] = ("You are in: appointment {appointmentNo}",
-                "Yardsyncs: you are inside the terminal. Go to {stops}. Open Yardsyncs mobile for the map."),
+                "Yardsyncs: appointment {appointmentNo}, you are inside the terminal. Go to {stops}. Open Yardsyncs mobile for the map."),
             ["ar"] = ("دخلت المحطة: الموعد {appointmentNo}",
-                "Yardsyncs: أنت داخل المحطة. توجّه إلى {stops}. افتح تطبيق Yardsyncs mobile لرؤية الخريطة."),
+                "Yardsyncs: الموعد {appointmentNo}، أنت داخل المحطة. توجّه إلى {stops}. افتح تطبيق Yardsyncs mobile لرؤية الخريطة."),
             ["ur"] = ("آپ اندر ہیں: اپوائنٹمنٹ {appointmentNo}",
-                "Yardsyncs: آپ ٹرمینل کے اندر ہیں۔ {stops} جائیں۔ نقشے کے لیے Yardsyncs mobile کھولیں۔"),
+                "Yardsyncs: اپوائنٹمنٹ {appointmentNo}، آپ ٹرمینل کے اندر ہیں۔ {stops} جائیں۔ نقشے کے لیے Yardsyncs mobile کھولیں۔"),
             ["hi"] = ("आप अंदर हैं: अपॉइंटमेंट {appointmentNo}",
-                "Yardsyncs: आप टर्मिनल के अंदर हैं। {stops} जाएँ। नक्शे के लिए Yardsyncs mobile खोलें।"),
+                "Yardsyncs: अपॉइंटमेंट {appointmentNo}, आप टर्मिनल के अंदर हैं। {stops} जाएँ। नक्शे के लिए Yardsyncs mobile खोलें।"),
         },
     };
 
