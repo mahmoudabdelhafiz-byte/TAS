@@ -24,6 +24,12 @@ public static class GateEndpoints
         gate.MapPost("/out", async (int terminalId, GateOutInput body, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? TasApi.Admin(await service.GateOutAsync(TasApi.User(http)!, terminalId, body, ct)));
 
+        // Control room: every live visit with its stops in the yard and where the truck was last seen; today's times.
+        app.MapGet("/api/terminals/{terminalId:int}/control-room", async (
+            int terminalId, HttpContext http, Tas.Infrastructure.ControlRoom.ControlRoomService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? Results.Ok(await service.BoardAsync(terminalId, ct)))
+            .RequireAuthorization();
+
         gate.MapGet("/troubles", async (int terminalId, bool? openOnly, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.ListTroublesAsync(terminalId, openOnly ?? true, ct)));
 

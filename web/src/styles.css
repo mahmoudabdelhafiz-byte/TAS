@@ -714,3 +714,72 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
   .map-grid { grid-template-columns: minmax(0, 1fr); }
   .map-box { height: 62vh; }
 }
+
+/* ------------------------------------------------------------------ control room */
+
+.control-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr); gap: 24px; align-items: start; }
+.control-map {
+  height: max(420px, calc(100vh - 300px)); overflow: hidden;
+  background: #e6ecef; border: 1px solid var(--line); border-radius: var(--radius);
+}
+.control-map svg { display: block; }
+.control-legend { margin-top: 8px; }
+.control-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.control-first { margin-top: 0; }
+.road-casing.thin { stroke-width: 6; }
+.road-line.thin { stroke-width: 2.5; stroke: #6b7f8c; }
+.zone-target polygon { stroke: var(--teal-dark); stroke-width: 2.5; fill: rgba(14, 124, 134, 0.26); }
+
+/* Stage colours: driving teal, at the block green, leaving ink; overdue gets a red ring. */
+.truck-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--grey); box-shadow: 0 0 0 2px #fff; }
+.truck-dot.stage-to_block { background: var(--teal); }
+.truck-dot.stage-at_block { background: var(--green); }
+.truck-dot.stage-to_exit { background: var(--ink); }
+.truck-dot.stage-at_gate { background: var(--amber); }
+.truck-dot.overdue { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--red); }
+
+.truck-marker { cursor: pointer; }
+.truck-marker circle { fill: var(--grey); stroke: #fff; stroke-width: 2; }
+.truck-marker rect { fill: #fff; stroke: var(--line); }
+.truck-marker text { direction: ltr; unicode-bidi: isolate; font-size: 12px; font-weight: 600; fill: var(--ink); font-variant-numeric: tabular-nums; }
+.truck-marker.stage-to_block circle { fill: var(--teal); }
+.truck-marker.stage-at_block circle { fill: var(--green); }
+.truck-marker.stage-to_exit circle { fill: var(--ink); }
+.truck-marker.overdue rect { stroke: var(--red); stroke-width: 2; }
+.truck-marker.silent { opacity: 0.55; }
+.truck-marker.active rect { fill: var(--ink); stroke: var(--ink); }
+.truck-marker.active text { fill: #fff; }
+
+.truck-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.truck-list li + li { border-top: 1px solid var(--line-soft); }
+.truck-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.1fr) auto; align-items: center; gap: 12px;
+  width: 100%; padding: 10px 14px; background: none; border: 0; font: inherit; color: var(--text); text-align: start; cursor: pointer;
+}
+.truck-row:hover { background: #f4f7f9; }
+.truck-row.active { background: var(--teal-tint); }
+.truck-main, .truck-where { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.truck-plate { font-weight: 600; }
+.truck-company, .truck-stage { font-size: 13.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.truck-stop { font-weight: 500; }
+.truck-time { text-align: end; font-weight: 600; display: flex; flex-direction: column; align-items: flex-end; }
+.overdue-text { color: var(--red); }
+.truck-silent { font-size: 12px; font-weight: 500; color: var(--amber); }
+
+.truck-detail { margin-top: 14px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-inline-start: 4px solid var(--teal); border-radius: var(--radius); }
+.truck-detail-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.truck-detail-head p { margin: 2px 0 0; }
+.truck-detail .facts { margin-top: 10px; }
+.stop-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 6px; }
+.stop-step { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: var(--radius); background: #f3f6f8; }
+.stop-name { font-weight: 600; }
+.stop-times { font-size: 13.5px; color: var(--muted); }
+.stop-done { color: var(--muted); }
+.stop-done .stop-name { text-decoration: line-through; text-decoration-color: var(--line); }
+.stop-current { background: var(--teal-tint); }
+.stop-arrived { background: var(--green-tint); }
+
+@media (max-width: 1100px) {
+  .control-grid { grid-template-columns: minmax(0, 1fr); }
+  .control-map { height: 52vh; }
+}

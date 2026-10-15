@@ -77,6 +77,11 @@ public sealed class Appointment
     public string? TrafficReason { get; set; }
     public DateTimeOffset? CurrentEta { get; set; }
     public DateTimeOffset? EtaUpdatedAt { get; set; }
+
+    /// <summary>Last position from the driver app (on the way and inside the terminal only).</summary>
+    public decimal? LastLatitude { get; set; }
+    public decimal? LastLongitude { get; set; }
+    public DateTimeOffset? LastPositionAt { get; set; }
     public string? CheckInMethod { get; set; }
 
     /// <summary>Last time the items were (re-)checked against the TOS.</summary>

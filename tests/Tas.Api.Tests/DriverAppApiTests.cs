@@ -470,4 +470,61 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         var all = await Read<List<Tas.Infrastructure.Integration.IntegrationEventView>>(await planner.GetAsync(events));
         Assert.Equal(new[] { "STOP_COMPLETED", "TRUCK_AT_BLOCK" }, all.Select(e => e.EventType).ToArray());
     }
+
+    [Fact]
+    public async Task The_control_room_follows_the_truck_from_the_gate_to_the_block()
+    {
+        if (!Enabled) return;
+
+        var number = await BookWithAbdullahAsync();
+        var phone = await SignInAsync("install-phone-0001");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            await db.Appointments.Where(a => a.AppointmentNo == number)
+                .ExecuteUpdateAsync(x => x.SetProperty(a => a.Status, Tas.Domain.Booking.AppointmentStatus.Arrived));
+        }
+        var planner = await As(DemoDataSeeder.PlannerEmail);
+        var room = $"{Terminal}/control-room";
+        Assert.Equal(HttpStatusCode.Forbidden, (await (await As(DemoDataSeeder.DispatcherEmail)).GetAsync(room)).StatusCode);
+
+        var atGate = await Read<Tas.Infrastructure.ControlRoom.ControlRoomBoard>(await planner.GetAsync(room));
+        Assert.Equal(1, atGate.Stats.AtGate);
+        Assert.Equal("AT_GATE", Assert.Single(atGate.Trucks).Stage);
+        Assert.Equal(60, atGate.TurnTargetMinutes);
+        Assert.Equal(4, atGate.Map.Areas.Count(a => a.Kind == "YARD_ZONE"));
+
+        Assert.Equal(HttpStatusCode.OK, (await planner.PostAsJsonAsync($"{Terminal}/gate/in", new { appointmentNo = number, laneCode = "IN-1" })).StatusCode);
+        var inside = Assert.Single((await Read<Tas.Infrastructure.ControlRoom.ControlRoomBoard>(await planner.GetAsync(room))).Trucks);
+        Assert.Equal("TO_BLOCK", inside.Stage);
+        Assert.Equal(1, inside.CurrentStop);
+        Assert.Equal("B2", inside.Stops[0].Block);
+        Assert.InRange(inside.MinutesInside!.Value, 0, 1);
+        Assert.False(inside.Overdue);
+
+        var position = $"/api/driver/appointments/{number}/position";
+        Assert.Equal(1, (await Read<TripUpdate>(await phone.PostAsJsonAsync(position, new { latitude = 21.467, longitude = 39.1735, speed = 1.0 }))).AtStop);
+        var board = await Read<Tas.Infrastructure.ControlRoom.ControlRoomBoard>(await planner.GetAsync(room));
+        var atBlock = Assert.Single(board.Trucks);
+        Assert.Equal("AT_BLOCK", atBlock.Stage);
+        Assert.Equal(new[] { 39.1735, 21.467 }, atBlock.Position);
+        Assert.Equal(1, board.Stats.Inside);
+        Assert.InRange(board.Stats.AvgMinutesToBlock!.Value, 0, 2);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await phone.PostAsync($"/api/driver/appointments/{number}/stops/1/done", null)).StatusCode);
+        var leaving = Assert.Single((await Read<Tas.Infrastructure.ControlRoom.ControlRoomBoard>(await planner.GetAsync(room))).Trucks);
+        Assert.Equal("TO_EXIT", leaving.Stage);
+        Assert.Null(leaving.CurrentStop);
+        Assert.Equal("DONE", leaving.Stops[0].Status);
+
+        // A turn-time target from the terminal's settings.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            db.TerminalSettings.Add(new Tas.Domain.TerminalSetting { TerminalId = Demo.TerminalId, SettingKey = "turn_target_min", SettingValue = "45" });
+            await db.SaveChangesAsync();
+        }
+        Assert.Equal(45, (await Read<Tas.Infrastructure.ControlRoom.ControlRoomBoard>(await planner.GetAsync(room))).TurnTargetMinutes);
+    }
 }
+

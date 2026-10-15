@@ -75,6 +75,12 @@ public sealed class TripTrackingService(TasDbContext db, TimeProvider clock)
             .SingleOrDefaultAsync(ct);
         if (appointment is null)
             return (null, $"Appointment {number} not found.", true);
+        if (appointment.Status is AppointmentStatus.EnRoute or AppointmentStatus.GateIn)
+        {
+            appointment.LastLatitude = Math.Round((decimal)latitude, 6);
+            appointment.LastLongitude = Math.Round((decimal)longitude, 6);
+            appointment.LastPositionAt = clock.GetUtcNow();
+        }
         if (appointment.Status == AppointmentStatus.GateIn)
             return (await InsideAsync(appointment, latitude, longitude, speedMps, ct), null, false);
         if (appointment.Status != AppointmentStatus.EnRoute)

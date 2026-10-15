@@ -1,5 +1,5 @@
 /* =====================================================================
-   Truck Appointment System (TAS) — PostgreSQL schema, draft v0.9
+   Truck Appointment System (TAS) — PostgreSQL schema, draft v1.0
    Requires PostgreSQL 15+ and PostGIS (for geofences).
    Multi-terminal. See docs/data-model.md for the design.
 
@@ -256,6 +256,9 @@ CREATE TABLE appointment (
     traffic_reason   varchar(200) NULL,       -- shown to driver, e.g. 'Customs hold' / 'Outside time window'
     current_eta      timestamptz  NULL,
     eta_updated_at   timestamptz  NULL,
+    last_latitude    numeric(9,6) NULL,       -- last app position (on the way / inside only), for the control room
+    last_longitude   numeric(9,6) NULL,
+    last_position_at timestamptz  NULL,
     check_in_method  varchar(15)  NULL CHECK (check_in_method IN ('APP_GEOFENCE','APP_MANUAL','OCR','CLERK')),
     last_validated_at timestamptz NULL,      -- last time the items were (re-)checked against the TOS
     arrived_at       timestamptz  NULL,
