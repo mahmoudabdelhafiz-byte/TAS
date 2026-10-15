@@ -140,7 +140,9 @@ jobs:
           cache: true
 
       - name: Platform folders
-        run: flutter create --platforms=android --org com.yardsyncs --project-name yardsyncs_driver .
+        run: |
+          flutter create --platforms=android --org com.yardsyncs --project-name yardsyncs_driver .
+          bash tool/configure_android.sh
 
       - name: Install
         run: flutter pub get

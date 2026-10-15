@@ -203,6 +203,15 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | CI job: analyze, tests, debug APK as a download for testers |
 | ✅ | Tests: sign-in flow, limits, one phone at a time, blocked drivers, token separation (API); texts, parsing, terminal time, sign-in screen (app) |
 
+### 18. Gate pass and on the way (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Rotating gate pass: per-driver secret (encrypted at rest), QR code changing every 30 s, made on the phone without mobile data; checked at the lane and matched to the appointment; revoked when the driver signs in on another phone |
+| ✅ | Positions from the app while on the way (only then): arrival estimate (distance to the gate × road factor ÷ speed), terminal areas entered, automatic check-in in the pre-gate area |
+| ✅ | Terminal areas API (PostGIS): approach, parking, pre-gate, gate, yard zones…; demo areas for the demo terminal |
+| ✅ | Arrival estimate shown in the portal's appointment list and in the app |
+| ✅ | Tests: shared gate-code vectors in C# and Dart, gate pass at the lane, positions and check-in, areas |
+
 ---
 
 ## Remaining
@@ -217,7 +226,6 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | | Item | Notes |
 |---|---|---|
 | ⬜ | Third-party Autogate / OCR connector | For terminals that keep their existing lane system: push its reads into the gate API. Our own Autogate is Phase H |
-| ⬜ | Gate pass for drivers | Rotating QR in the driver app instead of the static appointment QR (Phase E) |
 
 ### Phase C — Integrations
 | | Item | Notes |
@@ -245,8 +253,9 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | 🔜 | App identity: package name, icon, signing keys, store listings; commit the Android / iOS folders; release builds with HTTPS only | |
 | ⬜ | National e-ID verification as a per-terminal option | Nafath in Saudi Arabia |
 | ⬜ | Reasons from the TOS in the driver's language (English today) | |
-| ⬜ | Gate pass: rotating QR for the lane reader; after gate-in it shows where to go (block, row, bay or transfer point) | `gate_pass` table |
-| ⬜ | Start trip → ETA to the terminal, auto check-in at the pre-gate geofence | Reuse the truck tracking work; location only while EN_ROUTE / inside |
+| ⬜ | After gate-in the app shows where to go (block, row, bay or transfer point) | with yard navigation |
+| 🔜 | Background position while on the way (Android foreground service / iOS background location), so the app needn't stay open | |
+| ⬜ | Map editor for terminal areas in the portal (API exists) | |
 | ⬜ | **Yard navigation:** at gate-in TAS reads the container's yard position from N4 and turns it into stops (`yard_instruction`): import pickup → block / row / bay; export drop / empty return → block or transfer point N4 assigns; dual moves → stops in order, then exit | N4 TasLookup adds the position; ❓ decision 9 |
 | ⬜ | **Terminal map:** blocks, roads (one-way, speed zones), transfer points, gates and exits as a map layer; routes computed on the terminal's own road network (public maps don't know internal roads); works without mobile data inside the yard | Built from the terminal's CAD drawing / survey; editor in the portal ❓ decision 10 |
 | ⬜ | Route on the map from the gate to the block, next turn in large text, voice prompts in the driver's language; the screen does not take input while the truck moves | ❓ decision 11 (phone use inside the terminal) |

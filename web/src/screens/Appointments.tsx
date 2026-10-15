@@ -82,7 +82,10 @@ export function Appointments() {
                         </span>
                       ))}
                     </td>
-                    <td><span className={`status status-${a.status}`}>{tx('status', a.status)}</span></td>
+                    <td>
+                      <span className={`status status-${a.status}`}>{tx('status', a.status)}</span>
+                      {a.eta && <span className="eta num">{t('appt.eta', { time: clock(a.eta, terminal.timeZone) })}</span>}
+                    </td>
                     <td>{active(a) || a.status === 'Arrived' ? <TrafficLight light={a.trafficLight} reason={a.trafficReason} /> : <span className="muted">—</span>}</td>
                   </tr>
                 ))}

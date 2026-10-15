@@ -57,6 +57,7 @@ class DriverAppointment {
     required this.truckPlate,
     required this.moves,
     required this.gateCode,
+    this.eta,
   });
 
   final String appointmentNo;
@@ -71,6 +72,23 @@ class DriverAppointment {
   final String? truckPlate;
   final List<Move> moves;
   final String? gateCode;
+  final DateTime? eta; // UTC
+
+  DriverAppointment copyWith({String? status, DateTime? eta}) => DriverAppointment(
+        appointmentNo: appointmentNo,
+        terminalName: terminalName,
+        utcOffsetMinutes: utcOffsetMinutes,
+        slotStart: slotStart,
+        slotEnd: slotEnd,
+        status: status ?? this.status,
+        trafficLight: trafficLight,
+        trafficReason: trafficReason,
+        companyName: companyName,
+        truckPlate: truckPlate,
+        moves: moves,
+        gateCode: gateCode,
+        eta: eta,
+      );
 
   bool get canStartTrip => status == 'Confirmed' || status == 'EnRoute';
   bool get isActive => status == 'Confirmed' || status == 'EnRoute' || status == 'Arrived' || status == 'GateIn';
@@ -92,7 +110,14 @@ class DriverAppointment {
         truckPlate: json['truckPlate'] as String?,
         moves: ((json['moves'] as List?) ?? const []).map((m) => Move.fromJson(m as Map<String, dynamic>)).toList(),
         gateCode: json['gateCode'] as String?,
+        eta: json['eta'] == null ? null : DateTime.parse(json['eta'] as String).toUtc(),
       );
+
+  /// "10:42" in terminal time.
+  String? etaClock() {
+    final e = eta?.add(Duration(minutes: utcOffsetMinutes));
+    return e == null ? null : '${two(e.hour)}:${two(e.minute)}';
+  }
 }
 
 String two(int n) => n.toString().padLeft(2, '0');
@@ -118,3 +143,20 @@ String? dayWord(DriverAppointment a, DateTime nowUtc) {
 
 /// "20/10" for days other than today / tomorrow.
 String shortDate(DriverAppointment a) => '${two(a.localStart.day)}/${two(a.localStart.month)}';
+
+/// What the server answers to a position while on the way.
+class TripUpdate {
+  const TripUpdate({required this.status, required this.eta, required this.distanceKm, required this.checkedIn});
+
+  final String status;
+  final DateTime? eta;
+  final double? distanceKm;
+  final bool checkedIn;
+
+  factory TripUpdate.fromJson(Map<String, dynamic> json) => TripUpdate(
+        status: json['status'] as String,
+        eta: json['eta'] == null ? null : DateTime.parse(json['eta'] as String).toUtc(),
+        distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+        checkedIn: json['checkedIn'] as bool? ?? false,
+      );
+}

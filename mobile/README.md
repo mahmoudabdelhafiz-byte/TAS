@@ -12,6 +12,7 @@ Requires Flutter 3.27 or later.
 ```bash
 cd mobile
 flutter create --platforms=android,ios --org com.yardsyncs --project-name yardsyncs_driver .   # once: adds the platform folders
+bash tool/configure_android.sh                                    # internet and location permissions
 flutter pub get
 flutter test
 flutter run --dart-define=YARDSYNCS_API=http://10.0.2.2:5000      # Android emulator → API on your machine
@@ -26,6 +27,8 @@ committed once app identity (package name, icons, signing) is settled.
 - **Sign in** — mobile number → 6-digit code by SMS. The session is bound to this phone; signing in on another phone signs this one out.
 - **My appointments** — next first; day, hour (terminal time), terminal, traffic light, containers. Refreshes every minute and on pull.
 - **Appointment** — reason behind the light, moves, company and truck, gate QR code (only while the appointment can still pass the gate), "I am leaving now".
+- **Gate pass** — the QR changes every 30 seconds and is made on the phone from a secret received at sign-in, so it works without mobile data at the gate; signing in on another phone revokes it.
+- **On the way** — after "I am leaving now", while the appointment screen is open, the position is sent every minute: the terminal sees an arrival estimate, and the truck is checked in when it enters the pre-gate area. Positions are only accepted while on the way. (Background tracking needs a foreground service — next step.)
 
 ## API
 

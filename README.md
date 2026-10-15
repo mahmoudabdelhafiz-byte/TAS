@@ -284,6 +284,12 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `GET` | `/api/driver/appointments/{no}` | One of them |
 | `POST` | `/api/driver/appointments/{no}/start-trip` | The truck is leaving: re-check, then on the way; refused while anything is red |
 | `POST` | `/api/driver/logout` | Signs this phone out |
+| `GET` | `/api/driver/gate-pass` | Secret for the rotating gate QR `YS1:{passId}:{appointmentNo}:{code}` (8 digits, changes every 30 s, made offline on the phone; revoked on sign-in elsewhere) |
+| `POST` | `/api/driver/appointments/{no}/position` | `{latitude, longitude, speed?}` while on the way only: arrival estimate, terminal areas entered, automatic check-in in the pre-gate area |
+| `GET` / `POST` | `/api/terminals/{id}/geofences` | Terminal areas (approach, pre-gate, gate, yard zones…) as GeoJSON; terminal admins draw them as a ring of `[longitude, latitude]` points |
+| `POST` | `/api/terminals/{id}/geofences/{gid}/deactivate` | Remove an area |
+
+Gate lanes accept the rotating gate pass in `qrToken` (as well as the static appointment code): the live code is checked and the truck is matched to its appointment. Gate pass secrets are stored encrypted; set `GatePass__Key` (32 bytes, base64) or a key is derived from the JWT signing key.
 
 The Flutter app is in `mobile/` (see `mobile/README.md`). CI analyzes, tests and builds a debug APK, kept for 14 days as a download on the CI run (`yardsyncs-driver-debug-apk`).
 
@@ -372,4 +378,5 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Web portal, round 1: sign-in, booking, appointments, slot board with capacity changes, gate and trouble desk; Arabic / English
 - [x] Web portal, round 2: capacity setup (weekly plan grid, seasonal plans, reserved places, rules), bulk upload, fleet and users, KPI dashboard
 - [x] Driver app, part 1: sign-in by SMS code, my appointments with traffic light, gate QR code, start trip (Arabic, English, Urdu, Hindi)
-- [ ] Driver app, next: push notifications, rotating gate pass, ETA and auto check-in, yard navigation to the container's block
+- [x] Rotating gate pass, positions on the way with arrival estimate, automatic check-in at the pre-gate, terminal areas
+- [ ] Driver app, next: push notifications, background tracking, yard navigation to the container's block

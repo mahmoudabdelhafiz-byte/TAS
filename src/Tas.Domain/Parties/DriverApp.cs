@@ -50,3 +50,54 @@ public sealed class DriverOtp
     public DateTimeOffset? ConsumedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+/// <summary>The driver's gate pass: the secret behind the rotating QR (stored encrypted).</summary>
+public sealed class GatePass
+{
+    public long GatePassId { get; set; }
+    public int DriverId { get; set; }
+
+    /// <summary>Null = valid at every terminal.</summary>
+    public int? TerminalId { get; set; }
+
+    public byte[] PassSecret { get; set; } = [];
+
+    /// <summary>ACTIVE, SUSPENDED, REVOKED or EXPIRED.</summary>
+    public string Status { get; set; } = "ACTIVE";
+
+    public DateTimeOffset IssuedAt { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
+    public string? RevokedReason { get; set; }
+}
+
+/// <summary>An arrival estimate while the truck is on the way (kept only for EN_ROUTE appointments).</summary>
+public sealed class AppointmentEta
+{
+    public long EtaId { get; set; }
+    public long AppointmentId { get; set; }
+    public DateTimeOffset EtaAt { get; set; }
+    public decimal? DistanceKm { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+
+    /// <summary>APP_GPS, TMS_API or MANUAL.</summary>
+    public string Source { get; set; } = "APP_GPS";
+
+    public DateTimeOffset RecordedAt { get; set; }
+}
+
+/// <summary>The truck entered or left a terminal area (approach, pre-gate, gate…).</summary>
+public sealed class GeofenceEvent
+{
+    public long GeofenceEventId { get; set; }
+    public long AppointmentId { get; set; }
+    public int DriverId { get; set; }
+    public int GeofenceId { get; set; }
+
+    /// <summary>ENTER, EXIT or DWELL.</summary>
+    public string EventType { get; set; } = "ENTER";
+
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+    public DateTimeOffset OccurredAt { get; set; }
+}

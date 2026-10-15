@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../api.dart';
+import '../gate_pass.dart';
 import '../models.dart';
 import '../strings.dart';
 import '../theme.dart';
@@ -169,8 +171,70 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   bool _busy = false;
   String? _error;
   String? _done;
+  GatePass? _pass;
+  Timer? _tick;
+  Timer? _tracking;
+  String? _locationProblem;
 
-  String t(String key) => tr(widget.lang, key);
+  String t(String key, [Map<String, String> values = const {}]) => tr(widget.lang, key, values);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPass();
+    // Redraw every second: the gate code rotates and the countdown moves.
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _a.gateCode != null) setState(() {});
+    });
+    if (_a.status == 'EnRoute') _startTracking();
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    _tracking?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadPass() async {
+    try {
+      final pass = await widget.api.gatePass();
+      if (mounted) setState(() => _pass = pass);
+    } catch (_) {
+      // Signed out or offline: the static gate code is shown.
+    }
+  }
+
+  /// While on the way and this screen is open: send the position every minute (foreground only).
+  void _startTracking() {
+    _tracking?.cancel();
+    _sendPosition();
+    _tracking = Timer.periodic(const Duration(seconds: 60), (_) => _sendPosition());
+  }
+
+  Future<void> _sendPosition() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever || !await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) setState(() => _locationProblem = t('locationOff'));
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+      final update = await widget.api.reportPosition(_a.appointmentNo, position.latitude, position.longitude, position.speed >= 0 ? position.speed : null);
+      if (!mounted) return;
+      setState(() {
+        _locationProblem = null;
+        _a = _a.copyWith(status: update.status, eta: update.eta);
+        if (update.checkedIn) _done = t('checkedIn');
+      });
+      if (update.status != 'EnRoute') _tracking?.cancel();
+    } on ApiException catch (e) {
+      if (e.status == 409) _tracking?.cancel(); // no longer on the way
+    } catch (_) {
+      // No fix or no network: try again next minute.
+    }
+  }
 
   Future<void> _startTrip() async {
     setState(() {
@@ -183,6 +247,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         _a = updated;
         _done = t('tripStarted');
       });
+      if (updated.status == 'EnRoute') _startTracking();
     } on ApiException catch (e) {
       if (e.signedOut) {
         if (mounted) Navigator.of(context).pop();
@@ -240,6 +305,12 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           const SizedBox(height: 8),
           _Fact(label: t('company'), value: a.companyName),
           if (a.truckPlate != null) _Fact(label: t('truck'), value: a.truckPlate!, ltr: true),
+          if (a.status == 'EnRoute') ...[
+            const SizedBox(height: 16),
+            if (a.etaClock() != null)
+              Text(t('eta', {'time': a.etaClock()!}), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: ink)),
+            Text(_locationProblem ?? t('sharing'), style: TextStyle(fontSize: 14, color: _locationProblem == null ? muted : red)),
+          ],
           if (a.gateCode != null) ...[
             const SizedBox(height: 20),
             Text(t('gateCode'), style: const TextStyle(fontSize: 16, color: ink, fontWeight: FontWeight.w600)),
@@ -248,9 +319,18 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
               child: Container(
                 color: Colors.white,
                 padding: const EdgeInsets.all(12),
-                child: QrImageView(data: a.gateCode!, size: 220, backgroundColor: Colors.white),
+                child: QrImageView(
+                  data: _pass == null ? a.gateCode! : _pass!.payload(a.appointmentNo, DateTime.now()),
+                  size: 240,
+                  backgroundColor: Colors.white,
+                ),
               ),
             ),
+            if (_pass != null)
+              Center(
+                child: Text(t('codeChanges', {'s': '${_pass!.secondsLeft(DateTime.now())}'}),
+                    style: const TextStyle(fontSize: 14, color: muted)),
+              ),
           ],
           const SizedBox(height: 24),
           if (_error != null) ...[ErrorBox(message: _error!), const SizedBox(height: 12)],

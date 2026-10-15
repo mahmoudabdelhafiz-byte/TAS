@@ -25,7 +25,8 @@ public sealed record DriverAppointment(
     string CompanyName,
     string? TruckPlate,
     IReadOnlyList<DriverMove> Moves,
-    string? GateCode);
+    string? GateCode,
+    DateTimeOffset? Eta);
 
 /// <summary>What the driver app reads and does: the driver's appointments (by mobile number, across companies) and start trip.</summary>
 public sealed class DriverAppService(TasDbContext db, AppointmentQueryService queries, RevalidationService revalidation, TimeProvider clock)
@@ -107,6 +108,7 @@ public sealed class DriverAppService(TasDbContext db, AppointmentQueryService qu
                 names.TryGetValue(i.Category, out var n) ? n.NameEn : i.Category,
                 names.TryGetValue(i.Category, out var m) ? m.NameAr : i.Category,
                 i.ContainerNo, i.BookingRef, i.CargoRef)).ToList(),
-            live ? dto.QrToken : null);
+            live ? dto.QrToken : null,
+            dto.Eta);
     }
 }

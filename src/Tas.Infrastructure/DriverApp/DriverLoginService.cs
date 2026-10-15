@@ -173,6 +173,11 @@ public sealed partial class DriverLoginService(
         device.IsActive = true;
         device.LastSeenAt = now;
 
+        // The old phone's gate pass stops working; this phone gets a new one.
+        await db.GatePasses
+            .Where(p => driverIds.Contains(p.DriverId) && p.Status == "ACTIVE")
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.Status, "REVOKED").SetProperty(p => p.RevokedReason, "Signed in on another phone"), ct);
+
         db.DriverVerifications.Add(new DriverVerification
         {
             DriverId = driver.DriverId,

@@ -117,6 +117,7 @@ public sealed class AppointmentQueryService(TasDbContext db, TimeProvider clock)
                     .OrderBy(v => v.ValidationId)
                     .Select(v => new CheckDto(n + 1, v.CheckType, v.Result, v.Message, v.Source))
                     .ToList())).ToList(),
-            a.CreatedAt);
+            a.CreatedAt,
+            a.Status == AppointmentStatus.EnRoute ? a.CurrentEta : null);
     }
 }

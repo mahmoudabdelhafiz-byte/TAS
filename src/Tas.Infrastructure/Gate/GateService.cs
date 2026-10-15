@@ -25,7 +25,8 @@ public sealed class GateService(
     BookingService booking,
     AppointmentQueryService queries,
     TimeProvider clock,
-    ILogger<GateService> logger)
+    ILogger<GateService> logger,
+    Tas.Infrastructure.DriverApp.GatePassService? gatePasses = null)
 {
     // ================================================================ arrival
 
@@ -44,6 +45,21 @@ public sealed class GateService(
         var plate = PlateNumber.Normalize(input.PlateRead);
         var qr = string.IsNullOrWhiteSpace(input.QrToken) ? null : input.QrToken.Trim().ToUpperInvariant();
         var number = string.IsNullOrWhiteSpace(input.AppointmentNo) ? null : input.AppointmentNo.Trim().ToUpperInvariant();
+
+        // A rotating gate pass from the driver app: verify the live code, then match by its appointment number.
+        string? passProblem = null;
+        var passScanned = false;
+        if (gatePasses is not null && qr is not null && qr.StartsWith(GatePassCode.Prefix + ":", StringComparison.Ordinal))
+        {
+            passScanned = true;
+            var pass = await gatePasses.VerifyAsync(terminalId, qr, ct);
+            if (pass.Valid)
+                number = pass.AppointmentNo;
+            else
+                passProblem = pass.Problem;
+            qr = null;
+            reads = reads with { QrToken = null, AppointmentNo = number };
+        }
         var truckIds = plate.Length == 0
             ? new List<int>()
             : await db.Trucks.AsNoTracking().Where(t => t.PlateNormalized == plate).Select(t => t.TruckId).ToListAsync(ct);
@@ -77,6 +93,8 @@ public sealed class GateService(
             .Select(r => new GateCandidate(r.AppointmentId, r.AppointmentNo, r.QrToken, r.Status, r.SlotStart, r.SlotEnd, r.Plate, r.Containers.ToHashSet()))
             .ToList();
         var match = GateMatcher.Match(reads, candidates, now);
+        if (passProblem is not null)
+            match = match with { Warnings = match.Warnings.Append(passProblem).ToList() };
         var found = match.Appointment is null ? null : rows.Single(r => r.AppointmentId == match.Appointment.AppointmentId);
 
         // Re-check against the TOS at the gate (holds can appear minutes before arrival).
@@ -107,7 +125,7 @@ public sealed class GateService(
             decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.NotCleared,
                 "The terminal system could not be reached to re-check this truck — verify in the TOS and admit from the trouble desk.");
 
-        AddEvent(terminalId, lane.LaneId, null, string.IsNullOrEmpty(qr) ? GateEventType.OcrRead : GateEventType.PassScan,
+        AddEvent(terminalId, lane.LaneId, null, string.IsNullOrEmpty(qr) && !passScanned ? GateEventType.OcrRead : GateEventType.PassScan,
             input.PlateRead, containerReads, number is null ? null : $"Appointment no. {number}", now);
 
         long? troubleId = null;
