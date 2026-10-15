@@ -251,3 +251,60 @@ export interface GeofenceView {
   isActive: boolean;
   geoJson: string;
 }
+
+export interface ControlStop {
+  sequence: number;
+  stopType: string;
+  block: string | null;
+  slot: string | null;
+  status: 'PENDING' | 'ACTIVE' | 'ARRIVED' | 'DONE' | 'CANCELLED';
+  arrivedAt: string | null;
+  completedAt: string | null;
+}
+
+export type ControlStage = 'ON_THE_WAY' | 'AT_GATE' | 'TO_BLOCK' | 'AT_BLOCK' | 'TO_EXIT';
+
+export interface ControlTruck {
+  appointmentNo: string;
+  status: string;
+  stage: ControlStage;
+  company: string;
+  truckPlate: string | null;
+  driverName: string | null;
+  slotStart: string;
+  slotEnd: string;
+  eta: string | null;
+  arrivedAt: string | null;
+  gateInAt: string | null;
+  minutesInside: number | null;
+  position: [number, number] | null;
+  positionAt: string | null;
+  moves: string[];
+  stops: ControlStop[];
+  currentStop: number | null;
+  overdue: boolean;
+  silent: boolean;
+}
+
+export interface YardMapArea {
+  name: string;
+  kind: string;
+  block: string | null;
+  ring: [number, number][];
+}
+
+export interface ControlRoomBoard {
+  now: string;
+  turnTargetMinutes: number;
+  stats: {
+    onTheWay: number;
+    atGate: number;
+    inside: number;
+    completedToday: number;
+    avgMinutesInside: number | null;
+    avgMinutesToBlock: number | null;
+    avgMinutesAtBlock: number | null;
+  };
+  trucks: ControlTruck[];
+  map: { areas: YardMapArea[]; roads: [number, number][][]; bounds: number[] };
+}

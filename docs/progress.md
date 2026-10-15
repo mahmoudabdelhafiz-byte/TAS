@@ -259,6 +259,15 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Events for the terminal's systems: TRUCK_CHECKED_IN, TRUCK_AT_BLOCK, STOP_COMPLETED — kept in an outbox, sent to the terminal's webhook (signed, retried) when it subscribes; visible through the API |
 | ✅ | Tests: arrival detection, stop confirmation, webhook delivery / signature / retry / skip |
 
+### 24. Control room (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Portal screen for terminal staff (planners, admins, gate clerks): the yard map with every truck inside at its last position, its target block outlined, and a list of trucks inside / at the gate / on the way |
+| ✅ | Each truck's stage (driving to the block, at the block, leaving), current stop with block and row.bay.tier, time inside; flagged when inside longer than the terminal's target (`turn_target_min`, default 60) or when the app stopped sending positions |
+| ✅ | Today: visits done, average time inside, gate to block, at the block; truck detail with every stop and its times |
+| ✅ | The app's last position is kept on the appointment (on the way and inside only; migration 009) |
+| ✅ | Tests: board from the gate to the block and out, turn-time target setting |
+
 ---
 
 ## Remaining
@@ -304,7 +313,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | Speed zones and no-go lanes on the terminal roads; DXF import (GeoJSON import exists) | ❓ decision 10 |
 | ⬜ | Turn-by-turn prompts at junctions ("turn left at block A1"); spoken stops exist | |
 | ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
-| ⬜ | Control-room view in the portal: trucks inside, stop reached / done, time per stop for turn-time analysis | events and stop times are recorded |
+| ⬜ | Time per block / per stop in the KPI screen (history by day), alerts to the control room (overdue, no signal) | control room shows today |
 | ⬜ | N4 write-back of arrival at block (instead of / besides the webhook) | ❓ customer's N4 |
 | ⬜ | Chat / call request to the control room, templated messages | `appointment_message` table |
 | ⬜ | Backend for messages | `appointment_message` table |

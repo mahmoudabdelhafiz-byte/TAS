@@ -95,8 +95,8 @@ Screens by role:
 | Role | Screens |
 |---|---|
 | Company admin / dispatcher | Book a truck (one, or several by BL / container list), Bulk upload, Appointments (own company), Fleet & users |
-| Planner, terminal admin | Slot board, KPIs, Capacity setup, Terminal map (terminal admins edit, planners view), Appointments (all companies), Book a truck / Bulk upload (on behalf of a company), Gate, Fleet & users (companies for terminal admins) |
-| Gate clerk | Gate (board, truck check, gate in/out, trouble desk), Appointments |
+| Planner, terminal admin | Slot board, Control room, KPIs, Capacity setup, Terminal map (terminal admins edit, planners view), Appointments (all companies), Book a truck / Bulk upload (on behalf of a company), Gate, Fleet & users (companies for terminal admins) |
+| Gate clerk | Gate (board, truck check, gate in/out, trouble desk), Control room, Appointments |
 
 The terminal map editor draws blocks, gates, exits and roads (one-way in the drawn direction) over a background map, imports a GeoJSON export from CAD / GIS, checks that every block can be reached from the gate and left to the exit, and tries routes before saving. The background tiles come from the `yardsyncs-map-tiles` meta tag in `web/index.html` (OpenStreetMap by default; set any `{z}/{x}/{y}` tile server, or leave it empty for a plain grid on sites without internet) with its credit line in `yardsyncs-map-attribution`.
 
@@ -298,6 +298,7 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `PUT` | `/api/terminals/{id}/geofences/{gid}` | Terminal admins: change an area's name, kind, shape, block or check-in flag. Yard blocks need the TOS block name, unique among the terminal's blocks |
 | `POST` | `/api/terminals/{id}/geofences/{gid}/deactivate` | Remove an area |
 | `GET` | `/api/driver/appointments/{no}/yard?lat&lon` | After gate-in: stops in order (drops, then pickups, then exit) with block and row.bay.tier from the TOS, routes on the terminal's roads, and the yard map; `live: false` when the TOS can't be reached and the last known stops are shown |
+| `GET` | `/api/terminals/{id}/control-room` | Live visits (on the way, at the gate, inside) with stage, stops, last app position, time inside, overdue (terminal setting `turn_target_min`, default 60) and no-signal flags; today's averages; the yard map (terminal staff) |
 | `GET` | `/api/terminals/{id}/integration-events?limit=` | Events for the terminal's own systems, newest first, with delivery status (staff) |
 | `GET` | `/api/terminals/{id}/yard-map` | Areas and roads of the terminal (staff) |
 | `GET` | `/api/terminals/{id}/yard-map/roads` | The roads as saved (FeatureCollection with names and one-way flags), for the map editor |
