@@ -218,4 +218,20 @@ public sealed class MasterDataApiTests(TasApiFactory factory) : ApiTestBase(fact
         plainUser.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", (await Login(DemoDataSeeder.PlannerEmail)).AccessToken);
         Assert.Equal(HttpStatusCode.Forbidden, (await plainUser.GetAsync("/api/users")).StatusCode);
     }
+
+    [Fact]
+    public async Task Terminal_list_shows_what_each_user_can_work_at()
+    {
+        if (!Enabled) return;
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Factory.CreateClient().GetAsync("/api/terminals")).StatusCode);
+
+        var forCompany = await Read<List<TerminalView>>(await (await As(DemoDataSeeder.DispatcherEmail)).GetAsync("/api/terminals"));
+        var demo = Assert.Single(forCompany, t => t.TerminalId == Demo.TerminalId);
+        Assert.Equal(DemoDataSeeder.TerminalCode, demo.Code);
+        Assert.Equal("Asia/Riyadh", demo.TimeZone);
+
+        var forPlanner = await Read<List<TerminalView>>(await (await As(DemoDataSeeder.PlannerEmail)).GetAsync("/api/terminals"));
+        Assert.Equal(Demo.TerminalId, Assert.Single(forPlanner).TerminalId);
+    }
 }

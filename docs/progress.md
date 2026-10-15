@@ -154,6 +154,19 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Database: delivery columns on `notification_log`, upgrade script `db/migrations/005_notifications.sql` |
 | ✅ | Tests: templates in every language, providers against a fake server, delivery / retry / expiry / reminder / slot-closed flows |
 
+### 13. Web portal — round 1 (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | `web/`: React + TypeScript (Vite), served by the API from `wwwroot` after `npm run build`; hash routes, no extra router |
+| ✅ | Sign-in with silent token refresh; menus by role (companies: book, appointments; planners: slot board, appointments, book, gate; gate clerks: gate, appointments) |
+| ✅ | Arabic / English with full right-to-left layout; times always in the terminal's time zone; Gregorian dates and Latin digits in Arabic |
+| ✅ | Book a truck: move type, day, arrival hours with free places, up to 4 moves (container / empty by booking / cargo by BL), truck and driver; refusals show the failed checks |
+| ✅ | Appointments: day list with status and traffic light; details with checks and messages sent; re-check, truck is leaving, move to another hour, change truck/driver, cancel with reason |
+| ✅ | Slot board: each hour drawn as a bay filling by move type against its capacity line; closed and over-capacity hours marked; close / set / add-remove for one hour with a reason; remove changes |
+| ✅ | Gate: live board (at the gate, inside, completed, average turn time), truck check by appointment number or plate, gate in / gate out, trouble desk (let in, turn away, close case) |
+| ✅ | API: `GET /api/terminals` (terminal picker) |
+| ✅ | Tests: time zone, Arabic texts complete, routes and role menus, token refresh and error handling (`npm test`); CI builds and tests the portal |
+
 ---
 
 ## Remaining
@@ -184,12 +197,13 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| 🔜 | Capacity setup: weekly template grid, seasonal templates, overrides calendar |
-| ⬜ | Slot board: capacity vs booked per hour/category, over-capacity alerts |
-| ⬜ | Appointments: search, details, cancel / move on behalf of companies |
-| ⬜ | Company portal: availability, booking (single / dual / cargo), bulk upload, fleet (trucks, drivers) |
-| ⬜ | KPI dashboard: slot utilization, no-show rate, turn time, appointment vs walk-in |
-| ⬜ | Arabic / English UI (RTL) |
+| 🔜 | Capacity setup: weekly template grid, seasonal templates, reservations, release rules |
+| 🔜 | Bulk upload screen (dry run, results per row, template download) |
+| 🔜 | Fleet (trucks, drivers) and user management screens; companies for terminal admins |
+| 🔜 | KPI dashboard: slot utilization, no-show rate, turn time, appointment vs walk-in |
+| ⬜ | Walk-in booking from the trouble desk; appointment search by container / plate across days |
+| ⬜ | Arabic texts for server messages (check results and errors are English today) |
+| ⬜ | Native review of the portal's Arabic wording |
 
 ### Phase E — Driver app (Flutter)
 | | Item |

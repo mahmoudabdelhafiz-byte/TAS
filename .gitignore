@@ -9,3 +9,5 @@ TestResults/
 *.swp
 appsettings.Local.json
 node_modules/
+web/dist/
+src/Tas.Api/wwwroot/
