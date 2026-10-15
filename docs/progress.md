@@ -167,6 +167,15 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | API: `GET /api/terminals` (terminal picker) |
 | ✅ | Tests: time zone, Arabic texts complete, routes and role menus, token refresh and error handling (`npm test`); CI builds and tests the portal |
 
+### 14. Book by BL or several containers (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Booking screen: "One truck" or "Several trucks"; find containers by import bill of lading or a pasted list (from Excel, one per line or comma-separated) |
+| ✅ | Each container checked before booking (holds, release, payment, check digit, already booked); ready ones pre-selected, blocked ones shown with the reason |
+| ✅ | Two 20′ containers per truck (optional), 40′/45′ alone; trucks spread over one or more chosen hours by free places; one appointment per truck; results per truck, retry the ones not booked |
+| ✅ | API: `POST /api/terminals/{id}/containers/lookup`; TOS adapter lists containers of a BL (fake TOS config, N4 `blUnits` in TasLookup — VERIFY on the customer's N4) |
+| ✅ | Tests: lookup API (BL, pasted list, other company's booking hidden), N4 answer parsing, ISO sizes, truck grouping and hour allocation |
+
 ---
 
 ## Remaining

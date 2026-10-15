@@ -26,15 +26,7 @@ public sealed class N4TosAdapter(
 
     public async Task<IReadOnlyList<TosCheck>> ValidateAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default)
     {
-        var terminal = await db.Terminals.AsNoTracking()
-            .Where(t => t.TerminalId == terminalId)
-            .Select(t => new { t.Code, t.TimeZone })
-            .SingleOrDefaultAsync(ct)
-            ?? throw new TosUnavailableException($"Terminal {terminalId} not found.");
-
-        var config = options.CurrentValue;
-        var n4 = config.For(terminal.Code)
-                 ?? throw new TosUnavailableException($"N4 is not configured for terminal {terminal.Code} (N4:Terminals:{terminal.Code}).");
+        var (terminal, n4, config) = await ConnectionAsync(terminalId, ct);
 
         var evaluator = new N4CheckEvaluator(
             new N4HoldClassifier(config.HoldMapping),
@@ -44,12 +36,53 @@ public sealed class N4TosAdapter(
         if (request.Units.Count == 0 && request.Orders.Count == 0 && request.Bls.Count == 0)
             return evaluator.Evaluate(items, new N4LookupResult(Array.Empty<N4Unit>(), Array.Empty<N4Order>(), Array.Empty<N4BillOfLading>()));
 
+        return evaluator.Evaluate(items, await LookupAsync(terminal.Code, n4, request, ct));
+    }
+
+    public async Task<IReadOnlyList<TosBlUnit>?> FindBlContainersAsync(int terminalId, string blNo, CancellationToken ct = default)
+    {
+        var (terminal, n4, _) = await ConnectionAsync(terminalId, ct);
+        var nbr = blNo.Trim().ToUpperInvariant();
+        var request = new N4LookupRequest(Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>(), new[] { nbr });
+        return BlContainers(await LookupAsync(terminal.Code, n4, request, ct), nbr);
+    }
+
+    /// <summary>The containers of one BL from the lookup answer; null when N4 does not know the BL.</summary>
+    public static IReadOnlyList<TosBlUnit>? BlContainers(N4LookupResult result, string nbr)
+    {
+        var bl = result.BlUnits?.FirstOrDefault(b => string.Equals(b.Nbr, nbr, StringComparison.OrdinalIgnoreCase));
+        if (bl is null || !bl.Found)
+            return null;
+        return (bl.Units ?? Array.Empty<N4BlUnit>())
+            .Where(u => !string.IsNullOrWhiteSpace(u.ContainerNo))
+            .Select(u => new TosBlUnit(u.ContainerNo.Trim().ToUpperInvariant(), string.IsNullOrWhiteSpace(u.IsoType) ? null : u.IsoType.Trim().ToUpperInvariant()))
+            .ToList();
+    }
+
+    private sealed record TerminalRef(string Code, string TimeZone);
+
+    private async Task<(TerminalRef Terminal, N4TerminalOptions N4, N4Options Config)> ConnectionAsync(int terminalId, CancellationToken ct)
+    {
+        var terminal = await db.Terminals.AsNoTracking()
+            .Where(t => t.TerminalId == terminalId)
+            .Select(t => new TerminalRef(t.Code, t.TimeZone))
+            .SingleOrDefaultAsync(ct)
+            ?? throw new TosUnavailableException($"Terminal {terminalId} not found.");
+
+        var config = options.CurrentValue;
+        var n4 = config.For(terminal.Code)
+                 ?? throw new TosUnavailableException($"N4 is not configured for terminal {terminal.Code} (N4:Terminals:{terminal.Code}).");
+        return (terminal, n4, config);
+    }
+
+    private async Task<N4LookupResult> LookupAsync(string terminalCode, N4TerminalOptions n4, N4LookupRequest request, CancellationToken ct)
+    {
         var started = DateTimeOffset.UtcNow;
         var payload = await client.InvokeAsync(n4, LookupDocument(n4.CodeExtension, request), ct);
-        logger.LogDebug("N4 lookup for {Terminal}: {Units} unit(s), {Orders} order(s), {Bls} BL(s) in {Ms} ms",
-            terminal.Code, request.Units.Count, request.Orders.Count, request.Bls.Count, (DateTimeOffset.UtcNow - started).TotalMilliseconds);
-
-        return evaluator.Evaluate(items, ParsePayload(payload));
+        logger.LogDebug("N4 lookup for {Terminal}: {Units} unit(s), {Orders} order(s), {Bls} BL(s), {BlUnits} BL unit list(s) in {Ms} ms",
+            terminalCode, request.Units.Count, request.Orders.Count, request.Bls.Count, request.BlUnits?.Count ?? 0,
+            (DateTimeOffset.UtcNow - started).TotalMilliseconds);
+        return ParsePayload(payload);
     }
 
     /// <summary>The genericInvoke document that runs the code extension with the request as JSON.</summary>

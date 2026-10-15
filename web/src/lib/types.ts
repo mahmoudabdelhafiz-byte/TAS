@@ -221,3 +221,21 @@ export interface ArrivalResult {
   reason: TroubleReason | null;
   warnings: string[];
 }
+
+export type LookupStatus = 'Ready' | 'Warning' | 'Blocked' | 'Booked';
+
+export interface LookupContainer {
+  containerNo: string;
+  isoType: string | null;
+  sizeFt: number | null;
+  status: LookupStatus;
+  problems: string[];
+  warnings: string[];
+  appointmentNo: string | null;
+}
+
+export interface ContainerLookupResult {
+  category: string;
+  blNo: string | null;
+  containers: LookupContainer[];
+}

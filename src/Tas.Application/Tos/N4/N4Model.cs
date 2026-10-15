@@ -6,7 +6,8 @@ namespace Tas.Application.Tos.N4;
 public sealed record N4LookupRequest(
     [property: JsonPropertyName("units")] IReadOnlyList<string> Units,
     [property: JsonPropertyName("orders")] IReadOnlyList<string> Orders,
-    [property: JsonPropertyName("bls")] IReadOnlyList<string> Bls);
+    [property: JsonPropertyName("bls")] IReadOnlyList<string> Bls,
+    [property: JsonPropertyName("blUnits")] IReadOnlyList<string>? BlUnits = null);
 
 /// <summary>A container as N4 sees it now.</summary>
 /// <param name="Category">N4 unit category key: IMPRT, EXPRT, STRGE, TRSHP, THRGH.</param>
@@ -45,7 +46,18 @@ public sealed record N4BillOfLading(
     [property: JsonPropertyName("released")] bool? Released = null,
     [property: JsonPropertyName("holds")] IReadOnlyList<string>? Holds = null);
 
+/// <summary>The containers of an import bill of lading (asked for with "blUnits").</summary>
+public sealed record N4BlUnits(
+    [property: JsonPropertyName("nbr")] string Nbr,
+    [property: JsonPropertyName("found")] bool Found,
+    [property: JsonPropertyName("units")] IReadOnlyList<N4BlUnit>? Units = null);
+
+public sealed record N4BlUnit(
+    [property: JsonPropertyName("containerNo")] string ContainerNo,
+    [property: JsonPropertyName("isoType")] string? IsoType = null);
+
 public sealed record N4LookupResult(
     [property: JsonPropertyName("units")] IReadOnlyList<N4Unit>? Units,
     [property: JsonPropertyName("orders")] IReadOnlyList<N4Order>? Orders,
-    [property: JsonPropertyName("bls")] IReadOnlyList<N4BillOfLading>? Bls);
+    [property: JsonPropertyName("bls")] IReadOnlyList<N4BillOfLading>? Bls,
+    [property: JsonPropertyName("blUnits")] IReadOnlyList<N4BlUnits>? BlUnits = null);

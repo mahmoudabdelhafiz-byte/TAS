@@ -162,6 +162,16 @@ terminal.MapGet("/availability", async (
     }
 });
 
+// Book by BL / several containers: list the containers with their check results (books nothing).
+terminal.MapPost("/containers/lookup", async (
+    int terminalId, ContainerLookupInput body, HttpContext http, ContainerLookupService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    return !AccessRules.CanAccessTerminal(user, terminalId)
+        ? TasApi.Forbidden("You have no access to this terminal.")
+        : TasApi.Admin(await service.LookupAsync(user, terminalId, body, ct));
+});
+
 // ================================================================ terminal: appointments
 
 var appointments = terminal.MapGroup("/appointments");

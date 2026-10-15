@@ -132,4 +132,22 @@ public class ArgoServiceClientTests
         Assert.Equal(new DateTimeOffset(2026, 10, 21, 18, 0, 0, TimeSpan.FromHours(3)), Assert.Single(result.Orders!).CargoCutoff);
         Assert.Null(result.Bls);
     }
+
+    [Fact]
+    public void Bill_of_lading_containers_come_from_blUnits()
+    {
+        var result = N4TosAdapter.ParsePayload(
+            """{"units":[],"orders":[],"bls":[],"blUnits":[{"nbr":"MEDUJD260001","found":true,"units":[{"containerNo":"mscu1234566","isoType":"22g1"},{"containerNo":"MEDU2601003"},{"containerNo":" "}]},{"nbr":"NOPE","found":false}]}""");
+
+        var units = N4TosAdapter.BlContainers(result, "meduJD260001")!;
+        Assert.Equal(new[] { "MSCU1234566", "MEDU2601003" }, units.Select(u => u.ContainerNo).ToArray());
+        Assert.Equal("22G1", units[0].IsoType);
+        Assert.Null(units[1].IsoType);
+        Assert.Null(N4TosAdapter.BlContainers(result, "NOPE"));
+        Assert.Null(N4TosAdapter.BlContainers(result, "UNASKED"));
+
+        var document = N4TosAdapter.LookupDocument("TasLookup",
+            new N4LookupRequest(Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>(), new[] { "MEDUJD260001" }));
+        Assert.Contains("&quot;blUnits&quot;:[&quot;MEDUJD260001&quot;]", document);
+    }
 }
