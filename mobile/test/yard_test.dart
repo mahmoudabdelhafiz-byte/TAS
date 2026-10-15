@@ -64,4 +64,21 @@ void main() {
     // The wider side fills the usable width.
     expect(x1 - x0, closeTo(368, 1e-6));
   });
+
+  test('resumes at the first stop not confirmed', () {
+    Map<String, dynamic> withFlags(bool firstDone, bool secondDone) => {
+          ...json,
+          'stops': [
+            {...(json['stops'] as List)[0] as Map<String, dynamic>, 'arrived': true, 'done': firstDone},
+            {...(json['stops'] as List)[1] as Map<String, dynamic>, 'done': secondDone},
+            (json['stops'] as List)[2],
+          ],
+        };
+    expect(YardGuidance.fromJson(json).firstOpen, 0);
+    final one = YardGuidance.fromJson(withFlags(true, false));
+    expect(one.firstOpen, 1);
+    expect(one.stops[0].arrived, isTrue);
+    expect(YardGuidance.fromJson(withFlags(true, true)).firstOpen, 2); // the exit
+  });
 }
+

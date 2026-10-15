@@ -69,6 +69,12 @@ public static class DependencyInjection
         services.AddScoped<NotificationDispatcher>();
         services.AddHostedService<NotificationWorker>();
 
+        // Events for the terminal's own systems (truck at block…): outbox delivered to each terminal's webhook.
+        services.Configure<Tas.Infrastructure.Integration.IntegrationOptions>(config.GetSection("Integration"));
+        services.AddHttpClient("integration");
+        services.AddScoped<Tas.Infrastructure.Integration.IntegrationDispatcher>();
+        services.AddHostedService<Tas.Infrastructure.Integration.IntegrationWorker>();
+
         // TOS: "Tos:Adapter" = Fake (development / demos) or N4; "Tos:OnUnavailable" = Warn (default) or Reject.
         services.AddSingleton(new TosSettings(config.GetValue("Tos:OnUnavailable", TosUnavailablePolicy.Warn)));
         var adapter = config.GetValue("Tos:Adapter", "Fake");

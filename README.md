@@ -290,13 +290,15 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `GET` | `/api/driver/appointments/{no}` | One of them |
 | `POST` | `/api/driver/appointments/{no}/start-trip` | The truck is leaving: re-check, then on the way; refused while anything is red |
 | `POST` | `/api/driver/logout` | Signs this phone out (and stops pushes to it) |
+| `POST` | `/api/driver/appointments/{no}/stops/{seq}/done` | "Done here": the stop is confirmed, the next becomes current; `STOP_COMPLETED` goes to the terminal |
 | `PUT` | `/api/driver/push-token` | `{token}`: the app's Firebase push token for this phone (null stops pushes) |
 | `GET` | `/api/driver/gate-pass` | Secret for the rotating gate QR `YS1:{passId}:{appointmentNo}:{code}` (8 digits, changes every 30 s, made offline on the phone; revoked on sign-in elsewhere) |
-| `POST` | `/api/driver/appointments/{no}/position` | `{latitude, longitude, speed?}` while on the way only: arrival estimate, terminal areas entered, automatic check-in in the pre-gate area |
+| `POST` | `/api/driver/appointments/{no}/position` | `{latitude, longitude, speed?}` on the way: arrival estimate, terminal areas entered, automatic check-in in the pre-gate area. Inside the terminal (after gate-in): `atStop` when the truck reaches the block of its current stop (within 10 m, slower than ~15 km/h) → `TRUCK_AT_BLOCK` |
 | `GET` / `POST` | `/api/terminals/{id}/geofences` | Terminal areas (approach, pre-gate, gate, yard zones…) as GeoJSON; terminal admins draw them as a ring of `[longitude, latitude]` points |
 | `PUT` | `/api/terminals/{id}/geofences/{gid}` | Terminal admins: change an area's name, kind, shape, block or check-in flag. Yard blocks need the TOS block name, unique among the terminal's blocks |
 | `POST` | `/api/terminals/{id}/geofences/{gid}/deactivate` | Remove an area |
 | `GET` | `/api/driver/appointments/{no}/yard?lat&lon` | After gate-in: stops in order (drops, then pickups, then exit) with block and row.bay.tier from the TOS, routes on the terminal's roads, and the yard map; `live: false` when the TOS can't be reached and the last known stops are shown |
+| `GET` | `/api/terminals/{id}/integration-events?limit=` | Events for the terminal's own systems, newest first, with delivery status (staff) |
 | `GET` | `/api/terminals/{id}/yard-map` | Areas and roads of the terminal (staff) |
 | `GET` | `/api/terminals/{id}/yard-map/roads` | The roads as saved (FeatureCollection with names and one-way flags), for the map editor |
 | `PUT` | `/api/terminals/{id}/yard-map/roads` | Terminal admins: `{roads: FeatureCollection}` of LineStrings in `[longitude, latitude]`, `properties.oneWay` for one-way roads (drawn direction); roads join where they share a point |
@@ -322,6 +324,33 @@ V1,2026-10-20,10:00,IMP_PICKUP,MSCU1234566,,1234 ABJ,1012345678
 - `.xlsx` (dates and times may be real Excel cells) or CSV UTF-8 with comma, semicolon or tab. Max 500 rows / 2 MB.
 - **`dryRun=true` (the default)** runs every booking check — including TOS — and counts capacity taken by earlier rows of the same file; nothing is booked. Then send `dryRun=false` to book.
 - Each visit is booked on its own; failures don't stop the others. The response lists every visit with its rows, status (`Booked` / `WouldBook` / `Failed`), appointment number and reasons.
+
+### Integration events (for the terminal's own systems)
+
+Yardsyncs records what the terminal's TOS, control room or yard management may want to know, and sends it to the
+terminal's webhook when the terminal asks for it (per terminal, by terminal code):
+
+| Event | When |
+|---|---|
+| `TRUCK_CHECKED_IN` | The driver app checked the truck in at the pre-gate |
+| `TRUCK_AT_BLOCK` | Inside the terminal, the truck reached the block (or CFS) of its current stop |
+| `STOP_COMPLETED` | The driver pressed "Done here" for a stop |
+
+```json
+"Integration": {
+  "Terminals": {
+    "DEMO": { "Url": "https://tos.example/yardsyncs-events", "Events": ["TRUCK_AT_BLOCK", "STOP_COMPLETED"] }
+  }
+}
+```
+
+Secret in an environment variable: `Integration__Terminals__DEMO__Secret`. Each event is a JSON POST with
+`eventId`, `type`, `occurredAt`, `terminal`, `appointmentNo`, `truckPlate`, `company`, `position` and, for stop
+events, `stop` (`sequence`, `kind` PICKUP / DROP, `block`, `slot` row.bay.tier, `category`, `container`, `bookingRef`).
+Headers: `X-Yardsyncs-Event`, `X-Yardsyncs-Delivery` (event id, the same on retries — ignore repeats) and
+`X-Yardsyncs-Signature: t={unix seconds},v1={hex HMAC-SHA256 of "{t}.{body}" with the secret}`. Answer 2xx;
+other answers are retried (30 s, 2, 10, 30, 60 min) except 4xx. Terminals without a webhook keep the events
+(status `SKIPPED`), visible through the API.
 
 ### Try it with the demo terminal
 

@@ -244,6 +244,21 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | While the truck moves (over ~9 km/h) the "Done here" button waits: "Stop the truck to confirm" |
 | ✅ | Tests: spoken texts in four languages, distance rounding, position sending rules |
 
+### 22. Yardsyncs mobile: iPhone, push, in-gate ticket (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | App name **Yardsyncs mobile**, `com.yardsyncs.mobile` on Android and iPhone; CI builds both (iPhone unsigned) |
+| ✅ | Push through Firebase (Android and iPhone): drivers with the app get push instead of SMS; SMS when a push can't be delivered; Firebase set per installation |
+| ✅ | At gate-in the TOS yard position becomes the in-gate ticket: push "go to B2 (14.03.2)", ticket in the app (appointment, truck, lane, time, stops) |
+
+### 23. Arrival at the container and events for the terminal's systems (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Phone used up to the gate (gate pass) and inside the terminal for directions; position shared on the way and inside, not while waiting at the gate |
+| ✅ | Reaching the block of the current stop (within 10 m, slow) marks it arrived; the driver hears and sees it |
+| ✅ | Events for the terminal's systems: TRUCK_CHECKED_IN, TRUCK_AT_BLOCK, STOP_COMPLETED — kept in an outbox, sent to the terminal's webhook (signed, retried) when it subscribes; visible through the API |
+| ✅ | Tests: arrival detection, stop confirmation, webhook delivery / signature / retry / skip |
+
 ---
 
 ## Remaining
@@ -281,15 +296,16 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase E — Driver app (Flutter) — next
 | | Item | Notes |
 |---|---|---|
-| 🔜 | Push notifications (traffic light changes, slot closed, reminder) to the app instead of SMS when the driver has it | Firebase / APNs account needed |
+| 🔜 | Firebase project and Apple push key per installation (code ready) | Firebase / Apple developer accounts |
 | 🔜 | App identity: package name, icon, signing keys, store listings; commit the Android / iOS folders; release builds with HTTPS only | iOS Info.plist: location texts (when in use / always) and background mode "location"; Android 13+: ask for the notification permission so the tracking notice shows; Play Store background-location declaration |
 | ⬜ | National e-ID verification as a per-terminal option | Nafath in Saudi Arabia |
 | ⬜ | Reasons from the TOS in the driver's language (English today) | |
 | ⬜ | Transfer points (lane / TP) as stops when N4 assigns them instead of a block | `yard_instruction.lane_or_tp` ready |
 | ⬜ | Speed zones and no-go lanes on the terminal roads; DXF import (GeoJSON import exists) | ❓ decision 10 |
-| ⬜ | Turn-by-turn prompts at junctions ("turn left at block A1"); spoken stops exist | ❓ decision 11 (phone use inside the terminal) |
+| ⬜ | Turn-by-turn prompts at junctions ("turn left at block A1"); spoken stops exist | |
 | ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
-| ⬜ | Arrived at the block (geofence) → shown to the control room / gate board; time per stop for turn-time analysis | `geofence`, `geofence_event` tables |
+| ⬜ | Control-room view in the portal: trucks inside, stop reached / done, time per stop for turn-time analysis | events and stop times are recorded |
+| ⬜ | N4 write-back of arrival at block (instead of / besides the webhook) | ❓ customer's N4 |
 | ⬜ | Chat / call request to the control room, templated messages | `appointment_message` table |
 | ⬜ | Backend for messages | `appointment_message` table |
 
@@ -340,6 +356,8 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 |---|---|
 | 2026-10-15 | Hosting: both are supported — cloud service from us and on-premise at the terminal (Phase F) |
 | 2026-10-15 | **Yardsyncs is a generic product** sold to many terminal operators. A customer's choice never goes into the code: it is a per-terminal setting (or a pluggable adapter), with a sensible default. The first customer is the first configuration (Phase G) |
+| 2026-10-15 | The driver app is **Yardsyncs mobile**, on Android and iPhone, with push notifications |
+| 2026-10-15 | The phone is used up to the gate (gate pass, in-gate ticket) and inside the terminal for navigation; when the truck reaches the container's block a message goes to the terminal's systems, for terminals that want it (integration events, per-terminal webhook) |
 | 2026-10-15 | **Autogate is the next Yardsyncs module** after the TAS: our own lane application on top of the gate API, vendor-neutral towards cameras, OCR, RFID, kiosks and barriers (Phase H). Everything built for the gate now must stay usable by it |
 
 ## Per-terminal settings (asked when a terminal is set up)
@@ -353,10 +371,12 @@ Former open questions, now options each terminal chooses. Default in **bold**.
 | Gate identification | **appointment number / QR** · plate OCR · container OCR · RFID tag · geofence check-in — any combination per lane | Gate API accepts all reads today; lane setup → Phase H |
 | Fees | **free** · booking fee · no-show / late penalty · paid priority slots; payment gateway per country | Phase F (billing) |
 | Slot length | **60 min**, 15 / 30 / 120 per terminal; different lengths by time of day as an option | Per terminal done; by time of day ⬜ |
-| Yard position source | **TOS position at gate-in** · earlier when the TOS has a pre-advised truck visit (needs TOS write-back) | Phase E |
-| Terminal map | drawn in the portal's map editor · imported from CAD / GeoJSON | Phase E |
+| Yard position source | **TOS position at gate-in** · earlier when the TOS has a pre-advised truck visit (needs TOS write-back) | At gate-in done |
+| Terminal map | drawn in the portal's map editor · imported from CAD / GeoJSON | Done |
 | Driving with the phone | **voice prompts, screen locked while moving** · view only when stopped | Phase E |
-| When the driver sees the yard position | **after gate-in** · when the trip starts | Phase E |
+| When the driver sees the yard position | **after gate-in** (in-gate ticket) · when the trip starts | After gate-in done |
+| Arrival at the block | **kept as an event** · also sent to the terminal's webhook (chosen event types) · N4 write-back | Webhook done; N4 write-back ⬜ |
+| Driver messages | **push to Yardsyncs mobile, SMS fallback** · SMS / WhatsApp only | Done (Firebase per installation) |
 
 ## Open decisions
 | ❓ | Question | Affects |

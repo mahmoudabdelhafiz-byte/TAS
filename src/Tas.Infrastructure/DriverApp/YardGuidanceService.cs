@@ -15,9 +15,12 @@ namespace Tas.Infrastructure.DriverApp;
 /// <param name="Slot">Row.bay.tier inside the block as the TOS writes it.</param>
 /// <param name="Moved">The position changed since the driver last looked (rehandle / housekeeping).</param>
 /// <param name="Point">Where the route ends for this stop, [longitude, latitude].</param>
+/// <param name="Arrived">The truck reached the block (seen by the phone's position).</param>
+/// <param name="Done">The driver confirmed the stop.</param>
 public sealed record GuidanceStop(
     int Sequence, string Kind, string? Block, string? Slot, IReadOnlyList<string> Containers,
-    IReadOnlyList<string> CategoriesEn, IReadOnlyList<string> CategoriesAr, bool Moved, double[]? Point);
+    IReadOnlyList<string> CategoriesEn, IReadOnlyList<string> CategoriesAr, bool Moved, double[]? Point,
+    bool Arrived = false, bool Done = false);
 
 /// <summary>The drive to a stop: points along the terminal roads, [longitude, latitude].</summary>
 public sealed record GuidanceLeg(int ToStop, IReadOnlyList<double[]> Path, double Meters);
@@ -44,6 +47,41 @@ public sealed record RoadsInput(JsonElement Roads);
 /// </summary>
 public sealed class YardGuidanceService(TasDbContext db, ITosAdapter tos, TripTrackingService areas, TimeProvider clock)
 {
+    /// <summary>
+    /// The driver pressed "Done here": the stop is DONE, the next one becomes ACTIVE, and STOP_COMPLETED goes to the
+    /// terminal's systems. Returns an error (null = done) and whether the appointment / stop wasn't found.
+    /// </summary>
+    public async Task<(string? Error, bool NotFound)> CompleteStopAsync(CurrentDriver driver, string appointmentNo, int sequence, CancellationToken ct = default)
+    {
+        var number = appointmentNo.Trim().ToUpperInvariant();
+        var appointment = await db.Appointments
+            .Where(a => a.AppointmentNo == number && a.DriverId != null
+                        && db.Drivers.Any(d => d.DriverId == a.DriverId && d.Mobile == driver.Mobile && !d.IsBlocked))
+            .SingleOrDefaultAsync(ct);
+        if (appointment is null)
+            return ($"Appointment {number} not found.", true);
+        if (appointment.Status != AppointmentStatus.GateIn)
+            return ("Stops can be confirmed inside the terminal only.", false);
+
+        var stops = await db.YardInstructions.Where(y => y.AppointmentId == appointment.AppointmentId).OrderBy(y => y.Sequence).ToListAsync(ct);
+        var stop = stops.FirstOrDefault(y => y.Sequence == sequence);
+        if (stop is null || stop.StopType == "EXIT")
+            return ($"Stop {sequence} not found.", true);
+        if (stop.Status == "DONE")
+            return (null, false); // pressed twice
+
+        var now = clock.GetUtcNow();
+        stop.Status = "DONE";
+        stop.ArrivedAt ??= now;
+        stop.CompletedAt = now;
+        if (stops.FirstOrDefault(y => y.Sequence > sequence && y.Status == "PENDING") is { } next)
+            next.Status = "ACTIVE";
+        Tas.Infrastructure.Integration.IntegrationEventQueue.Add(db, appointment.TerminalId, IntegrationEventTypes.StopCompleted, appointment.AppointmentId,
+            await areas.StopEventAsync(appointment, stop, null, null, now, ct), now);
+        await db.SaveChangesAsync(ct);
+        return (null, false);
+    }
+
     public async Task<(YardGuidance? Guidance, string? Error, bool NotFound)> ForDriverAsync(
         CurrentDriver driver, string appointmentNo, double? latitude, double? longitude, CancellationToken ct = default)
     {
@@ -160,7 +198,13 @@ public sealed class YardGuidanceService(TasDbContext db, ITosAdapter tos, TripTr
             GeoPoint? target = area is null ? null : RoadGraph.Centroid(Points(area.Ring));
 
             var existing = stored.FirstOrDefault(s => s.Sequence == sequence);
-            var moved = existing is not null && (existing.Block != stop.Block || existing.Bay != stop.Slot);
+            var moved = existing is not null && existing.Status != "DONE" && (existing.Block != stop.Block || existing.Bay != stop.Slot);
+            if (moved && existing!.ArrivedAt is not null && existing.Block != stop.Block)
+            {
+                // Arrived at the old block, but the container is elsewhere now: not there yet.
+                existing.ArrivedAt = null;
+                existing.Status = "ACTIVE";
+            }
             Upsert(appointment.AppointmentId, stop.Items[0].ItemId, sequence, "YARD_BLOCK", stop.Block, stop.Slot, existing, now,
                 $"Block {stop.Block ?? "?"}{(stop.Slot is null ? "" : $", slot {stop.Slot}")}",
                 $"البلوك {stop.Block ?? "?"}{(stop.Slot is null ? "" : $"، الموقع {stop.Slot}")}");
@@ -182,7 +226,7 @@ public sealed class YardGuidanceService(TasDbContext db, ITosAdapter tos, TripTr
                 stop.Items.Select(i => i.ContainerNo ?? i.BookingRef ?? i.Category.Code).ToList(),
                 stop.Items.Select(i => i.Category.NameEn).Distinct().ToList(),
                 stop.Items.Select(i => i.Category.NameAr).Distinct().ToList(),
-                moved, point));
+                moved, point, existing?.ArrivedAt is not null, existing?.Status == "DONE"));
         }
 
         // Then out of the terminal.
@@ -225,7 +269,7 @@ public sealed class YardGuidanceService(TasDbContext db, ITosAdapter tos, TripTr
     }
 
     /// <summary>Collect moves (imports, empties out, cargo); everything else is a delivery into the terminal.</summary>
-    private static bool IsPickup(TransactionCategory category) =>
+    internal static bool IsPickup(TransactionCategory category) =>
         category.Mode == CategoryMode.Cargo
         || category.Code.StartsWith("IMP", StringComparison.OrdinalIgnoreCase)
         || category.Code.EndsWith("_PICKUP", StringComparison.OrdinalIgnoreCase);

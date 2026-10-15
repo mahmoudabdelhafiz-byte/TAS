@@ -74,7 +74,7 @@ public static class DriverEndpoints
         driver.MapGet("/gate-pass", async (HttpContext http, GatePassService service, CancellationToken ct) =>
             Results.Ok(await service.IssueAsync(Me(http), ct)));
 
-        // Position while on the way (accepted only for EN_ROUTE appointments): arrival estimate and pre-gate check-in.
+        // Position on the way (arrival estimate, pre-gate check-in) and inside the terminal (arrival at the container's block).
         driver.MapPost("/appointments/{appointmentNo}/position", async (
             string appointmentNo, PositionBody body, HttpContext http, TripTrackingService service, CancellationToken ct) =>
         {
@@ -93,6 +93,24 @@ public static class DriverEndpoints
                 ? Results.Ok(guidance)
                 : TasApi.Problem(notFound ? StatusCodes.Status404NotFound : StatusCodes.Status409Conflict, error!);
         });
+
+        // "Done here" at a stop: the next stop becomes current; the terminal's systems are told.
+        driver.MapPost("/appointments/{appointmentNo}/stops/{sequence:int}/done", async (
+            string appointmentNo, int sequence, HttpContext http, YardGuidanceService service, CancellationToken ct) =>
+        {
+            var (error, notFound) = await service.CompleteStopAsync(Me(http), appointmentNo, sequence, ct);
+            return error is null
+                ? Results.NoContent()
+                : TasApi.Problem(notFound ? StatusCodes.Status404NotFound : StatusCodes.Status409Conflict, error);
+        });
+
+        // Events sent (or kept) for the terminal's own systems, newest first: terminal staff.
+        app.MapGet("/api/terminals/{terminalId:int}/integration-events", async (
+            int terminalId, int? limit, HttpContext http, Tas.Infrastructure.Integration.IntegrationDispatcher service, CancellationToken ct) =>
+            AccessRules.CanViewCapacity(TasApi.User(http)!, terminalId)
+                ? Results.Ok(await service.ListAsync(terminalId, limit ?? 100, ct))
+                : TasApi.Forbidden("Only terminal staff of this terminal can see its integration events."))
+            .RequireAuthorization();
 
         // The terminal map (areas and roads): terminal staff read it, terminal admins draw the roads.
         var yardMap = app.MapGroup("/api/terminals/{terminalId:int}/yard-map").RequireAuthorization();

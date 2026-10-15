@@ -3,7 +3,19 @@
 import 'dart:math' as math;
 
 class YardStop {
-  const YardStop({required this.sequence, required this.kind, this.block, this.slot, required this.containers, required this.categoriesEn, required this.categoriesAr, required this.moved, this.point});
+  const YardStop({
+    required this.sequence,
+    required this.kind,
+    this.block,
+    this.slot,
+    required this.containers,
+    required this.categoriesEn,
+    required this.categoriesAr,
+    required this.moved,
+    this.point,
+    this.arrived = false,
+    this.done = false,
+  });
 
   final int sequence;
   final String kind; // DROP, PICKUP, EXIT
@@ -15,6 +27,12 @@ class YardStop {
   final bool moved;
   final List<double>? point; // [lon, lat]
 
+  /// The truck reached the block (the terminal was told).
+  final bool arrived;
+
+  /// The driver confirmed the stop.
+  final bool done;
+
   factory YardStop.fromJson(Map<String, dynamic> json) => YardStop(
         sequence: (json['sequence'] as num).toInt(),
         kind: json['kind'] as String,
@@ -25,6 +43,8 @@ class YardStop {
         categoriesAr: ((json['categoriesAr'] as List?) ?? const []).cast<String>(),
         moved: json['moved'] as bool? ?? false,
         point: (json['point'] as List?)?.map((e) => (e as num).toDouble()).toList(),
+        arrived: json['arrived'] as bool? ?? false,
+        done: json['done'] as bool? ?? false,
       );
 
   /// Row, bay and tier from "14.03.2" (any part may be missing).
@@ -112,6 +132,12 @@ class YardGuidance {
       bounds: ((map['bounds'] as List?) ?? const [0, 0, 0, 0]).map((e) => (e as num).toDouble()).toList(),
       live: json['live'] as bool? ?? true,
     );
+  }
+
+  /// Where to resume: the first stop not confirmed yet (the exit when all are done).
+  int get firstOpen {
+    final i = stops.indexWhere((s) => !s.done);
+    return i < 0 ? stops.length - 1 : i;
   }
 
   YardLeg? legTo(int stop) {

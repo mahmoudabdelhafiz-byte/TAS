@@ -73,7 +73,7 @@ const Map<String, Map<String, String>> texts = {
     'eta': 'Expected at the gate around {time}',
     'checkedIn': 'Checked in at the pre-gate. Wait to be called to the gate.',
     'locationOff': 'Turn on location so the terminal knows when you will arrive.',
-    'sharing': 'Your position is shared with the terminal only while you are on the way, also when the phone is locked. It stops at the pre-gate.',
+    'sharing': 'Your position is shared with the terminal only on the way and inside it, also when the phone is locked; not while you wait at the gate, and not after you leave.',
     'trackingTitle': 'Yardsyncs is sharing your location',
     'trackingText': 'Only until you reach the terminal gate.',
     'trackingChannel': 'Trip location',
@@ -87,6 +87,8 @@ const Map<String, Map<String, String>> texts = {
     'lane': 'Lane',
     'gateInTime': 'Gate in',
     'yourStops': 'Your stops',
+    'trackingTextInside': 'Inside the terminal, until you leave: it sees when you reach your container.',
+    'arrivedHere': 'You have reached the block. The terminal knows you are here.',
   },
   'ar': {
     'appName': 'Yardsyncs mobile',
@@ -161,6 +163,8 @@ const Map<String, Map<String, String>> texts = {
     'lane': 'المسار',
     'gateInTime': 'وقت الدخول',
     'yourStops': 'محطاتك',
+    'trackingTextInside': 'داخل المحطة حتى تخرج: تعرف المحطة متى تصل إلى حاويتك.',
+    'arrivedHere': 'وصلت إلى البلوك. المحطة تعلم أنك هنا.',
   },
   'ur': {
     'appName': 'Yardsyncs mobile',
@@ -235,6 +239,8 @@ const Map<String, Map<String, String>> texts = {
     'lane': 'لین',
     'gateInTime': 'گیٹ اِن',
     'yourStops': 'آپ کے اسٹاپ',
+    'trackingTextInside': 'ٹرمینل کے اندر، باہر نکلنے تک: ٹرمینل جانتا ہے کب آپ اپنے کنٹینر تک پہنچے۔',
+    'arrivedHere': 'آپ بلاک پر پہنچ گئے۔ ٹرمینل کو معلوم ہے کہ آپ یہاں ہیں۔',
   },
   'hi': {
     'appName': 'Yardsyncs mobile',
@@ -309,6 +315,8 @@ const Map<String, Map<String, String>> texts = {
     'lane': 'लेन',
     'gateInTime': 'गेट इन',
     'yourStops': 'आपके स्टॉप',
+    'trackingTextInside': 'टर्मिनल के अंदर, निकलने तक: टर्मिनल जानता है कि आप कब अपने कंटेनर तक पहुँचे।',
+    'arrivedHere': 'आप ब्लॉक पर पहुँच गए। टर्मिनल को पता है कि आप यहाँ हैं।',
   },
 };
 

@@ -415,4 +415,59 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
             Assert.False(await db.DriverDevices.AnyAsync(d => d.PushToken != null));
         }
     }
+
+    [Fact]
+    public async Task Reaching_the_containers_block_tells_the_terminals_systems()
+    {
+        if (!Enabled) return;
+
+        var number = await BookWithAbdullahAsync(); // import MSCU1234566 in B2, row 14 bay 03 tier 2
+        var phone = await SignInAsync("install-phone-0001");
+        var position = $"/api/driver/appointments/{number}/position";
+        Assert.Equal(HttpStatusCode.Conflict, (await phone.PostAsJsonAsync(position, new { latitude = 21.467, longitude = 39.1735 })).StatusCode);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            await db.Appointments.Where(a => a.AppointmentNo == number)
+                .ExecuteUpdateAsync(x => x.SetProperty(a => a.Status, Tas.Domain.Booking.AppointmentStatus.Arrived));
+        }
+        var planner = await As(DemoDataSeeder.PlannerEmail);
+        Assert.Equal(HttpStatusCode.OK, (await planner.PostAsJsonAsync($"{Terminal}/gate/in", new { appointmentNo = number, laneCode = "IN-1" })).StatusCode);
+
+        // Inside: at the gate nothing yet; driving fast past the block doesn't count; stopping at it does, once.
+        Assert.Null((await Read<TripUpdate>(await phone.PostAsJsonAsync(position, new { latitude = 21.4705, longitude = 39.1700 }))).AtStop);
+        Assert.Null((await Read<TripUpdate>(await phone.PostAsJsonAsync(position, new { latitude = 21.467, longitude = 39.1735, speed = 9.0 }))).AtStop);
+        var at = await Read<TripUpdate>(await phone.PostAsJsonAsync(position, new { latitude = 21.467, longitude = 39.1735, speed = 1.5 }));
+        Assert.Equal(1, at.AtStop);
+        Assert.Equal(Tas.Domain.Booking.AppointmentStatus.GateIn, at.Status);
+        Assert.Null((await Read<TripUpdate>(await phone.PostAsJsonAsync(position, new { latitude = 21.467, longitude = 39.1736 }))).AtStop);
+
+        var events = $"{Terminal}/integration-events";
+        Assert.Equal(HttpStatusCode.Forbidden, (await (await As(DemoDataSeeder.DispatcherEmail)).GetAsync(events)).StatusCode);
+        var arrived = Assert.Single(await Read<List<Tas.Infrastructure.Integration.IntegrationEventView>>(await planner.GetAsync(events)));
+        Assert.Equal("TRUCK_AT_BLOCK", arrived.EventType);
+        Assert.Equal(number, arrived.AppointmentNo);
+        Assert.Equal("QUEUED", arrived.Status);
+        var stop = arrived.Payload.GetProperty("stop");
+        Assert.Equal("B2", stop.GetProperty("block").GetString());
+        Assert.Equal("14.03.2", stop.GetProperty("slot").GetString());
+        Assert.Equal("MSCU1234566", stop.GetProperty("container").GetString());
+        Assert.Equal("PICKUP", stop.GetProperty("kind").GetString());
+        Assert.Equal("DEMO", arrived.Payload.GetProperty("terminal").GetString());
+        Assert.Equal(21.467, arrived.Payload.GetProperty("position").GetProperty("latitude").GetDouble());
+
+        var yard = $"/api/driver/appointments/{number}/yard";
+        var guidance = await Read<YardGuidance>(await phone.GetAsync(yard));
+        Assert.True(guidance.Stops[0].Arrived);
+        Assert.False(guidance.Stops[0].Done);
+
+        // "Done here": confirmed once, the exit isn't a stop to confirm.
+        Assert.Equal(HttpStatusCode.NoContent, (await phone.PostAsync($"/api/driver/appointments/{number}/stops/1/done", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await phone.PostAsync($"/api/driver/appointments/{number}/stops/1/done", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await phone.PostAsync($"/api/driver/appointments/{number}/stops/2/done", null)).StatusCode);
+        Assert.True((await Read<YardGuidance>(await phone.GetAsync(yard))).Stops[0].Done);
+        var all = await Read<List<Tas.Infrastructure.Integration.IntegrationEventView>>(await planner.GetAsync(events));
+        Assert.Equal(new[] { "STOP_COMPLETED", "TRUCK_AT_BLOCK" }, all.Select(e => e.EventType).ToArray());
+    }
 }
