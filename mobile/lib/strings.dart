@@ -15,7 +15,7 @@ bool isRtl(String lang) => lang == 'ar' || lang == 'ur';
 
 const Map<String, Map<String, String>> texts = {
   'en': {
-    'appName': 'Yardsyncs',
+    'appName': 'Yardsyncs mobile',
     'signInTitle': 'Sign in',
     'signInLead': 'Enter the mobile number your company registered for you.',
     'mobile': 'Mobile number',
@@ -82,9 +82,14 @@ const Map<String, Map<String, String>> texts = {
     'sayAgain': 'Say it again',
     'stopToConfirm': 'Stop the truck to confirm',
     'speakMeters': 'About {m} metres',
+    'gateTicket': 'In-gate ticket',
+    'appointment': 'Appointment',
+    'lane': 'Lane',
+    'gateInTime': 'Gate in',
+    'yourStops': 'Your stops',
   },
   'ar': {
-    'appName': 'Yardsyncs',
+    'appName': 'Yardsyncs mobile',
     'signInTitle': 'تسجيل الدخول',
     'signInLead': 'أدخل رقم الجوال الذي سجّلته شركتك لك.',
     'mobile': 'رقم الجوال',
@@ -151,9 +156,14 @@ const Map<String, Map<String, String>> texts = {
     'sayAgain': 'أعد القول',
     'stopToConfirm': 'أوقف الشاحنة للتأكيد',
     'speakMeters': 'حوالي {m} متر',
+    'gateTicket': 'تذكرة الدخول',
+    'appointment': 'الموعد',
+    'lane': 'المسار',
+    'gateInTime': 'وقت الدخول',
+    'yourStops': 'محطاتك',
   },
   'ur': {
-    'appName': 'Yardsyncs',
+    'appName': 'Yardsyncs mobile',
     'signInTitle': 'سائن اِن',
     'signInLead': 'وہ موبائل نمبر درج کریں جو آپ کی کمپنی نے آپ کے لیے رجسٹر کیا ہے۔',
     'mobile': 'موبائل نمبر',
@@ -220,9 +230,14 @@ const Map<String, Map<String, String>> texts = {
     'sayAgain': 'دوبارہ سنائیں',
     'stopToConfirm': 'تصدیق کے لیے ٹرک روکیں',
     'speakMeters': 'تقریباً {m} میٹر',
+    'gateTicket': 'گیٹ اِن ٹکٹ',
+    'appointment': 'اپوائنٹمنٹ',
+    'lane': 'لین',
+    'gateInTime': 'گیٹ اِن',
+    'yourStops': 'آپ کے اسٹاپ',
   },
   'hi': {
-    'appName': 'Yardsyncs',
+    'appName': 'Yardsyncs mobile',
     'signInTitle': 'साइन इन',
     'signInLead': 'वह मोबाइल नंबर डालें जो आपकी कंपनी ने आपके लिए रजिस्टर किया है।',
     'mobile': 'मोबाइल नंबर',
@@ -289,6 +304,11 @@ const Map<String, Map<String, String>> texts = {
     'sayAgain': 'फिर से सुनाएँ',
     'stopToConfirm': 'पुष्टि के लिए ट्रक रोकें',
     'speakMeters': 'लगभग {m} मीटर',
+    'gateTicket': 'गेट-इन टिकट',
+    'appointment': 'अपॉइंटमेंट',
+    'lane': 'लेन',
+    'gateInTime': 'गेट इन',
+    'yourStops': 'आपके स्टॉप',
   },
 };
 

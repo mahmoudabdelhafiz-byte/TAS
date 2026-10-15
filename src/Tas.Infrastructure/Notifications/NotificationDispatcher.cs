@@ -105,7 +105,9 @@ public sealed class NotificationDispatcher(
         }
         else if (await RecipientAsync(n, ct) is not { } recipient)
         {
-            result = Fail($"No {(n.Channel == NotificationChannel.Email ? "email address" : "mobile number")} for the recipient.");
+            result = n.Channel == NotificationChannel.Push
+                ? PushFallback(n, o, now, "The driver is no longer signed in to the app.", Fail)
+                : Fail($"No {(n.Channel == NotificationChannel.Email ? "email address" : "mobile number")} for the recipient.");
         }
         else
         {
@@ -114,13 +116,29 @@ public sealed class NotificationDispatcher(
             var values = Values(n.Params);
             try
             {
-                var message = NotificationText.Render(n.TemplateCode, n.Language, values);
+                var message = NotificationText.Render(n.TemplateCode, n.Language, values) with
+                {
+                    Data = new Dictionary<string, string>
+                    {
+                        ["template"] = n.TemplateCode,
+                        ["appointmentNo"] = values.GetValueOrDefault(NotificationText.Keys.AppointmentNo) ?? "",
+                    },
+                };
                 n.ProviderRef = Truncate(await sender.SendAsync(recipient, message, ct), 100);
                 n.Status = NotificationStatus.Sent;
                 n.SentAt = clock.GetUtcNow();
                 n.LastError = null;
                 n.NextAttemptAt = null;
                 result = NotificationStatus.Sent;
+            }
+            catch (NotificationSendException ex) when (ex.Permanent && n.Channel == NotificationChannel.Push)
+            {
+                if (ex.InvalidRecipient)
+                {
+                    // The app was removed or reinstalled: stop pushing to that token.
+                    await db.DriverDevices.Where(d => d.PushToken == recipient).ExecuteUpdateAsync(s => s.SetProperty(d => d.PushToken, (string?)null), ct);
+                }
+                result = PushFallback(n, o, now, $"{sender.Provider}: {ex.Message}", Fail);
             }
             catch (NotificationSendException ex) when (ex.Permanent || n.Attempts >= o.MaxAttempts)
             {
@@ -141,6 +159,29 @@ public sealed class NotificationDispatcher(
         }
 
         await db.SaveChangesAsync(ct);
+        return result;
+    }
+
+    /// <summary>A push that can't be delivered: marked FAILED and the same message queued by SMS / WhatsApp instead.</summary>
+    private NotificationStatus PushFallback(
+        NotificationLog n, NotificationOptions o, DateTimeOffset now, string error, Func<string, NotificationStatus> fail)
+    {
+        var result = fail(error);
+        if (n.DriverId is not null)
+        {
+            db.NotificationLogs.Add(new NotificationLog
+            {
+                AppointmentId = n.AppointmentId,
+                DriverId = n.DriverId,
+                Channel = o.DriverChannel,
+                TemplateCode = n.TemplateCode,
+                Language = n.Language,
+                Status = NotificationStatus.Queued,
+                Params = n.Params,
+                CreatedAt = now,
+            });
+            n.LastError = Truncate($"{error} Sent by {o.DriverChannel} instead.", 400);
+        }
         return result;
     }
 
@@ -191,7 +232,7 @@ public sealed class NotificationDispatcher(
                 [NotificationText.Keys.GateOpens] = TimeZoneInfo.ConvertTime(a.StartAt.AddMinutes(-early), zone).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
                 [NotificationText.Keys.Items] = string.Join(", ", a.Moves.Where(m => m is not null)),
             };
-            await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, NotificationTemplates.SlotReminder, values, o.DriverChannel, now, ct, includeBooker: false);
+            await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, NotificationTemplates.SlotReminder, values, o.DriverChannel, now, ct, includeBooker: false, pushFirst: o.PushFirst);
         }
 
         await db.SaveChangesAsync(ct);
@@ -209,6 +250,8 @@ public sealed class NotificationDispatcher(
     {
         if (n.DriverId is { } driverId)
         {
+            if (n.Channel == NotificationChannel.Push)
+                return await NotificationQueue.PushTokenAsync(db, driverId, ct);
             return n.Channel is NotificationChannel.Sms or NotificationChannel.Whatsapp
                 ? await db.Drivers.AsNoTracking().Where(d => d.DriverId == driverId && !d.IsBlocked).Select(d => d.Mobile).SingleOrDefaultAsync(ct)
                 : null;

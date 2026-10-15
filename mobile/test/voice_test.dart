@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yardsyncs_driver/strings.dart';
-import 'package:yardsyncs_driver/trip_tracker.dart';
-import 'package:yardsyncs_driver/voice.dart';
-import 'package:yardsyncs_driver/yard.dart';
+import 'package:yardsyncs_mobile/strings.dart';
+import 'package:yardsyncs_mobile/trip_tracker.dart';
+import 'package:yardsyncs_mobile/voice.dart';
+import 'package:yardsyncs_mobile/yard.dart';
 
 YardStop stop(String kind, {String? block, String? slot, bool moved = false}) => YardStop(
     sequence: 1, kind: kind, block: block, slot: slot, containers: const [], categoriesEn: const [], categoriesAr: const [], moved: moved);

@@ -141,7 +141,7 @@ jobs:
 
       - name: Platform folders
         run: |
-          flutter create --platforms=android --org com.yardsyncs --project-name yardsyncs_driver .
+          flutter create --platforms=android --org com.yardsyncs --project-name yardsyncs_mobile .
           bash tool/configure_android.sh
 
       - name: Install
@@ -158,7 +158,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: yardsyncs-driver-debug-apk
+          name: yardsyncs-mobile-debug-apk
           path: mobile/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 14
 
@@ -168,3 +168,33 @@ jobs:
           flutter analyze --no-fatal-infos 2>&1 | grep -E "^\s*(error|warning)" | head -30 | while read -r line; do echo "::error title=mobile analyze::$line"; done
           flutter test 2>&1 | grep -E "Expected|Actual|Error|error:|FAILED|Exception" | head -30 | while read -r line; do echo "::error title=mobile test::$line"; done
           flutter build apk --debug --dart-define=YARDSYNCS_API=https://tas.example.invalid 2>&1 | grep -iE "error|what went wrong|failed|requires|version|>" | grep -v "^\s*$" | head -40 | while read -r line; do echo "::error title=mobile build::$line"; done
+
+  # The same app on iPhone: build without signing (signing and store upload need the Apple developer account).
+  ios:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Platform folder
+        run: |
+          flutter create --platforms=ios --org com.yardsyncs --project-name yardsyncs_mobile .
+          flutter pub get
+          bash tool/configure_ios.sh
+
+      - name: Build for iPhone (debug, unsigned)
+        run: flutter build ios --debug --no-codesign --dart-define=YARDSYNCS_API=https://tas.example.invalid
+
+      - name: Publish errors
+        if: failure()
+        run: |
+          flutter build ios --debug --no-codesign --dart-define=YARDSYNCS_API=https://tas.example.invalid 2>&1 | grep -iE "error|failed|requires|deployment|pod" | head -40 | while read -r line; do echo "::error title=ios build::$line"; done
+

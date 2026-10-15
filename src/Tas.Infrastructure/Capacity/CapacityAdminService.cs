@@ -449,7 +449,8 @@ public sealed class CapacityAdminService(
                 [NotificationText.Keys.Slot] = NotificationText.SlotLabel(a.StartAt, a.EndAt, timeZone),
                 [NotificationText.Keys.Reason] = closure.Reason,
             };
-            await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, NotificationTemplates.SlotClosed, values, channel, now, ct);
+            await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, NotificationTemplates.SlotClosed, values, channel, now, ct,
+                pushFirst: NotificationQueue.PushFirst(config));
         }
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Override {Id}: notified {Count} appointment(s) of the closure", closure.OverrideId, affected.Count);

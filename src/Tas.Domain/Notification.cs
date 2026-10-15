@@ -63,4 +63,7 @@ public static class NotificationTemplates
 
     /// <summary>The terminal closed the slot (e.g. crane breakdown): please reschedule.</summary>
     public const string SlotClosed = "SLOT_CLOSED";
+
+    /// <summary>The truck passed the gate: the in-gate ticket with the block(s) to drive to.</summary>
+    public const string GateIn = "GATE_IN";
 }

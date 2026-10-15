@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yardsyncs_driver/models.dart';
+import 'package:yardsyncs_mobile/models.dart';
 
 Map<String, dynamic> sample({String start = '2026-10-20T07:00:00+00:00', String end = '2026-10-20T08:00:00+00:00'}) => {
       'appointmentNo': 'DEMO-261020-7KQ4M',

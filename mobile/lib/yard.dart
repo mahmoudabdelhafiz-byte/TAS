@@ -61,8 +61,37 @@ class YardArea {
       );
 }
 
+/// The in-gate ticket: when and where the truck passed the gate.
+class GateTicket {
+  const GateTicket({required this.terminalName, this.gateInAt, this.lane, this.truckPlate});
+
+  final String terminalName;
+  final DateTime? gateInAt;
+  final String? lane;
+  final String? truckPlate;
+
+  factory GateTicket.fromJson(Map<String, dynamic> json) => GateTicket(
+        terminalName: (json['terminalName'] as String?) ?? '',
+        gateInAt: json['gateInAt'] == null ? null : DateTime.parse(json['gateInAt'] as String).toUtc(),
+        lane: json['lane'] as String?,
+        truckPlate: json['truckPlate'] as String?,
+      );
+}
+
 class YardGuidance {
-  const YardGuidance({required this.stops, required this.legs, required this.areas, required this.roads, required this.bounds, required this.live});
+  const YardGuidance({
+    required this.appointmentNo,
+    required this.stops,
+    required this.legs,
+    required this.areas,
+    required this.roads,
+    required this.bounds,
+    required this.live,
+    this.ticket,
+  });
+
+  final String appointmentNo;
+  final GateTicket? ticket;
 
   final List<YardStop> stops;
   final List<YardLeg> legs;
@@ -74,6 +103,8 @@ class YardGuidance {
   factory YardGuidance.fromJson(Map<String, dynamic> json) {
     final map = json['map'] as Map<String, dynamic>;
     return YardGuidance(
+      appointmentNo: (json['appointmentNo'] as String?) ?? '',
+      ticket: json['ticket'] == null ? null : GateTicket.fromJson(json['ticket'] as Map<String, dynamic>),
       stops: ((json['stops'] as List?) ?? const []).map((e) => YardStop.fromJson(e as Map<String, dynamic>)).toList(),
       legs: ((json['legs'] as List?) ?? const []).map((e) => YardLeg.fromJson(e as Map<String, dynamic>)).toList(),
       areas: ((map['areas'] as List?) ?? const []).map((e) => YardArea.fromJson(e as Map<String, dynamic>)).toList(),

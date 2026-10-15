@@ -34,9 +34,22 @@ public sealed class NotificationOptions
     /// <summary>Log | Smtp</summary>
     public string EmailProvider { get; set; } = "Log";
 
+    /// <summary>Log | Fcm — push to the Yardsyncs mobile app (Android and iPhone).</summary>
+    public string PushProvider { get; set; } = "Log";
+
+    /// <summary>
+    /// Drivers signed in to the app get messages by push instead of SMS / WhatsApp (when a push provider is set);
+    /// a push that can't be delivered falls back to <see cref="DriverChannel"/>.
+    /// </summary>
+    public bool DriverPush { get; set; } = true;
+
+    /// <summary>True when drivers with the app should get push first.</summary>
+    public bool PushFirst => DriverPush && !string.Equals(PushProvider?.Trim(), "Log", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(PushProvider);
+
     public UnifonicOptions Unifonic { get; set; } = new();
     public TwilioOptions Twilio { get; set; } = new();
     public SmtpOptions Smtp { get; set; } = new();
+    public FcmOptions Fcm { get; set; } = new();
 }
 
 public sealed class UnifonicOptions

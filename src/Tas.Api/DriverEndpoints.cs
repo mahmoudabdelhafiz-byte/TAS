@@ -46,6 +46,12 @@ public static class DriverEndpoints
             return Results.NoContent();
         });
 
+        // The app's push address (Firebase token); null signs this phone out of push.
+        driver.MapPut("/push-token", async (PushTokenBody body, HttpContext http, DriverLoginService service, CancellationToken ct) =>
+            await service.SetPushTokenAsync(Me(http).DeviceId, body.Token, ct) is { } error
+                ? TasApi.Problem(StatusCodes.Status400BadRequest, error)
+                : Results.NoContent());
+
         driver.MapGet("/me", async (HttpContext http, DriverAppService service, CancellationToken ct) =>
             await service.ProfileAsync(Me(http), ct) is { } profile ? Results.Ok(profile) : Results.Unauthorized());
 
@@ -149,3 +155,5 @@ public static class DriverEndpoints
 
     private static CurrentDriver Me(HttpContext http) => CurrentDriver.FromClaims(http.User)!;
 }
+
+public sealed record PushTokenBody(string? Token);

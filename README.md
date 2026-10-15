@@ -257,8 +257,12 @@ language (Arabic, English, Urdu, Hindi), branded **Yardsyncs**:
 | `SLOT_REMINDER` — slot time and when the gate opens | `ReminderHoursBefore` (2 h) before the slot | driver |
 | `SLOT_CLOSED` — please reschedule | a planner closes booked hours (e.g. crane breakdown) | driver + dispatcher |
 
-Drivers get SMS (or WhatsApp with `DriverChannel: Whatsapp`); dispatchers get email. Providers per channel:
-`SmsProvider` = `Unifonic` · `Twilio` · `Log`, `WhatsappProvider` = `Twilio` · `Log`, `EmailProvider` = `Smtp` · `Log`.
+Drivers get SMS (or WhatsApp with `DriverChannel: Whatsapp`); dispatchers get email. Drivers signed in to Yardsyncs
+mobile get push instead when `PushProvider` is `Fcm` (Firebase; set-up in `mobile/README.md`); a push that can't be
+delivered goes by SMS / WhatsApp. Providers per channel:
+`SmsProvider` = `Unifonic` · `Twilio` · `Log`, `WhatsappProvider` = `Twilio` · `Log`, `EmailProvider` = `Smtp` · `Log`,
+`PushProvider` = `Fcm` · `Log`. Messages: on hold, cleared, reminder, slot closed, and at gate-in the in-gate ticket
+with the block(s) to drive to.
 **`Log` (the default) only writes the message to the log** — nothing reaches a phone until a provider is configured:
 
 ```json
@@ -285,7 +289,8 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `GET` | `/api/driver/appointments` | Upcoming and live appointments (and those finished in the last 12 h): terminal time offset, traffic light and reason, moves, gate code |
 | `GET` | `/api/driver/appointments/{no}` | One of them |
 | `POST` | `/api/driver/appointments/{no}/start-trip` | The truck is leaving: re-check, then on the way; refused while anything is red |
-| `POST` | `/api/driver/logout` | Signs this phone out |
+| `POST` | `/api/driver/logout` | Signs this phone out (and stops pushes to it) |
+| `PUT` | `/api/driver/push-token` | `{token}`: the app's Firebase push token for this phone (null stops pushes) |
 | `GET` | `/api/driver/gate-pass` | Secret for the rotating gate QR `YS1:{passId}:{appointmentNo}:{code}` (8 digits, changes every 30 s, made offline on the phone; revoked on sign-in elsewhere) |
 | `POST` | `/api/driver/appointments/{no}/position` | `{latitude, longitude, speed?}` while on the way only: arrival estimate, terminal areas entered, automatic check-in in the pre-gate area |
 | `GET` / `POST` | `/api/terminals/{id}/geofences` | Terminal areas (approach, pre-gate, gate, yard zones…) as GeoJSON; terminal admins draw them as a ring of `[longitude, latitude]` points |
@@ -298,7 +303,7 @@ Drivers sign in with the mobile number their company registered; the code arrive
 
 Gate lanes accept the rotating gate pass in `qrToken` (as well as the static appointment code): the live code is checked and the truck is matched to its appointment. Gate pass secrets are stored encrypted; set `GatePass__Key` (32 bytes, base64) or a key is derived from the JWT signing key.
 
-The Flutter app is in `mobile/` (see `mobile/README.md`). CI analyzes, tests and builds a debug APK, kept for 14 days as a download on the CI run (`yardsyncs-driver-debug-apk`).
+The Flutter app is in `mobile/` (see `mobile/README.md`). CI analyzes, tests and builds a debug APK, kept for 14 days as a download on the CI run (`yardsyncs-mobile-debug-apk`).
 
 ### Bulk booking
 

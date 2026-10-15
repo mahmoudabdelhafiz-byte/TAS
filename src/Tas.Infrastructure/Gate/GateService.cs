@@ -26,7 +26,9 @@ public sealed class GateService(
     AppointmentQueryService queries,
     TimeProvider clock,
     ILogger<GateService> logger,
-    Tas.Infrastructure.DriverApp.GatePassService? gatePasses = null)
+    Tas.Infrastructure.DriverApp.GatePassService? gatePasses = null,
+    Tas.Infrastructure.DriverApp.YardGuidanceService? yard = null,
+    Microsoft.Extensions.Configuration.IConfiguration? config = null)
 {
     // ================================================================ arrival
 
@@ -215,6 +217,7 @@ public sealed class GateService(
         AddHistory(appointment.AppointmentId, AppointmentStatus.Arrived, AppointmentStatus.GateIn, clerk.UserId, "Gate in", now);
         AddEvent(terminalId, laneId, appointment.AppointmentId, GateEventType.GateIn, null, [], null, now);
         await db.SaveChangesAsync(ct);
+        await AfterGateInAsync(appointment.AppointmentId, ct);
         return AdminResult<AppointmentDto>.Ok((await queries.GetAsync(terminalId, number, ct))!);
     }
 
@@ -476,7 +479,39 @@ public sealed class GateService(
         AddHistory(appointmentId, current, AppointmentStatus.GateIn, clerk.UserId, reason, now);
         AddEvent(terminalId, laneId, appointmentId, GateEventType.GateIn, null, [], reason, now);
         await db.SaveChangesAsync(ct);
+        await AfterGateInAsync(appointmentId, ct);
         return null;
+    }
+
+    /// <summary>
+    /// The in-gate ticket: the TOS yard positions become the truck's stops, and the driver gets them by push
+    /// (or SMS without the app). The truck is already in; a TOS or messaging problem must not undo that.
+    /// </summary>
+    private async Task AfterGateInAsync(long appointmentId, CancellationToken ct)
+    {
+        if (yard is null)
+            return;
+        try
+        {
+            var guidance = await yard.IssueAtGateInAsync(appointmentId, ct);
+            var stops = guidance is null ? "" : Tas.Infrastructure.DriverApp.YardGuidanceService.StopsText(guidance.Stops);
+            if (stops.Length == 0)
+                return; // no position from the TOS: the driver follows the terminal's directions
+            var values = new Dictionary<string, string>
+            {
+                [Tas.Application.Notifications.NotificationText.Keys.AppointmentNo] = guidance!.AppointmentNo,
+                [Tas.Application.Notifications.NotificationText.Keys.Stops] = stops,
+            };
+            await Tas.Infrastructure.Notifications.NotificationQueue.ForAppointmentAsync(db, appointmentId, NotificationTemplates.GateIn, values,
+                Tas.Infrastructure.Notifications.NotificationQueue.DriverChannel(config), clock.GetUtcNow(), ct,
+                includeBooker: false, pushFirst: Tas.Infrastructure.Notifications.NotificationQueue.PushFirst(config));
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            db.ChangeTracker.Clear();
+            logger.LogWarning(ex, "In-gate ticket for appointment {AppointmentId} could not be issued", appointmentId);
+        }
     }
 
     private async Task<long?> ResolveAppointmentIdAsync(int terminalId, long? fromTrouble, string? appointmentNo, CancellationToken ct)

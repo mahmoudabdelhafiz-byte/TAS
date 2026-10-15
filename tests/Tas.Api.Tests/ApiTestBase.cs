@@ -29,6 +29,7 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("NoShow:Enabled", "false");
         builder.UseSetting("Revalidation:Enabled", "false");
         builder.UseSetting("Notifications:Enabled", "false");
+        builder.UseSetting("Notifications:PushProvider", "Fcm"); // push first for drivers with the app (not sent: the worker is off)
         builder.UseSetting("DriverLogin:ExposeCodeForTesting", "true");
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
         builder.UseSetting("FakeTos:PaymentWarning:0", "CMAU5100028");

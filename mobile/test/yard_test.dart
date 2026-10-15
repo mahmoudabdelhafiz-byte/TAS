@@ -1,11 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:yardsyncs_driver/yard.dart';
+import 'package:yardsyncs_mobile/yard.dart';
 
 void main() {
   final json = <String, dynamic>{
     'appointmentNo': 'A-1',
     'status': 'GateIn',
     'live': false,
+    'ticket': {'terminalName': 'Demo Container Terminal', 'gateInAt': '2026-10-15T07:42:00+00:00', 'lane': 'IN-1', 'truckPlate': '1234 ABJ'},
     'stops': [
       {'sequence': 1, 'kind': 'DROP', 'block': 'E1', 'slot': null, 'containers': ['MSCU5523417'], 'categoriesEn': ['Export drop'], 'categoriesAr': ['تسليم تصدير'], 'moved': false, 'point': [39.1665, 21.464]},
       {'sequence': 2, 'kind': 'PICKUP', 'block': 'B2', 'slot': '14.03.2', 'containers': ['MSCU1234566'], 'categoriesEn': [], 'categoriesAr': [], 'moved': true, 'point': [39.1735, 21.467]},
@@ -29,6 +30,11 @@ void main() {
   test('parses stops, legs and the map', () {
     final g = YardGuidance.fromJson(json);
     expect(g.live, isFalse);
+    expect(g.appointmentNo, 'A-1');
+    expect(g.ticket!.lane, 'IN-1');
+    expect(g.ticket!.truckPlate, '1234 ABJ');
+    expect(g.ticket!.gateInAt, DateTime.utc(2026, 10, 15, 7, 42));
+    expect(YardGuidance.fromJson({...json}..remove('ticket')).ticket, isNull);
     expect(g.stops.map((s) => s.kind), ['DROP', 'PICKUP', 'EXIT']);
     expect(g.stops[1].slotParts, ['14', '03', '2']);
     expect(g.stops[1].moved, isTrue);

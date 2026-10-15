@@ -63,7 +63,7 @@ public static class DependencyInjection
         // Notifications: outbox delivery; provider per channel from "Notifications" (default: Log = not sent).
         services.Configure<NotificationOptions>(config.GetSection("Notifications"));
         services.AddHttpClient("notifications", c => c.Timeout = TimeSpan.FromSeconds(20));
-        foreach (var channel in new[] { NotificationChannel.Sms, NotificationChannel.Whatsapp, NotificationChannel.Email })
+        foreach (var channel in new[] { NotificationChannel.Sms, NotificationChannel.Whatsapp, NotificationChannel.Email, NotificationChannel.Push })
             services.AddSingleton<INotificationSender>(sp => CreateSender(sp, channel));
         services.AddSingleton<NotificationSenders>();
         services.AddScoped<NotificationDispatcher>();
@@ -100,6 +100,7 @@ public static class DependencyInjection
         {
             NotificationChannel.Sms => o.SmsProvider,
             NotificationChannel.Whatsapp => o.WhatsappProvider,
+            NotificationChannel.Push => o.PushProvider,
             _ => o.EmailProvider,
         } ?? "Log").Trim().ToLowerInvariant();
 
@@ -109,6 +110,7 @@ public static class DependencyInjection
             (NotificationChannel.Sms, "unifonic") => new UnifonicSmsSender(Http(), o.Unifonic),
             (NotificationChannel.Sms or NotificationChannel.Whatsapp, "twilio") => new TwilioSender(Http(), o.Twilio, channel),
             (NotificationChannel.Email, "smtp") => new SmtpEmailSender(o.Smtp),
+            (NotificationChannel.Push, "fcm") => new FcmPushSender(Http(), o.Fcm, sp.GetRequiredService<TimeProvider>()),
             _ => throw new InvalidOperationException($"Notification provider '{provider}' is not available for {channel}."),
         };
     }

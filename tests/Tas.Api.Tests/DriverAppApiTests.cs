@@ -369,4 +369,50 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         var bad = new { type = "FeatureCollection", features = new object[] { new { type = "Feature", geometry = new { type = "Point", coordinates = new[] { 39.17, 21.47 } } } } };
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"{Terminal}/yard-map/roads", new { roads = bad })).StatusCode);
     }
+
+    [Fact]
+    public async Task Gate_in_issues_the_ticket_and_pushes_the_block_to_the_app()
+    {
+        if (!Enabled) return;
+
+        var number = await BookWithAbdullahAsync();
+        var phone = await SignInAsync("install-phone-0001");
+        Assert.Equal(HttpStatusCode.BadRequest, (await phone.PutAsJsonAsync("/api/driver/push-token", new { token = new string('x', 401) })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await phone.PutAsJsonAsync("/api/driver/push-token", new { token = "fcm-token-abdullah" })).StatusCode);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            await db.Appointments.Where(a => a.AppointmentNo == number)
+                .ExecuteUpdateAsync(x => x.SetProperty(a => a.Status, Tas.Domain.Booking.AppointmentStatus.Arrived));
+        }
+        var planner = await As(DemoDataSeeder.PlannerEmail);
+        Assert.Equal(HttpStatusCode.OK, (await planner.PostAsJsonAsync($"{Terminal}/gate/in", new { appointmentNo = number, laneCode = "IN-1" })).StatusCode);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            var push = await db.NotificationLogs.AsNoTracking().SingleAsync(n => n.TemplateCode == Tas.Domain.NotificationTemplates.GateIn);
+            Assert.Equal(Tas.Domain.NotificationChannel.Push, push.Channel);
+            Assert.Equal(Demo.DriverIds[0], push.DriverId);
+            Assert.Contains("B2 (14.03.2)", push.Params);
+            Assert.Equal(2, await db.YardInstructions.CountAsync(y => db.Appointments.Any(a => a.AppointmentId == y.AppointmentId && a.AppointmentNo == number))); // block B2, then the exit
+        }
+
+        // The in-gate ticket in the app.
+        var guidance = await Read<YardGuidance>(await phone.GetAsync($"/api/driver/appointments/{number}/yard"));
+        Assert.NotNull(guidance.Ticket);
+        Assert.Equal("IN-1", guidance.Ticket!.Lane);
+        Assert.NotNull(guidance.Ticket.GateInAt);
+        Assert.False(string.IsNullOrEmpty(guidance.Ticket.TerminalName));
+        Assert.Equal("B2", guidance.Stops[0].Block);
+
+        // Signing out stops pushes to this phone.
+        Assert.Equal(HttpStatusCode.NoContent, (await phone.PostAsync("/api/driver/logout", null)).StatusCode);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            Assert.False(await db.DriverDevices.AnyAsync(d => d.PushToken != null));
+        }
+    }
 }

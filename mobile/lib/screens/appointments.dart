@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../api.dart';
 import '../gate_pass.dart';
 import '../models.dart';
+import '../push.dart';
 import '../strings.dart';
 import '../theme.dart';
 import 'common.dart';
@@ -13,12 +14,15 @@ import 'yard_screen.dart';
 
 /// My appointments: the next ones first, each with its traffic light.
 class AppointmentsScreen extends StatefulWidget {
-  const AppointmentsScreen({super.key, required this.api, required this.lang, required this.onLanguage, required this.onSignedOut});
+  const AppointmentsScreen({super.key, required this.api, required this.lang, required this.onLanguage, required this.onSignedOut, this.push});
 
   final DriverApi api;
   final String lang;
   final ValueChanged<String> onLanguage;
   final VoidCallback onSignedOut;
+
+  /// Messages from the terminal (null in tests and when push isn't set up).
+  final PushService? push;
 
   @override
   State<AppointmentsScreen> createState() => _AppointmentsScreenState();
@@ -28,6 +32,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   List<DriverAppointment>? _items;
   String? _error;
   Timer? _timer;
+  StreamSubscription<PushMessage>? _pushes;
 
   String t(String key) => tr(widget.lang, key);
 
@@ -36,12 +41,40 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     super.initState();
     _load();
     _timer = Timer.periodic(const Duration(seconds: 60), (_) => _load());
+    _pushes = widget.push?.messages.listen(_onPush);
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _pushes?.cancel();
     super.dispose();
+  }
+
+  /// A message from the terminal: refresh; at gate-in go straight to the ticket and directions.
+  Future<void> _onPush(PushMessage m) async {
+    await _load();
+    if (!mounted || !m.isGateIn || m.appointmentNo.isEmpty) {
+      if (mounted && m.body != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m.body!), duration: const Duration(seconds: 8)));
+      }
+      return;
+    }
+    if (m.opened) {
+      _openYard(m.appointmentNo);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m.body ?? t('whereToGo')),
+        duration: const Duration(seconds: 20),
+        action: SnackBarAction(label: t('whereToGo'), onPressed: () => _openYard(m.appointmentNo)),
+      ));
+    }
+  }
+
+  void _openYard(String appointmentNo) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => YardScreen(api: widget.api, lang: widget.lang, appointmentNo: appointmentNo),
+    ));
   }
 
   Future<void> _load() async {
