@@ -1,11 +1,15 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Tas.Application.Auth;
 using Tas.Application.Capacity;
+using Tas.Application.Notifications;
 using Tas.Domain;
+using Tas.Domain.Booking;
 using Tas.Domain.Capacity;
+using Tas.Infrastructure.Notifications;
 using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.Capacity;
@@ -20,7 +24,8 @@ public sealed class CapacityAdminService(
     TasDbContext db,
     SlotGenerationService slotGeneration,
     TimeProvider clock,
-    ILogger<CapacityAdminService> logger)
+    ILogger<CapacityAdminService> logger,
+    IConfiguration? config = null)
 {
     private static readonly JsonSerializerOptions AuditJson = new(JsonSerializerDefaults.Web)
     {
@@ -194,6 +199,8 @@ public sealed class CapacityAdminService(
         }
 
         var regenerated = await RegenerateAsync(terminal, item.StartAt, item.EndAt, ct);
+        if (item.Action == OverrideAction.Close)
+            await NotifySlotClosedAsync(terminal, item, ct);
         logger.LogInformation("Override {Id} at terminal {TerminalId} by user {UserId}: {Action} {Value} ({Reason})",
             item.OverrideId, terminalId, actor.UserId, item.Action, item.Value, item.Reason);
         return AdminResult<OverrideView>.Created(ToView(item, codes), regenerated);
@@ -408,6 +415,45 @@ public sealed class CapacityAdminService(
     }
 
     // ================================================================ helpers
+
+    /// <summary>
+    /// After a CLOSE override, tells the drivers and dispatchers of appointments in the closed hours (or with moves
+    /// in the closed category) that haven't left yet to reschedule. Their bookings are kept; they decide.
+    /// </summary>
+    private async Task NotifySlotClosedAsync(Terminal terminal, CapacityOverride closure, CancellationToken ct)
+    {
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(terminal.TimeZone);
+        var now = clock.GetUtcNow();
+
+        var query = db.Appointments.AsNoTracking()
+            .Where(a => a.TerminalId == terminal.TerminalId
+                        && (a.Status == AppointmentStatus.Confirmed || a.Status == AppointmentStatus.EnRoute)
+                        && a.Slot.StartAt < closure.EndAt && a.Slot.EndAt > closure.StartAt
+                        && a.Slot.EndAt > now);
+        query = closure.CategoryId is { } categoryId
+            ? query.Where(a => a.Items.Any(i => i.CategoryId == categoryId))
+            : query.Where(a => a.Slot.IsClosed);
+
+        var affected = await query
+            .Select(a => new { a.AppointmentId, a.AppointmentNo, a.Slot.StartAt, a.Slot.EndAt })
+            .ToListAsync(ct);
+        if (affected.Count == 0)
+            return;
+
+        var channel = NotificationQueue.DriverChannel(config);
+        foreach (var a in affected)
+        {
+            var values = new Dictionary<string, string>
+            {
+                [NotificationText.Keys.AppointmentNo] = a.AppointmentNo,
+                [NotificationText.Keys.Slot] = NotificationText.SlotLabel(a.StartAt, a.EndAt, timeZone),
+                [NotificationText.Keys.Reason] = closure.Reason,
+            };
+            await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, NotificationTemplates.SlotClosed, values, channel, now, ct);
+        }
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Override {Id}: notified {Count} appointment(s) of the closure", closure.OverrideId, affected.Count);
+    }
 
     private void Audit(int terminalId, string entity, long key, AuditAction action, object? before, object? after, string? reason, CurrentUser actor) =>
         db.AuditLogs.Add(new AuditLog

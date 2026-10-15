@@ -1,6 +1,6 @@
 # TAS — Progress Log
 
-Last updated: 2026-10-14 (after the N4 adapter)
+Last updated: 2026-10-15 (after notifications)
 
 Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 
@@ -141,6 +141,19 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | N4 outage: booking warns (or rejects, configurable) and is re-checked when N4 answers; trip start refused; gate refers to trouble desk |
 | ✅ | Tests: evaluator unit tests, SOAP client against a fake server, booking / re-check / gate flows with a stub N4 |
 
+### 12. Notifications (2026-10-15)
+| | Item |
+|---|---|
+| ✅ | Outbox delivery worker: claims due messages (safe with several API instances), renders, sends, records recipient / provider id / errors |
+| ✅ | Messages in Arabic, English, Urdu, Hindi, branded Yardsyncs: on hold, cleared, reminder before the slot (with gate-opening time), slot closed by the terminal |
+| ✅ | Drivers by SMS or WhatsApp (configurable); dispatchers by email; reminders to drivers only, once |
+| ✅ | Slot closed: closing booked hours (or a category) notifies affected trucks not yet at the gate, with the planner's reason |
+| ✅ | Providers: Unifonic (SMS), Twilio (SMS, WhatsApp), SMTP (email); "Log" mode until configured |
+| ✅ | Retries after 1 / 5 / 15 / 60 min; permanent errors fail at once; expiry after 12 h; reminders dropped if the appointment is no longer upcoming |
+| ✅ | Endpoint: messages per appointment for the help desk |
+| ✅ | Database: delivery columns on `notification_log`, upgrade script `db/migrations/005_notifications.sql` |
+| ✅ | Tests: templates in every language, providers against a fake server, delivery / retry / expiry / reminder / slot-closed flows |
+
 ---
 
 ## Remaining
@@ -164,13 +177,14 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | N4 write-back | Pre-advise exports / create truck visits in N4 from bookings ❓ go-ahead needed |
 | ⬜ | FASAH customs release | If not already reflected in N4 |
 | ⬜ | National appointment platform | Check whether Mawani / FASAH requires integration at the customer's port ❓ |
-| 🔜 | **Notification sender** | Deliver the queued outbox (SMS / WhatsApp / email / push) in the recipient's language; reminders, slot closed |
+| ⬜ | SMS / WhatsApp provider account | Choose Unifonic / Twilio / other, register the "Yardsyncs" sender ID ❓ provider |
+| ⬜ | Native review of message texts | Arabic, Urdu and Hindi wording; translated reasons (reasons from the TOS are in English today) |
 | ⬜ | Trucking company API | Client credentials, scopes, rate limits for bookings from their own TMS |
 
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| ⬜ | Capacity setup: weekly template grid, seasonal templates, overrides calendar |
+| 🔜 | Capacity setup: weekly template grid, seasonal templates, overrides calendar |
 | ⬜ | Slot board: capacity vs booked per hour/category, over-capacity alerts |
 | ⬜ | Appointments: search, details, cancel / move on behalf of companies |
 | ⬜ | Company portal: availability, booking (single / dual / cargo), bulk upload, fleet (trucks, drivers) |

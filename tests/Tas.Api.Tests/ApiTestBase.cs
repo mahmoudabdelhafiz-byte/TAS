@@ -28,6 +28,7 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("SlotGeneration:Enabled", "false");
         builder.UseSetting("NoShow:Enabled", "false");
         builder.UseSetting("Revalidation:Enabled", "false");
+        builder.UseSetting("Notifications:Enabled", "false");
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
     }
 }

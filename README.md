@@ -95,6 +95,7 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | `POST` | `/api/terminals/{id}/appointments/{no}/reschedule` | Move to another slot (allowed until gate-in, e.g. for late trucks) |
 | `PUT` | `/api/terminals/{id}/appointments/{no}/assignment` | Assign / change truck and driver |
 | `POST` | `/api/terminals/{id}/appointments/{no}/revalidate` | Re-check the appointment against the TOS now and refresh the traffic light |
+| `GET` | `/api/terminals/{id}/appointments/{no}/notifications` | Messages queued / sent for the appointment (status, recipient, errors) |
 | `POST` | `/api/terminals/{id}/appointments/{no}/start-trip` | Truck is leaving: re-check now; refused (422) while anything is red, else `EN_ROUTE` |
 | `POST` | `/api/terminals/{id}/appointments/bulk?dryRun=true` | Bulk booking from an uploaded `.xlsx` / `.csv` (form field `file`) |
 | `GET` | `/api/terminals/{id}/appointments/bulk/template?format=xlsx` | Download the bulk template (`xlsx` or `csv`) with instructions |
@@ -173,7 +174,7 @@ Every master data change is written to the audit log. Tokens are re-checked agai
 
 **Re-checks before arrival:** a container that was clear at booking can get a customs hold, a withdrawn release or unpaid charges later. Booked appointments starting within 24 h are re-checked against the TOS (at most every 60 min each), on request, and when the trip starts. If an item turns red or clears, the change is written to the appointment history and a notification (`STATUS_RED` / `STATUS_CLEARED`) is queued for the driver (SMS) and the person who booked (email) in the `notification_log` outbox.
 
-Background workers: slot generation (every 6 h), no-show marking (every 10 min), re-checks (every 15 min).
+Background workers: slot generation (every 6 h), no-show marking (every 10 min), re-checks (every 15 min), notifications (every 30 s).
 Settings: `Revalidation:LookAheadHours` (24), `Revalidation:MinAgeMinutes` (60), `Revalidation:IntervalMinutes` (15), `Revalidation:Enabled`.
 
 Booking responses: `201` booked · `400` invalid request · `404` not found · `409` no capacity / conflict ·
@@ -213,6 +214,34 @@ code extension, which returns units, bookings / EDOs and bills of lading as JSON
 If N4 can't be reached, bookings go ahead with an amber warning and are re-checked as soon as N4 answers
 (`Tos:OnUnavailable: Reject` refuses them instead); trip starts are refused and the gate sends the truck to the
 trouble desk — a truck is never sent or admitted unchecked.
+
+### Notifications (SMS / WhatsApp / email)
+
+Messages are written to an outbox (`notification_log`) and delivered by a background worker in the recipient's
+language (Arabic, English, Urdu, Hindi), branded **Yardsyncs**:
+
+| Message | When | To |
+|---|---|---|
+| `STATUS_RED` — on hold, don't set off | a re-check finds a hold / unpaid / not available | driver + dispatcher |
+| `STATUS_CLEARED` — good to go | a previous hold has cleared | driver + dispatcher |
+| `SLOT_REMINDER` — slot time and when the gate opens | `ReminderHoursBefore` (2 h) before the slot | driver |
+| `SLOT_CLOSED` — please reschedule | a planner closes booked hours (e.g. crane breakdown) | driver + dispatcher |
+
+Drivers get SMS (or WhatsApp with `DriverChannel: Whatsapp`); dispatchers get email. Providers per channel:
+`SmsProvider` = `Unifonic` · `Twilio` · `Log`, `WhatsappProvider` = `Twilio` · `Log`, `EmailProvider` = `Smtp` · `Log`.
+**`Log` (the default) only writes the message to the log** — nothing reaches a phone until a provider is configured:
+
+```json
+"Notifications": {
+  "SmsProvider": "Unifonic", "EmailProvider": "Smtp",
+  "Unifonic": { "AppSid": "…", "SenderId": "Yardsyncs" },
+  "Smtp": { "Host": "smtp.office365.com", "Port": 587, "Username": "…", "Password": "…", "From": "noreply@…" }
+}
+```
+
+Delivery is retried after 1, 5, 15 and 60 minutes on temporary errors; invalid numbers / refused senders fail at once;
+messages not sent within 12 h are dropped. The sender ID ("Yardsyncs") must be registered with the SMS provider
+(CITC rules in Saudi Arabia). Put secrets in environment variables, e.g. `Notifications__Unifonic__AppSid`.
 
 ### Bulk booking
 
@@ -295,5 +324,6 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Re-checks before arrival: scheduled, on request and at trip start; history and notification outbox
 - [x] Gate: lane arrivals (QR / number / plate / container), re-check, admit or trouble desk, walk-ins, gate in/out, turn time, gate board
 - [x] Navis N4 adapter (read-only checks via genericInvoke + Groovy code extension), outage handling
+- [x] Notifications: on hold / cleared / reminder / slot closed in 4 languages; Unifonic, Twilio (SMS, WhatsApp), SMTP; retries
 - [ ] Operator portal (React)
 - [ ] Driver app (Flutter)
