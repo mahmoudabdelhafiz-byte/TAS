@@ -254,7 +254,23 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         var created = (await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.Name == "Block C");
         Assert.Equal("C", created.YardBlock);
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"{areas}/{created.GeofenceId}/deactivate", null)).StatusCode);
+
+        // Editing an area: reshape, rename, block names are unique among the yard blocks.
+        var block = $"{areas}/{created.GeofenceId}";
+        var bigger = new[] { new[] { 39.18, 21.48 }, new[] { 39.195, 21.48 }, new[] { 39.195, 21.49 }, new[] { 39.18, 21.49 }, new[] { 39.18, 21.48 } };
+        Assert.Equal(HttpStatusCode.Forbidden, (await planner.PutAsJsonAsync(block, new { name = "Block C", zoneType = "YARD_ZONE", ring = bigger, yardBlock = "C" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync(block, new { name = "Block C east", zoneType = "YARD_ZONE", ring = bigger, yardBlock = "c" })).StatusCode);
+        var edited = (await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.GeofenceId == created.GeofenceId);
+        Assert.Equal("Block C east", edited.Name);
+        Assert.Equal("C", edited.YardBlock);
+        Assert.Contains("39.195", edited.GeoJson);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync(block, new { name = "Block C", zoneType = "YARD_ZONE", ring = bigger, yardBlock = "B2" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync(block, new { name = "Block C", zoneType = "YARD_ZONE", ring = bigger })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync(areas, new { name = "Another A1", zoneType = "YARD_ZONE", ring, yardBlock = "A1" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync($"{areas}/999999", new { name = "X", zoneType = "GATE", ring })).StatusCode);
+
         Assert.False((await Read<List<GeofenceView>>(await admin.GetAsync(areas))).Single(a => a.Name == "Block C").IsActive);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync(block, new { name = "Block C", zoneType = "YARD_ZONE", ring = bigger, yardBlock = "C" })).StatusCode);
     }
 
     [Fact]
@@ -341,6 +357,14 @@ public sealed class DriverAppApiTests(TasApiFactory factory) : ApiTestBase(facto
         Assert.Equal(HttpStatusCode.Forbidden, (await planner.PutAsJsonAsync($"{Terminal}/yard-map/roads", new { roads })).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync($"{Terminal}/yard-map/roads", new { roads })).StatusCode);
         Assert.Single((await Read<YardMapView>(await planner.GetAsync($"{Terminal}/yard-map"))).Roads);
+
+        // The editor reads the roads back as saved, one-way flag included.
+        using (var saved = JsonDocument.Parse(await (await planner.GetAsync($"{Terminal}/yard-map/roads")).Content.ReadAsStringAsync()))
+        {
+            var feature = saved.RootElement.GetProperty("features")[0];
+            Assert.True(feature.GetProperty("properties").GetProperty("oneWay").GetBoolean());
+            Assert.Equal(2, feature.GetProperty("geometry").GetProperty("coordinates").GetArrayLength());
+        }
 
         var bad = new { type = "FeatureCollection", features = new object[] { new { type = "Feature", geometry = new { type = "Point", coordinates = new[] { 39.17, 21.47 } } } } };
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"{Terminal}/yard-map/roads", new { roads = bad })).StatusCode);

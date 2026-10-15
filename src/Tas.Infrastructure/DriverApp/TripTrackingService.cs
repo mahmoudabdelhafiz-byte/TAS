@@ -160,27 +160,72 @@ public sealed class TripTrackingService(TasDbContext db, TimeProvider clock)
     /// <summary>Adds an area; returns its id, or the problems with the input.</summary>
     public async Task<(int? Id, IReadOnlyList<string> Errors)> CreateAsync(int terminalId, GeofenceInput input, CancellationToken ct = default)
     {
+        var (zone, block, wkt, errors) = await ValidateAsync(terminalId, null, input, ct);
+        if (errors.Count > 0)
+            return (null, errors);
+
+        var ids = await db.Database.SqlQuery<int>($"""
+            INSERT INTO geofence (terminal_id, name, zone_type, area, yard_block, triggers_check_in)
+            VALUES ({terminalId}, {input.Name.Trim()}, {zone}, ST_GeogFromText({wkt}), {block}, {input.TriggersCheckIn})
+            RETURNING geofence_id AS "Value"
+            """).ToListAsync(ct);
+        return (ids[0], Array.Empty<string>());
+    }
+
+    /// <summary>Changes an active area's name, kind, shape or block. NotFound when there is no such active area.</summary>
+    public async Task<(bool NotFound, IReadOnlyList<string> Errors)> UpdateAsync(int terminalId, int geofenceId, GeofenceInput input, CancellationToken ct = default)
+    {
+        var exists = await db.Database.SqlQuery<int>($"""
+            SELECT geofence_id AS "Value" FROM geofence WHERE terminal_id = {terminalId} AND geofence_id = {geofenceId} AND is_active
+            """).AnyAsync(ct);
+        if (!exists)
+            return (true, Array.Empty<string>());
+
+        var (zone, block, wkt, errors) = await ValidateAsync(terminalId, geofenceId, input, ct);
+        if (errors.Count > 0)
+            return (false, errors);
+
+        await db.Database.ExecuteSqlAsync($"""
+            UPDATE geofence SET name = {input.Name.Trim()}, zone_type = {zone}, area = ST_GeogFromText({wkt}),
+                   yard_block = {block}, triggers_check_in = {input.TriggersCheckIn}
+            WHERE terminal_id = {terminalId} AND geofence_id = {geofenceId}
+            """, ct);
+        return (false, Array.Empty<string>());
+    }
+
+    private async Task<(string Zone, string? Block, string Wkt, List<string> Errors)> ValidateAsync(
+        int terminalId, int? geofenceId, GeofenceInput input, CancellationToken ct)
+    {
         var errors = new List<string>();
         var zone = input.ZoneType?.Trim().ToUpperInvariant() ?? "";
-        if (string.IsNullOrWhiteSpace(input.Name) || input.Name.Length > 100)
+        if (string.IsNullOrWhiteSpace(input.Name) || input.Name.Trim().Length > 100)
             errors.Add("Give the area a name (up to 100 characters).");
         if (!ZoneTypes.Contains(zone))
             errors.Add($"Zone type must be one of {string.Join(", ", ZoneTypes)}.");
+
+        var block = string.IsNullOrWhiteSpace(input.YardBlock) ? null : input.YardBlock.Trim().ToUpperInvariant();
+        if (zone == "YARD_ZONE" && block is null)
+            errors.Add("A yard block needs the block name the TOS uses (for example A01).");
+        else if (block is { Length: > 20 })
+            errors.Add("The block name can be up to 20 characters.");
+        else if (block is not null && zone == "YARD_ZONE")
+        {
+            var others = await db.Database.SqlQuery<int>($"""
+                SELECT geofence_id AS "Value" FROM geofence
+                WHERE terminal_id = {terminalId} AND is_active AND zone_type = 'YARD_ZONE' AND upper(yard_block) = {block}
+                """).ToListAsync(ct);
+            if (others.Any(id => id != geofenceId))
+                errors.Add($"Block {block} is already drawn on the map.");
+        }
+
         var ring = (input.Ring ?? Array.Empty<double[]>()).ToList();
         if (ring.Count < 4 || ring.Any(p => p is not { Length: 2 } || p[0] is < -180 or > 180 || p[1] is < -90 or > 90))
             errors.Add("The area needs at least 4 [longitude, latitude] points.");
         else if (ring[0][0] != ring[^1][0] || ring[0][1] != ring[^1][1])
             ring.Add(ring[0]); // close the ring
-        if (errors.Count > 0)
-            return (null, errors);
 
-        var wkt = "POLYGON((" + string.Join(", ", ring.Select(p => FormattableString.Invariant($"{p[0]} {p[1]}"))) + "))";
-        var ids = await db.Database.SqlQuery<int>($"""
-            INSERT INTO geofence (terminal_id, name, zone_type, area, yard_block, triggers_check_in)
-            VALUES ({terminalId}, {input.Name.Trim()}, {zone}, ST_GeogFromText({wkt}), {input.YardBlock}, {input.TriggersCheckIn})
-            RETURNING geofence_id AS "Value"
-            """).ToListAsync(ct);
-        return (ids[0], Array.Empty<string>());
+        var wkt = errors.Count > 0 ? "" : "POLYGON((" + string.Join(", ", ring.Select(p => FormattableString.Invariant($"{p[0]} {p[1]}"))) + "))";
+        return (zone, zone == "YARD_ZONE" || zone == "CFS" ? block : null, wkt, errors);
     }
 
     public Task<int> DeactivateAsync(int terminalId, int geofenceId, CancellationToken ct = default) =>

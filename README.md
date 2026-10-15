@@ -95,8 +95,10 @@ Screens by role:
 | Role | Screens |
 |---|---|
 | Company admin / dispatcher | Book a truck (one, or several by BL / container list), Bulk upload, Appointments (own company), Fleet & users |
-| Planner, terminal admin | Slot board, KPIs, Capacity setup, Appointments (all companies), Book a truck / Bulk upload (on behalf of a company), Gate, Fleet & users (companies for terminal admins) |
+| Planner, terminal admin | Slot board, KPIs, Capacity setup, Terminal map (terminal admins edit, planners view), Appointments (all companies), Book a truck / Bulk upload (on behalf of a company), Gate, Fleet & users (companies for terminal admins) |
 | Gate clerk | Gate (board, truck check, gate in/out, trouble desk), Appointments |
+
+The terminal map editor draws blocks, gates, exits and roads (one-way in the drawn direction) over a background map, imports a GeoJSON export from CAD / GIS, checks that every block can be reached from the gate and left to the exit, and tries routes before saving. The background tiles come from the `yardsyncs-map-tiles` meta tag in `web/index.html` (OpenStreetMap by default; set any `{z}/{x}/{y}` tile server, or leave it empty for a plain grid on sites without internet) with its credit line in `yardsyncs-map-attribution`.
 
 Arabic and English, right-to-left in Arabic. Times are shown in the terminal's time zone. Messages that come from the server (check results, errors) are in English for now.
 
@@ -287,9 +289,11 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `GET` | `/api/driver/gate-pass` | Secret for the rotating gate QR `YS1:{passId}:{appointmentNo}:{code}` (8 digits, changes every 30 s, made offline on the phone; revoked on sign-in elsewhere) |
 | `POST` | `/api/driver/appointments/{no}/position` | `{latitude, longitude, speed?}` while on the way only: arrival estimate, terminal areas entered, automatic check-in in the pre-gate area |
 | `GET` / `POST` | `/api/terminals/{id}/geofences` | Terminal areas (approach, pre-gate, gate, yard zones…) as GeoJSON; terminal admins draw them as a ring of `[longitude, latitude]` points |
+| `PUT` | `/api/terminals/{id}/geofences/{gid}` | Terminal admins: change an area's name, kind, shape, block or check-in flag. Yard blocks need the TOS block name, unique among the terminal's blocks |
 | `POST` | `/api/terminals/{id}/geofences/{gid}/deactivate` | Remove an area |
 | `GET` | `/api/driver/appointments/{no}/yard?lat&lon` | After gate-in: stops in order (drops, then pickups, then exit) with block and row.bay.tier from the TOS, routes on the terminal's roads, and the yard map; `live: false` when the TOS can't be reached and the last known stops are shown |
 | `GET` | `/api/terminals/{id}/yard-map` | Areas and roads of the terminal (staff) |
+| `GET` | `/api/terminals/{id}/yard-map/roads` | The roads as saved (FeatureCollection with names and one-way flags), for the map editor |
 | `PUT` | `/api/terminals/{id}/yard-map/roads` | Terminal admins: `{roads: FeatureCollection}` of LineStrings in `[longitude, latitude]`, `properties.oneWay` for one-way roads (drawn direction); roads join where they share a point |
 
 Gate lanes accept the rotating gate pass in `qrToken` (as well as the static appointment code): the live code is checked and the truck is matched to its appointment. Gate pass secrets are stored encrypted; set `GatePass__Key` (32 bytes, base64) or a key is derived from the JWT signing key.
@@ -382,4 +386,6 @@ POST /api/terminals/1/appointments          (Authorization: Bearer <accessToken>
 - [x] Web portal, round 2: capacity setup (weekly plan grid, seasonal plans, reserved places, rules), bulk upload, fleet and users, KPI dashboard
 - [x] Driver app, part 1: sign-in by SMS code, my appointments with traffic light, gate QR code, start trip (Arabic, English, Urdu, Hindi)
 - [x] Rotating gate pass, positions on the way with arrival estimate, automatic check-in at the pre-gate, terminal areas
-- [ ] Driver app, next: push notifications, background tracking, yard navigation to the container's block
+- [x] Yard navigation: container's yard position from the TOS, routes on the terminal's roads, where-to-go screen in the app
+- [x] Terminal map editor in the portal: areas and roads, GeoJSON import, reachability check, route preview
+- [ ] Driver app, next: push notifications, background tracking, voice prompts

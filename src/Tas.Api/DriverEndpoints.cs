@@ -94,6 +94,10 @@ public static class DriverEndpoints
             AccessRules.CanViewCapacity(TasApi.User(http)!, terminalId)
                 ? Results.Ok(await service.MapViewAsync(terminalId, ct))
                 : TasApi.Forbidden("Only terminal staff of this terminal can see its map."));
+        yardMap.MapGet("/roads", async (int terminalId, HttpContext http, YardGuidanceService service, CancellationToken ct) =>
+            AccessRules.CanViewCapacity(TasApi.User(http)!, terminalId)
+                ? Results.Content(await service.RoadsAsync(terminalId, ct), "application/json")
+                : TasApi.Forbidden("Only terminal staff of this terminal can see its map."));
         yardMap.MapPut("/roads", async (int terminalId, RoadsInput body, HttpContext http, YardGuidanceService service, CancellationToken ct) =>
         {
             var user = TasApi.User(http)!;
@@ -119,6 +123,17 @@ public static class DriverEndpoints
             return id is null
                 ? TasApi.Problem(StatusCodes.Status400BadRequest, string.Join(" ", errors), new Dictionary<string, object?> { ["errors"] = errors })
                 : Results.Created($"/api/terminals/{terminalId}/geofences/{id}", new { geofenceId = id });
+        });
+        areas.MapPut("/{geofenceId:int}", async (int terminalId, int geofenceId, GeofenceInput body, HttpContext http, TripTrackingService service, CancellationToken ct) =>
+        {
+            if (!AccessRules.CanManageCategories(TasApi.User(http)!, terminalId))
+                return TasApi.Forbidden("Only terminal admins of this terminal can change areas.");
+            var (notFound, errors) = await service.UpdateAsync(terminalId, geofenceId, body, ct);
+            if (notFound)
+                return TasApi.Problem(StatusCodes.Status404NotFound, $"Area {geofenceId} not found.");
+            return errors.Count == 0
+                ? Results.NoContent()
+                : TasApi.Problem(StatusCodes.Status400BadRequest, string.Join(" ", errors), new Dictionary<string, object?> { ["errors"] = errors });
         });
         areas.MapPost("/{geofenceId:int}/deactivate", async (int terminalId, int geofenceId, HttpContext http, TripTrackingService service, CancellationToken ct) =>
         {

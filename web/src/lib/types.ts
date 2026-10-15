@@ -240,3 +240,14 @@ export interface ContainerLookupResult {
   blNo: string | null;
   containers: LookupContainer[];
 }
+
+/** A terminal area (GET /api/terminals/{id}/geofences); GeoJson is the Polygon. */
+export interface GeofenceView {
+  geofenceId: number;
+  name: string;
+  zoneType: string;
+  yardBlock: string | null;
+  triggersCheckIn: boolean;
+  isActive: boolean;
+  geoJson: string;
+}
