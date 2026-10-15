@@ -123,6 +123,27 @@ export class ApiClient {
   }
 
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const response = await this.authorized(method, path, body);
+    if (response.status === 204) return undefined as T;
+    const text = await response.text();
+    return (text ? JSON.parse(text) : undefined) as T;
+  }
+
+  /** Multipart upload (a file in a form). */
+  postForm<T>(path: string, form: FormData): Promise<T> {
+    return this.request<T>('POST', path, form);
+  }
+
+  /** A file from the API, with the name the server suggests. */
+  async download(path: string): Promise<{ blob: Blob; fileName: string | null }> {
+    const response = await this.authorized('GET', path);
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+    return { blob: await response.blob(), fileName: match ? decodeURIComponent(match[1]) : null };
+  }
+
+  /** Sends with the access token, refreshes once on 401, turns errors into ApiError. */
+  private async authorized(method: string, path: string, body?: unknown): Promise<Response> {
     let response = await this.send(method, path, body);
     if (response.status === 401 && this.session && (await this.refresh())) {
       response = await this.send(method, path, body);
@@ -132,19 +153,18 @@ export class ApiClient {
       throw new ApiError(401, 'Session ended.');
     }
     if (!response.ok) throw await readProblem(response);
-    if (response.status === 204) return undefined as T;
-    const text = await response.text();
-    return (text ? JSON.parse(text) : undefined) as T;
+    return response;
   }
 
   private send(method: string, path: string, body?: unknown): Promise<Response> {
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
     if (this.session) headers.Authorization = `Bearer ${this.session.accessToken}`;
     return this.fetcher(`${this.base}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
     });
   }
 

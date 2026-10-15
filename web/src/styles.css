@@ -491,3 +491,79 @@ textarea:focus { border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px
 .grid.compact tbody tr { cursor: default; }
 td .check-fail { color: var(--red); font-size: 14px; }
 .book-side .table-wrap + .hint { margin-top: 10px; }
+
+/* ------------------------------------------------------------------ capacity setup */
+
+button.seg { font: inherit; color: inherit; cursor: pointer; }
+.field-tiny { max-width: 90px; }
+.field-row { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.field-row > span { flex: 1; color: var(--text); font-size: 14.5px; }
+.field-row input { width: 90px; text-align: center; }
+.small-legend { font-size: 14px; margin-bottom: 4px; }
+.quota-list { display: grid; gap: 6px; }
+.form-stack { display: flex; flex-direction: column; gap: 12px; }
+.form-stack > .btn { align-self: flex-start; }
+.form-stack h2 { margin: 0; }
+
+.plans { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+.plan-list ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.plan-item {
+  width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: start;
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  font: inherit; color: inherit; cursor: pointer;
+}
+.plan-item:hover { border-color: var(--ink); }
+.plan-item.active { border-color: var(--teal); box-shadow: inset 3px 0 0 var(--teal); }
+[dir='rtl'] .plan-item.active { box-shadow: inset -3px 0 0 var(--teal); }
+.plan-name { font-weight: 600; }
+.plan-when { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.plan-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; margin-bottom: 10px; }
+.plan-fields .field:first-child { min-width: 220px; }
+.plan-summary { margin: 0 0 8px; margin-inline-start: auto; color: var(--muted); }
+.plan-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.plan-side { display: flex; flex-direction: column; gap: 14px; position: sticky; inset-block-start: 16px; }
+.plan-save { display: flex; flex-direction: column; gap: 10px; align-items: stretch; padding-top: 4px; }
+
+.week-grid-wrap { max-height: calc(100vh - 260px); overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); user-select: none; }
+.week-grid { border-collapse: separate; border-spacing: 0; width: 100%; }
+.week-grid th { position: sticky; background: var(--surface); z-index: 1; font-weight: 500; font-size: 13px; padding: 6px 8px; }
+.week-grid thead th { inset-block-start: 0; border-bottom: 1px solid var(--line); }
+.week-grid tbody th { inset-inline-start: 0; text-align: end; border-inline-end: 1px solid var(--line); width: 64px; }
+.week-grid .link-btn { color: var(--ink); text-decoration: none; font-weight: 500; }
+.week-grid td {
+  height: 28px; min-width: 64px; text-align: center; cursor: cell;
+  border-bottom: 1px solid #fff; border-inline-end: 1px solid #fff;
+}
+.week-grid td.shut { background: repeating-linear-gradient(135deg, #f1f4f6 0 5px, #e4e9ed 5px 6px); }
+.week-grid td.picked { box-shadow: inset 0 0 0 2px var(--ink); }
+.cell-num { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.cell-num.light { color: #fff; }
+
+.setup-two { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 28px; align-items: start; }
+
+/* ------------------------------------------------------------------ bulk upload */
+
+.bulk-steps { list-style: none; counter-reset: step; margin: 0 0 20px; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.bulk-steps li {
+  counter-increment: step; position: relative; padding: 16px 16px 16px 52px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+}
+[dir='rtl'] .bulk-steps li { padding: 16px 52px 16px 16px; }
+.bulk-steps li::before {
+  content: counter(step); position: absolute; inset-inline-start: 16px; inset-block-start: 15px;
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ink); color: #fff; font-size: 13px; font-weight: 600;
+}
+.bulk-steps h2 { font-size: 15px; }
+.bulk-steps .actions { margin: 0; }
+.file-pick { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.file-name { font-weight: 500; }
+.ok-text { color: var(--green); font-weight: 500; }
+.bulk-result h2 { margin-bottom: 12px; }
+
+@media (max-width: 1100px) {
+  .plans, .plan-body, .setup-two, .bulk-steps { grid-template-columns: minmax(0, 1fr); }
+  .plan-side { position: static; }
+}

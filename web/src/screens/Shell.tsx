@@ -6,13 +6,17 @@ import type { Terminal } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { Appointments } from './Appointments.tsx';
 import { Book } from './Book.tsx';
+import { BulkUpload } from './BulkUpload.tsx';
+import { CapacitySetup } from './CapacitySetup.tsx';
 import { GateScreen } from './Gate.tsx';
 import { SlotBoard } from './SlotBoard.tsx';
 
 const navText: Record<Screen, TextKey> = {
   book: 'nav.book',
+  bulk: 'nav.bulk',
   appointments: 'nav.appointments',
   slots: 'nav.slots',
+  setup: 'nav.setup',
   gate: 'nav.gate',
 };
 
@@ -73,6 +77,8 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
           {screen === 'appointments' && <Appointments />}
           {screen === 'slots' && <SlotBoard />}
           {screen === 'gate' && <GateScreen />}
+          {screen === 'bulk' && <BulkUpload />}
+          {screen === 'setup' && <CapacitySetup />}
         </main>
       </div>
     </div>
@@ -96,6 +102,8 @@ function NavIcon({ screen }: { screen: Screen }) {
     appointments: <><path d="M4 6h16M4 12h16M4 18h10" /><circle cx="19" cy="18" r="2" /></>,
     slots: <><rect x="3" y="12" width="4" height="9" /><rect x="10" y="6" width="4" height="15" /><rect x="17" y="9" width="4" height="12" /></>,
     gate: <><path d="M3 21V8l9-5 9 5v13" /><path d="M7 21v-8h10v8M7 17h10" /></>,
+    bulk: <><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4M9 12h6M9 16h6" /></>,
+    setup: <><rect x="3" y="4" width="18" height="16" rx="1" /><path d="M3 9h18M9 4v16M15 4v16" /></>,
   };
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"

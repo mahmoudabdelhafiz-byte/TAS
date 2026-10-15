@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addDays, clock, dayLabel, duration, localDate, slotRange as range } from '../src/lib/time.ts';
+import { addDays, clock, dayLabel, duration, localDate, slotRange as range, zonedIso } from '../src/lib/time.ts';
 
 test('local date follows the terminal zone, not the browser', () => {
   // 22:30 UTC on 19 Oct is already 20 Oct in Riyadh (UTC+3).
@@ -36,4 +36,11 @@ test('durations', () => {
   assert.equal(duration(125), '2 h 05');
   assert.equal(duration(-3), '0 min');
   assert.equal(duration(90, 'دقيقة', 'ساعة'), '1 ساعة 30');
+});
+
+test('local terminal time becomes an instant with the zone offset', () => {
+  assert.equal(zonedIso('2026-10-20', '10:00', 'Asia/Riyadh'), '2026-10-20T10:00:00+03:00');
+  assert.equal(zonedIso('2026-07-01', '08:30', 'Europe/London'), '2026-07-01T08:30:00+01:00');
+  assert.equal(zonedIso('2026-01-01', '08:30', 'Europe/London'), '2026-01-01T08:30:00+00:00');
+  assert.equal(zonedIso('2026-01-01', '00:00', 'America/New_York'), '2026-01-01T00:00:00-05:00');
 });
