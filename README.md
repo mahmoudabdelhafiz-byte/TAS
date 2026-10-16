@@ -125,6 +125,10 @@ The terminal map editor draws blocks, gates, exits and roads (one-way in the dra
 
 Arabic and English, right-to-left in Arabic. Times are shown in the terminal's time zone. Messages that come from the server (check results, errors) are in English for now.
 
+**Help** (`#/help`) has the user guides for each role in Arabic and English, ready to print. They are Markdown in
+`web/src/help/en` and `web/src/help/ar`; when a screen's wording changes, the web tests point at the guides that
+name it.
+
 ## API (so far)
 
 All endpoints except `/health` and login/refresh/logout need `Authorization: Bearer <accessToken>`.

@@ -340,6 +340,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Environments: staging upgraded on every merge, production on a release after approval — over SSH once the servers and secrets exist |
 | ✅ | Known vulnerabilities: image scanned (Grype), .NET and npm packages checked, Dependabot weekly |
 
+
+### 32. User guides (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | **Help** in the portal for every role, in Arabic and English, printable: getting started, booking and appointments, tracking containers, fleet and users (with drivers' data rights), Yardsyncs mobile for drivers (to print and hand out), the gate, the control room, capacity planning, terminal administration with onboarding a trucking company |
+| ✅ | Guides are Markdown in `web/src/help/{en,ar}/`; tests check both languages have the same sections and that every button or label the guides name in bold is a word on the screen (portal and app), so the guides can't drift from the screens unnoticed |
+| ✅ | Yardsyncs mobile: the Arabic, Urdu and Hindi location texts said sharing stops at the pre-gate; now they say what the app does (on the way and inside, not while waiting at the gate, not after leaving) |
+
 ---
 
 ## Remaining
@@ -404,7 +412,8 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Security review; PDPL privacy: retention, drivers' copy and erasure, location notice (`docs/security.md`) |
 | ⬜ | Outside penetration test; two-step sign-in for admins; audit trail screen; secret rotation procedure |
 | ✅ | Load test for peak booking times (CI size every pull request; `peak` profile to run on the customer's staging before go-live) |
-| ⬜ | User guides (Arabic / English) and onboarding for trucking companies |
+| ✅ | User guides (Arabic / English) and onboarding for trucking companies — **Help** in the portal |
+| ⬜ | Driver guide in Urdu and Hindi; short videos for drivers |
 | ⬜ | **Reminder for Mahmoud when development is finished:** make the GitHub repository private (Settings → Danger Zone → Change visibility) |
 
 ### Phase G — Generic product (any terminal operator)

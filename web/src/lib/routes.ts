@@ -2,7 +2,7 @@
 
 import type { UserRole } from './types.ts';
 
-export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'map' | 'control' | 'gate' | 'kpi' | 'fleet';
+export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'map' | 'control' | 'gate' | 'kpi' | 'fleet' | 'help';
 
 export interface Route {
   screen: Screen | null;
@@ -14,7 +14,7 @@ export function parseHash(hash: string): Route {
   const [path, query = ''] = clean.split('?');
   const params: Record<string, string> = {};
   for (const [key, value] of new URLSearchParams(query)) params[key] = value;
-  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'map', 'control', 'gate', 'kpi', 'fleet'] as const).find(s => s === path) ?? null;
+  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'map', 'control', 'gate', 'kpi', 'fleet', 'help'] as const).find(s => s === path) ?? null;
   return { screen, params };
 }
 
@@ -25,8 +25,12 @@ export function buildHash(screen: Screen, params: Record<string, string | undefi
   return `#/${screen}${text ? `?${text}` : ''}`;
 }
 
-/** The menu for a role, in order; the first entry is the home screen. */
+/** The menu for a role, in order; the first entry is the home screen. Help is last for everyone. */
 export function screensFor(role: UserRole): Screen[] {
+  return [...workScreens(role), 'help'];
+}
+
+function workScreens(role: UserRole): Screen[] {
   switch (role) {
     case 'CompanyAdmin':
     case 'CompanyUser':
