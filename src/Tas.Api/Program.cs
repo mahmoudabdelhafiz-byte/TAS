@@ -509,6 +509,9 @@ app.MapDriverApp();
 if (app.Environment.IsDevelopment())
 {
     app.MapPost("/api/dev/seed", async (DemoDataSeeder seeder, CancellationToken ct) => Results.Ok(await seeder.SeedAsync(ct)));
+    // Load test data (loadtest/): many companies with admins and drivers already on the way.
+    app.MapPost("/api/dev/load-seed", async (int? companies, int? driversPerCompany, LoadTestSeeder seeder, CancellationToken ct) =>
+        Results.Ok(await seeder.SeedAsync(companies ?? 100, driversPerCompany ?? 2, ct)));
     app.MapPost("/api/dev/no-shows", async (NoShowService service, CancellationToken ct) =>
         Results.Ok(new { marked = await service.MarkNoShowsAsync(ct) }));
 }

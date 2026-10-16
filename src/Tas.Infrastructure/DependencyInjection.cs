@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddHostedService<RevalidationWorker>();
         services.AddHostedService<NoShowWorker>();
         services.AddScoped<DemoDataSeeder>();
+        services.AddScoped<LoadTestSeeder>();
 
         // Gate
         services.AddScoped<GateService>();

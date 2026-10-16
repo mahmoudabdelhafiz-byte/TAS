@@ -252,6 +252,37 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.smoke.yml run --rm backup now
           ls -l backups/ && ls backups/tas-*.dump
 
+      # Peak hour on the CI runner: dispatchers booking the busy hours, trucks reporting positions, control room
+      # watching (loadtest/README.md). Thresholds in loadtest/peak.js; the booking rules are checked afterwards.
+      - name: Load test
+        working-directory: deploy
+        run: |
+          compose="docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f ../loadtest/compose.load.yml"
+          $compose up -d app
+          for i in $(seq 1 60); do curl -fsS localhost:8080/health/ready >/dev/null 2>&1 && break; sleep 3; done
+          set +e
+          docker run --rm --network host --user "$(id -u)" -v "$PWD/../loadtest:/scripts" grafana/k6:0.54.0 \
+            run --quiet --summary-export /scripts/summary.json /scripts/peak.js > ../loadtest/k6.log 2>&1
+          result=$?
+          set -e
+          tail -60 ../loadtest/k6.log
+          if [ -f ../loadtest/summary.json ]; then
+            jq -r '.metrics | to_entries[] | select(.key | test("^http_req_duration\\{name:")) |
+              "\(.key | capture("name:(?<n>[^}]+)").n): p95 \(.value["p(95)"] | floor) ms, p99 \(.value["p(99)"] | floor) ms, max \(.value.max | floor) ms"' \
+              ../loadtest/summary.json | while read -r line; do echo "::notice title=load::$line"; done
+            jq -r '"requests \(.metrics.http_reqs.count) (\(.metrics.http_reqs.rate | floor)/s), failed \(.metrics.http_req_failed.value * 100 | . * 100 | floor / 100)%, booked \(.metrics.booked.count // 0), slot taken \(.metrics.slot_taken.count // 0), no slot left \(.metrics.no_slot_left.count // 0)"' \
+              ../loadtest/summary.json | while read -r line; do echo "::notice title=load::$line"; done
+          fi
+          grep -E "✗|crossed|threshold" ../loadtest/k6.log | head -20 | while read -r line; do echo "::warning title=k6::$line"; done || true
+          exit $result
+
+      - name: Booking rules after the load
+        working-directory: deploy
+        run: |
+          line=$(docker compose -f docker-compose.yml -f docker-compose.smoke.yml exec -T db psql -U tas -d tas -At < ../loadtest/check.sql)
+          echo "::notice title=booking rules::$line"
+          echo "$line" | tr ' ' '\n' | grep -v '^appointments=' | grep -v '=0$' && exit 1 || true
+
       - name: Logs
         if: always()
         working-directory: deploy
