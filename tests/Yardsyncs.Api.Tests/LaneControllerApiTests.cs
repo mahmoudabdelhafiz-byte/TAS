@@ -96,7 +96,8 @@ public sealed class LaneControllerApiTests(YardsyncsApiFactory factory) : ApiTes
         var booked = await BookTruck1234(); // tomorrow
         var (laneId, devices) = await AutomaticIn1(admin);
 
-        await devices["IN1-CAM-FRONT"].PostAsJsonAsync("/api/devices/reads", new { plate = "1234 ABJ" });
+        // The driver types the appointment number at the kiosk (a plate only finds bookings within a day): decided at once.
+        Assert.Equal(HttpStatusCode.Created, (await devices["IN1-KIOSK"].PostAsJsonAsync("/api/devices/reads", new { appointmentNo = booked.AppointmentNo })).StatusCode);
         var tx = Assert.Single(await Read<List<LaneTransactionView>>(await admin.GetAsync($"{Gate}/transactions?laneId={laneId}")));
         Assert.Equal((LaneTransactionStatus.Referred, "EARLY"), (tx.Status, tx.Reason));
         Assert.NotNull(tx.TroubleId);

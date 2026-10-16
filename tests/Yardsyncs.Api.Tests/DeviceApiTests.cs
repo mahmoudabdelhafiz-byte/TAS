@@ -49,7 +49,7 @@ public sealed class DeviceApiTests(YardsyncsApiFactory factory) : ApiTestBase(fa
         var read = await camera.PostAsJsonAsync("/api/devices/reads", new
         {
             plate = "1234 abj", plateConfidence = 93,
-            containers = new[] { new { number = "MSCU 123456-6", isoCode = "22g1" }, new { number = "MSCU1234567", isoCode = (string?)null } },
+            containers = new[] { new { number = "MSCU 123456-6", isoCode = (string?)"22g1" }, new { number = "MSCU1234567", isoCode = (string?)null } },
             photos = new[] { "https://ocr.local/img/1.jpg" },
         });
         Assert.Equal(HttpStatusCode.Created, read.StatusCode);
