@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/node_modules/
+web/dist/
+src/Tas.Api/wwwroot/
+mobile/
+tests/
+TestResults/
+.git/
+.github/
+deploy/.env
+deploy/backups/
+*.md
+!README.md

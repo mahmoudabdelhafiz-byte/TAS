@@ -41,6 +41,19 @@ web/                          web portal (React + TypeScript, Vite) for trucking
 mobile/                       driver app (Flutter)
 ```
 
+## Deploying
+
+`Dockerfile` builds one image with the API and the portal. `deploy/` runs it on one server (on-premise at a terminal
+or a cloud VM) with PostgreSQL + PostGIS, HTTPS (Caddy) and nightly backups; the same image runs on cloud container
+platforms with a managed database. Step by step, upgrades, restore and monitoring: [`deploy/README.md`](deploy/README.md).
+
+- The database is created and upgraded by the application itself from `db/` (see [`db/README.md`](db/README.md));
+  `dotnet Tas.Api.dll migrate` does it on demand.
+- Health: `GET /health/live`, `GET /health/ready` (database reachable and up to date); `GET /api/ops/status` for
+  admins (version, database, message and event backlogs).
+- Production settings: `Logging__Json=true` (one JSON object per line), `Proxy__TrustForwardedHeaders=true` behind a
+  reverse proxy, HSTS and browser security headers (CSP, no framing) are on outside Development.
+
 ## Running locally
 
 Requires the .NET 10 SDK and PostgreSQL 15+ with PostGIS.

@@ -1,0 +1,80 @@
+# Yardsyncs on one server (on-premise at the terminal, or a cloud VM): database, app, HTTPS and nightly backups.
+#   cp .env.example .env    # fill in every value
+#   docker compose up -d
+# Upgrade: docker compose pull (or build) && docker compose up -d — the app migrates the database on start.
+
+name: yardsyncs
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tas
+      POSTGRES_USER: tas
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tas -d tas"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ${YARDSYNCS_IMAGE:-yardsyncs:latest}
+    build:
+      context: ..
+      args:
+        VERSION: ${YARDSYNCS_VERSION:-0.0.0-local}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      ConnectionStrings__Tas: Host=db;Port=5432;Database=tas;Username=tas;Password=${DB_PASSWORD}
+      Proxy__TrustForwardedHeaders: "true"
+      PasswordLinks__PortalUrl: https://${TAS_DOMAIN:?set TAS_DOMAIN in .env}
+    expose:
+      - "8080"
+
+  # HTTPS in front of the app: TLS = your email for a Let's Encrypt certificate, or "internal" inside a terminal network.
+  proxy:
+    image: caddy:2.8
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TAS_DOMAIN: ${TAS_DOMAIN}
+      TLS: ${TLS:?set TLS in .env (your email, or internal)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+  # Nightly database backup (pg_dump, custom format) kept for BACKUP_DAYS days in ./backups.
+  backup:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: tas
+      PGUSER: tas
+      PGPASSWORD: ${DB_PASSWORD}
+      BACKUP_AT: ${BACKUP_AT:-01:30}
+      BACKUP_DAYS: ${BACKUP_DAYS:-14}
+      TZ: ${TZ:-Asia/Riyadh}
+    volumes:
+      - ./backups:/backups
+      - ./backup.sh:/backup.sh:ro
+    entrypoint: ["bash", "/backup.sh"]
+
+volumes:
+  db-data:
+  caddy-data:

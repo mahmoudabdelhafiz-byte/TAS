@@ -31,6 +31,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the schema check compares with the base branch
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -43,6 +45,14 @@ jobs:
           psql -h localhost -U postgres -d tas_test -v ON_ERROR_STOP=1 -q -f db/schema.sql
           psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -q -c "CREATE DATABASE tas_api_test"
           psql -h localhost -U postgres -d tas_api_test -v ON_ERROR_STOP=1 -q -f db/schema.sql
+
+      - name: Schema matches migrations
+        if: github.event_name == 'pull_request'
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash db/check-migrations.sh "origin/${{ github.base_ref }}"
 
       - name: Restore
         run: dotnet restore TAS.slnx
@@ -197,4 +207,50 @@ jobs:
         if: failure()
         run: |
           flutter build ios --debug --no-codesign --dart-define=YARDSYNCS_API=https://tas.example.invalid 2>&1 | grep -iE "error|failed|requires|deployment|pod" | head -40 | while read -r line; do echo "::error title=ios build::$line"; done
+
+  # The deployable server: build the image, start it with a fresh database the way deploy/ does, and check that it
+  # creates the schema, answers ready, serves the portal, signs the bootstrap admin in, restarts cleanly and backs up.
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build image
+        run: docker build -t yardsyncs:latest --build-arg VERSION=ci-${{ github.sha }} .
+
+      - name: Start database and app
+        working-directory: deploy
+        run: |
+          cat > .env <<EOF
+          TAS_DOMAIN=localhost
+          TLS=internal
+          DB_PASSWORD=ci$(openssl rand -hex 12)
+          Jwt__SigningKey=$(openssl rand -base64 48)
+          GatePass__Key=$(openssl rand -base64 32)
+          Bootstrap__AdminEmail=admin@ci.example
+          Bootstrap__AdminPassword=Yard-Ci-2026-pass
+          Tos__Adapter=Fake
+          EOF
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml up -d db app
+
+      - name: Ready, portal, sign-in, restart, backup
+        working-directory: deploy
+        run: |
+          ready() { for i in $(seq 1 60); do curl -fsS localhost:8080/health/ready > ready.json 2>/dev/null && return 0; sleep 3; done; return 1; }
+          ready && cat ready.json && grep -q Healthy ready.json
+          curl -fsS localhost:8080/ | grep -q 'id="root"'
+          curl -fsSI localhost:8080/health/live | grep -qi 'content-security-policy'
+          curl -fsS -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' \
+            -d '{"email":"admin@ci.example","password":"Yard-Ci-2026-pass"}' | grep -q accessToken
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml restart app
+          ready && grep -q Healthy ready.json
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml run --rm backup now
+          ls -l backups/ && ls backups/tas-*.dump
+
+      - name: Logs
+        if: always()
+        working-directory: deploy
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml logs --no-color app | tail -80
+          docker compose -f docker-compose.yml -f docker-compose.smoke.yml logs --no-color app 2>&1 | grep -iE '"LogLevel":"(Error|Critical)"|fail|exception' | head -20 | while read -r line; do echo "::warning title=app log::$line"; done || true
 

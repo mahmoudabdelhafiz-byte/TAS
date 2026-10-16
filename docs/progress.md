@@ -293,6 +293,16 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Follow containers: re-checked every 15 minutes, an email the moment one becomes ready to collect (Arabic, English, Urdu, Hindi); 30 days or until collected (migration 011) |
 | ✅ | Tests: states from a bill of lading, visibility of other companies' bookings, following and the ready email |
 
+### 28. Production readiness, part 1 (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | One Docker image with the API and the portal; non-root, JSON logs, version stamped |
+| ✅ | Database created and upgraded by the app from the SQL in `db/` (version history in `schema_migration`, lock against parallel upgrades, `migrate` command); CI checks on every pull request that the previous schema plus new migrations equals `schema.sql`, and that migrations run twice safely |
+| ✅ | On one server (`deploy/`): PostgreSQL + PostGIS, the app, HTTPS with Caddy (Let's Encrypt or internal certificate authority), nightly backups with retention; guide for install, upgrade, restore, cloud hosting and monitoring |
+| ✅ | Health `/health/live` and `/health/ready`; `/api/ops/status` (version, database, message and event backlogs) for admins |
+| ✅ | Security headers (CSP, no framing, nosniff), HSTS, client address and https from the reverse proxy (rate limits per real client) |
+| ✅ | CI builds the image and starts it with a fresh database: schema created, ready, portal served, admin signs in, restart, backup |
+
 ---
 
 ## Remaining
@@ -300,7 +310,6 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase A — Backend MVP (make it usable by real customers)
 | | Item | Notes |
 |---|---|---|
-| ⬜ | EF Core migrations | Replace `db/schema.sql` as the source of truth |
 
 ### Phase B — Gate
 | | Item | Notes |
@@ -344,13 +353,16 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase F — Production readiness
 | | Item |
 |---|---|
-| ⬜ | One set of Docker images (API + portal) for both hosting modes; environments dev / staging / production |
+| ✅ | One Docker image (API + portal) for both hosting modes |
+| ⬜ | Environments dev / staging / production; image published to a registry with version tags; automatic updates for the cloud |
 | ⬜ | **Cloud (hosted by us):** one installation serving several terminals, managed PostgreSQL, TLS, automatic updates |
-| ⬜ | **On-premise (at the terminal):** install package for the terminal's servers (Docker Compose or Kubernetes), runs without internet except for SMS / WhatsApp / push and updates; upgrade and rollback guide |
+| ✅ | **On-premise (at the terminal):** Docker Compose package with install, upgrade and restore guide (`deploy/`) |
+| ⬜ | On-premise: Kubernetes / Helm variant if a terminal asks; rollback of a database upgrade (today: restore the backup taken before) |
 | ⬜ | N4 reach from the cloud: secure link to the terminal's N4 (site-to-site VPN, or a small relay agent installed at the terminal that calls N4 and connects out to the cloud) |
 | ⬜ | Driver app and trucking companies reach an on-premise installation: public address in the terminal's DMZ, or a cloud relay |
 | ⬜ | Licensing for on-premise installations; SQL Server support if a terminal does not allow PostgreSQL ❓ |
-| ⬜ | Backups, monitoring, logging, alerting |
+| ✅ | Backups, health checks, JSON logging, status for monitoring |
+| ⬜ | Alerting wired to the customer's monitoring (rules listed in `deploy/README.md`); off-site copy of backups |
 | ⬜ | Security review; PDPL privacy (location only during active visits, consent) |
 | ⬜ | Load test for peak booking times |
 | ⬜ | User guides (Arabic / English) and onboarding for trucking companies |
