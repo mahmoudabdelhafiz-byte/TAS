@@ -279,9 +279,10 @@ jobs:
       - name: Booking rules after the load
         working-directory: deploy
         run: |
-          line=$(docker compose -f docker-compose.yml -f docker-compose.smoke.yml exec -T db psql -U tas -d tas -At < ../loadtest/check.sql)
+          line=$(docker compose -f docker-compose.yml -f docker-compose.smoke.yml exec -T db psql -U tas -d tas -At < ../loadtest/check.sql 2>&1) || {
+            echo "::error title=booking rules::$line"; exit 1; }
           echo "::notice title=booking rules::$line"
-          echo "$line" | tr ' ' '\n' | grep -v '^appointments=' | grep -v '=0$' && exit 1 || true
+          echo "$line" | tr ' ' '\n' | grep -vE '^(appointments|connections)=' | grep -v '=0$' && exit 1 || true
 
       - name: Logs
         if: always()

@@ -9,6 +9,8 @@ services:
   db:
     image: postgis/postgis:16-3.4
     restart: unless-stopped
+    # Room for the app's connection pool (DB_POOL), backups and an administrator: the default 100 is all one pool.
+    command: postgres -c max_connections=${DB_MAX_CONNECTIONS:-150}
     environment:
       POSTGRES_DB: tas
       POSTGRES_USER: tas
@@ -33,7 +35,7 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      ConnectionStrings__Tas: Host=db;Port=5432;Database=tas;Username=tas;Password=${DB_PASSWORD}
+      ConnectionStrings__Tas: Host=db;Port=5432;Database=tas;Username=tas;Password=${DB_PASSWORD};Maximum Pool Size=${DB_POOL:-60}
       Proxy__TrustForwardedHeaders: "true"
       PasswordLinks__PortalUrl: https://${TAS_DOMAIN:?set TAS_DOMAIN in .env}
     expose:

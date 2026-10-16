@@ -19,7 +19,7 @@ public sealed class ConcurrencyApiTests(TasApiFactory factory) : ApiTestBase(fac
         var gulf = await As(DemoDataSeeder.OtherDispatcherEmail);
         for (var round = 0; round < 5; round++)
         {
-            var container = round switch { 0 => "MSCU1234566", 1 => "MSCU5523417", 2 => "TGHU8812340", 3 => "MEDU2601003", _ => "CMAU5100028" };
+            var container = Container("LDTU", 100 + round);
             var answers = await Task.WhenAll(
                 alNoor.PostAsJsonAsync(Appointments, ImportBooking(container: container)),
                 gulf.PostAsJsonAsync(Appointments, ImportBooking(container: container)),
@@ -39,7 +39,7 @@ public sealed class ConcurrencyApiTests(TasApiFactory factory) : ApiTestBase(fac
     {
         if (!Enabled) return;
 
-        // 40 import bookings at once for a slot that takes 15 imports (and 31 trucks).
+        // 40 import bookings at once: more than the slot takes (on a weekday 15 imports, on Fri / Sat 20 trucks).
         var alNoor = await As(DemoDataSeeder.DispatcherEmail);
         var answers = await Task.WhenAll(Enumerable.Range(0, 40).Select(i =>
             alNoor.PostAsJsonAsync(Appointments, ImportBooking(container: Container("LDTU", i)))));
@@ -49,12 +49,22 @@ public sealed class ConcurrencyApiTests(TasApiFactory factory) : ApiTestBase(fac
         var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
         var booked = await db.Appointments.CountAsync(a => a.SlotId == SlotId);
         Assert.Equal(answers.Count(a => a.StatusCode == HttpStatusCode.Created), booked);
-        Assert.InRange(booked, 1, 15);
-        Assert.Equal(booked, await db.Slots.Where(s => s.SlotId == SlotId).Select(s => s.TotalBooked).SingleAsync());
-        Assert.Equal(booked, await db.Database.SqlQuery<int>($"""
-            SELECT booked AS "Value" FROM slot_category_capacity c JOIN transaction_category t USING (category_id)
+        Assert.Contains(answers, a => a.StatusCode == HttpStatusCode.Conflict);
+        var slot = await db.Slots.AsNoTracking().SingleAsync(s => s.SlotId == SlotId);
+        Assert.Equal(booked, slot.TotalBooked);
+        Assert.True(booked <= slot.TotalCapacity - 2, $"{booked} booked, capacity {slot.TotalCapacity} less 2 held for walk-ins");
+        var imports = await db.Database.SqlQuery<ImportQuota>($"""
+            SELECT booked AS "Booked", quota_capacity AS "Quota" FROM slot_category_capacity c JOIN transaction_category t USING (category_id)
             WHERE c.slot_id = {SlotId} AND t.code = 'IMP_PICKUP'
-            """).SingleAsync());
+            """).SingleAsync();
+        Assert.Equal(booked, imports.Booked);
+        Assert.True(imports.Booked <= imports.Quota);
+    }
+
+    private sealed class ImportQuota
+    {
+        public int Booked { get; set; }
+        public int Quota { get; set; }
     }
 
     /// <summary>A valid ISO 6346 number: owner code + 6-digit serial + check digit.</summary>

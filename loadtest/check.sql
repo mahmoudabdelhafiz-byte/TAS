@@ -9,6 +9,7 @@ WITH live AS (
 )
 SELECT concat_ws(' ',
     'appointments=' || (SELECT count(*) FROM live),
+    'connections=' || (SELECT count(*) FROM pg_stat_activity WHERE datname = 'tas'),
     -- more trucks in a slot than it takes
     'oversold_slots=' || (SELECT count(*) FROM slot WHERE total_booked > total_capacity),
     -- the slot counter disagrees with the appointments in it
