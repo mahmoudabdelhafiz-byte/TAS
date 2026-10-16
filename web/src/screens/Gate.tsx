@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { ApiError } from '../lib/api.ts';
 import { readLookup } from '../lib/gate.ts';
-import { duration, stamp } from '../lib/time.ts';
+import { clock, duration, stamp } from '../lib/time.ts';
 import type { AdminResponse, ArrivalResult, GateBoard, GateBoardTruck, Lane, LaneState, Trouble } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, TrafficLight, useLoad } from '../ui/kit.tsx';
@@ -243,6 +243,8 @@ function LaneStrip({ lanes, onChanged, onError }: { lanes: Lane[]; onChanged: ()
 function LaneTile({ lane, onChanged, onError }: { lane: Lane; onChanged: () => void; onError: (m: string) => void }) {
   const { api, t, terminal } = useApp();
   const [closing, setClosing] = useState(false);
+  const hasBarrier = lane.devices.some(d => d.isActive && d.kind === 'Barrier');
+  const trouble = lane.devices.filter(d => d.isActive && (d.connection === 'Offline' || d.connection === 'Fault'));
   const [state, setState] = useState<LaneState>('Closed');
   const [note, setNote] = useState('');
   const url = `/api/terminals/${terminal.terminalId}/gate/lanes/${lane.laneId}/state`;
@@ -260,6 +262,20 @@ function LaneTile({ lane, onChanged, onError }: { lane: Lane; onChanged: () => v
       </div>
       <p className="lane-state">{t(laneStateText[lane.state])}</p>
       {lane.stateNote && <p className="lane-note" dir="auto">{lane.stateNote}</p>}
+      {trouble.length > 0 && <p className="lane-alert">{t('lanes.devicesDown')} {trouble.map(d => <bdi key={d.deviceId} className="lane-dev">{d.deviceCode}</bdi>)}</p>}
+      {lane.lastRead && (
+        <p className="lane-read" title={lane.lastRead.deviceCode}>
+          <span className="muted">{clock(lane.lastRead.receivedAt, terminal.timeZone)}</span>{' '}
+          <bdi className="plate">{lane.lastRead.plate ?? lane.lastRead.tag ?? lane.lastRead.appointmentNo ?? ''}</bdi>{' '}
+          {lane.lastRead.containers.map(c => <bdi key={c.number} className={c.checkDigitOk ? undefined : 'misread'}>{c.number} </bdi>)}
+        </p>
+      )}
+      {lane.state === 'Open' && hasBarrier && (
+        <ActionButton onError={onError} onRun={async () => {
+          await api.post(`/api/terminals/${terminal.terminalId}/gate/lanes/${lane.laneId}/commands`, { command: 'Open' });
+          onChanged();
+        }}>{t('lanes.openBarrier')}</ActionButton>
+      )}
       {lane.state === 'Open' && !closing && (
         <button type="button" className="link-btn" onClick={() => setClosing(true)}>{t('lanes.close')}</button>
       )}

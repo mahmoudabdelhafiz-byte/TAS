@@ -22,7 +22,7 @@ public sealed class PrivacyOptions
     /// <summary>Who a message went to (phone / email) and its values; the message record stays for the counts.</summary>
     public int MessageDays { get; set; } = 180;
 
-    /// <summary>Events delivered to the terminal's systems (they carry positions and plates).</summary>
+    /// <summary>Events delivered to the terminal's systems, and lane device reads and commands (they carry positions and plates).</summary>
     public int EventDays { get; set; } = 90;
 
     /// <summary>Used or expired sign-in sessions and password links (they carry IP addresses); sign-in codes go after a day.</summary>
@@ -72,6 +72,10 @@ public sealed class RetentionService(YardsyncsDbContext db, IOptions<PrivacyOpti
         removed["integrationEvents"] = await db.Database.ExecuteSqlAsync($"""
             DELETE FROM integration_event WHERE status <> 'QUEUED' AND created_at < {events}
             """, ct);
+
+        // Lane device reads carry plates and photo references; commands go with them.
+        removed["laneReads"] = await db.Database.ExecuteSqlAsync($"DELETE FROM lane_device_read WHERE received_at < {events}", ct)
+            + await db.Database.ExecuteSqlAsync($"DELETE FROM lane_device_command WHERE created_at < {events}", ct);
 
         removed["signInCodes"] = await db.Database.ExecuteSqlAsync($"DELETE FROM driver_otp WHERE created_at < {codes}", ct);
         removed["sessions"] = await db.Database.ExecuteSqlAsync($"""

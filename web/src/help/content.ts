@@ -20,6 +20,7 @@ import startEn from './en/start.md?raw';
 import trackEn from './en/track.md?raw';
 import apiTech from './tech/api.md?raw';
 import assistantTech from './tech/assistant.md?raw';
+import deviceAdaptersTech from './tech/device-adapters.md?raw';
 import integrationTech from './tech/integration.md?raw';
 import operationsTech from './tech/operations.md?raw';
 import overviewTech from './tech/overview.md?raw';
@@ -34,7 +35,7 @@ export const guideText: Record<Lang, Record<string, string>> = {
 
 /** Pages for IT teams and integrators (English). */
 export const techText: Record<string, string> = {
-  overview: overviewTech, api: apiTech, integration: integrationTech, 'tos-adapter': tosAdapterTech, operations: operationsTech, security: securityTech, assistant: assistantTech,
+  overview: overviewTech, api: apiTech, integration: integrationTech, 'tos-adapter': tosAdapterTech, 'device-adapters': deviceAdaptersTech, operations: operationsTech, security: securityTech, assistant: assistantTech,
 };
 
 /** The guides in a language: English for languages without guides of their own. */

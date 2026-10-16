@@ -57,6 +57,15 @@ builder.Services.AddRateLimiter(o =>
             PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimit:AuthPerMinute", 10),
             Window = TimeSpan.FromMinutes(1),
         }));
+    // Lane devices: calls per minute per device key (Devices:PerMinute, default 600 — a status every 30 s, commands
+    // polled every second, reads as trucks pass).
+    o.AddPolicy("device", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Request.Headers[DeviceEndpoints.KeyHeader].FirstOrDefault() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("Devices:PerMinute", 600),
+            Window = TimeSpan.FromMinutes(1),
+        }));
     // AI assistant: questions per minute per signed-in user (Assistant:PerMinute, default 10); the daily limit is in the service.
     o.AddPolicy("assistant", ctx => RateLimitPartition.GetFixedWindowLimiter(
         YardsyncsApi.User(ctx)?.UserId.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -536,6 +545,7 @@ app.MapBranding();
 app.MapOnboarding();
 app.MapCharges();
 app.MapGate();
+app.MapDevices();
 app.MapDriverApp();
 
 // ================================================================ development helpers

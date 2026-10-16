@@ -809,7 +809,20 @@
     "lanes.read.IsoCode": "ISO codes",
     "lanes.read.Seal": "seals",
     "lanes.read.Damage": "damage photos",
-    "lanes.read.Tag": "tags"
+    "lanes.read.Tag": "tags",
+    "lanes.connection": "Connection",
+    "lanes.conn.NotConnected": "Not connected",
+    "lanes.conn.Online": "Online",
+    "lanes.conn.Fault": "Fault",
+    "lanes.conn.Offline": "Offline",
+    "lanes.lastSeen": "Last heard from {when}",
+    "lanes.key": "Device key",
+    "lanes.keyFor": "Key for {device}.",
+    "lanes.keyOnce": "Copy it into the device or its adapter now: it is shown only once. Any earlier key for this device has stopped working.",
+    "lanes.copy": "Copy key",
+    "lanes.keyDone": "Done",
+    "lanes.devicesDown": "Not working:",
+    "lanes.openBarrier": "Open barrier"
   },
   "app": {
     "appName": "Yardsyncs mobile",

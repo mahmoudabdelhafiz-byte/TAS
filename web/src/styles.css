@@ -1062,3 +1062,17 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .device-form .check { align-items: center; }
 .device-form .check input { width: auto; min-height: 0; margin: 0; padding: 0; }
 .device-form .inline-form > .check { align-self: center; padding-top: 18px; }
+.lane-alert { margin: 0 0 6px; font-size: 14px; color: var(--red); font-weight: 500; }
+.lane-read { margin: 0 0 8px; font-size: 14px; }
+.lane-read .misread { color: #8a5d05; text-decoration: underline dotted; }
+.conn { white-space: nowrap; font-size: 14px; }
+.conn::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-end: 6px; background: var(--grey); }
+.conn-Online::before { background: var(--green); }
+.conn-Fault::before { background: var(--amber); }
+.conn-Offline::before { background: var(--red); }
+.conn-NotConnected { color: var(--muted); }
+.device-key { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--amber); background: var(--amber-tint); border-radius: var(--radius); }
+.device-key p { margin: 0 0 8px; }
+.device-key code { display: block; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); font-size: 14px; word-break: break-all; user-select: all; }
+.device-key .actions { margin-top: 10px; }
+.lane-alert .lane-dev { display: inline-block; margin-inline-end: 6px; }

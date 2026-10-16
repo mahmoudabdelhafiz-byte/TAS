@@ -250,6 +250,29 @@ export interface LaneDevice {
   address: string | null;
   isActive: boolean;
   notes: string | null;
+  /** A device key has been issued. */
+  hasKey: boolean;
+  connection: DeviceConnection;
+  lastSeenAt: string | null;
+  statusDetail: string | null;
+}
+
+export type DeviceConnection = 'NotConnected' | 'Online' | 'Fault' | 'Offline';
+
+export interface DeviceRead {
+  readId: number;
+  deviceCode: string;
+  readAt: string;
+  receivedAt: string;
+  plate: string | null;
+  plateConfidence: number | null;
+  containers: { number: string; checkDigitOk: boolean; isoCode: string | null; confidence: number | null; position: string | null }[];
+  seals: string[];
+  tag: string | null;
+  appointmentNo: string | null;
+  gatePassScanned: boolean;
+  weightKg: number | null;
+  warnings: string[];
 }
 
 export interface Lane {
@@ -267,6 +290,8 @@ export interface Lane {
   identifies: LaneIdentification[];
   /** What the lane still needs to work automatically; empty when it could. */
   automaticProblems: LaneProblem[];
+  /** The lane's latest device read in the last few minutes. */
+  lastRead: DeviceRead | null;
 }
 
 export interface ArrivalResult {

@@ -238,6 +238,11 @@ Example — a weekly template window (times are local; `24:00` = midnight):
 | `PUT` | `/api/terminals/{id}/gate/lanes/{laneId}` | `{ gateCode?, mode?: Manual\|Automatic, isActive? }` — Automatic only with a barrier and a way to identify trucks (TerminalAdmin) |
 | `POST` | `/api/terminals/{id}/gate/lanes/{laneId}/state` | `{ state: Open\|Closed\|OutOfOrder, note }` — gate staff; arrivals and gate-outs at a lane that isn't open get 409 with the note |
 | `POST` / `PUT` / `DELETE` | `/api/terminals/{id}/gate/lanes/{laneId}/devices[/{deviceId}]` | Devices at a lane: `{ deviceCode, kind, reads?, vendor?, model?, address?, isActive?, notes? }` (TerminalAdmin) |
+| `POST` | `/api/terminals/{id}/gate/lanes/{laneId}/devices/{deviceId}/key` | Issue (or replace) the device's key, shown once (TerminalAdmin) |
+| `POST` | `/api/terminals/{id}/gate/lanes/{laneId}/commands` | `{ command: Open\|Close\|Red\|Green\|Off\|Show\|Clear\|Print, text?, deviceCode? }` to the lane's devices that carry it out (gate staff) |
+| `GET` | `/api/terminals/{id}/gate/lanes/{laneId}/activity?limit=20` | The lane's latest device reads and commands, with each command's progress |
+
+**Lane devices** (cameras, OCR, RFID readers, kiosks, barriers, lights, displays, printers) call `/api/devices/…` with their own key in `X-Device-Key` — `GET me`, `POST status` (every 30 s), `POST reads`, `GET commands` (every second), `POST commands/{id}/ack`. Pull only: nothing needs to reach into the terminal's network. Limit `Devices__PerMinute` (600). Barrier and light commands expire after 30 s and are never handed out late. Details: technical page *Connecting lane devices*; a reference adapter is in `deploy/device-adapter/simulator.mjs`.
 
 How an arrival is handled:
 1. **Match** — QR code from the driver app or a typed appointment number win; otherwise the plate read (Arabic or Latin) picks the truck's appointment nearest to now; otherwise a container read. Reads that don't fit the appointment are shown as warnings.

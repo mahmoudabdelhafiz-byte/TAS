@@ -82,6 +82,11 @@ without a clerk — a kiosk, or a camera reading plates or container numbers; th
 lane is automatic, its barrier and its last way to identify trucks can't be removed. **Retire lane** takes a lane away
 for good; opening and closing for the day is on the gate screen.
 
+To connect a device, choose **Device key** and give the key to whoever sets up the device or its vendor software (it
+is shown only once; choosing it again replaces it). **Connection** then shows each device **Online**, **Fault** (with
+what the device reports), **Offline** (silent for two minutes) or **Not connected**. The technical page *Connecting
+lane devices* is for the integrator.
+
 ## Personal data
 
 Drivers' **Copy of data** and **Erase personal data** are in **Fleet & users** → **Drivers** (see the guide Your
