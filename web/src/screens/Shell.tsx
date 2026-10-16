@@ -18,6 +18,7 @@ import { ControlRoom } from './ControlRoom.tsx';
 import { TrackContainers } from './TrackContainers.tsx';
 import { GateScreen } from './Gate.tsx';
 import { Lanes } from './Lanes.tsx';
+import { Clerk } from './Clerk.tsx';
 import { SlotBoard } from './SlotBoard.tsx';
 import { Help } from './Help.tsx';
 import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
@@ -35,6 +36,7 @@ const navText: Record<Screen, TextKey> = {
   map: 'nav.map',
   control: 'nav.control',
   gate: 'nav.gate',
+  clerk: 'nav.clerk',
   lanes: 'nav.lanes',
   kpi: 'nav.kpi',
   fleet: 'nav.fleet',
@@ -101,6 +103,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
           {screen === 'appointments' && <Appointments />}
           {screen === 'slots' && <SlotBoard />}
           {screen === 'gate' && <GateScreen />}
+          {screen === 'clerk' && <Clerk />}
           {screen === 'lanes' && <Lanes />}
           {screen === 'bulk' && <BulkUpload />}
           {screen === 'setup' && <CapacitySetup />}
@@ -141,6 +144,7 @@ function NavIcon({ screen }: { screen: Screen }) {
     appointments: <><path d="M4 6h16M4 12h16M4 18h10" /><circle cx="19" cy="18" r="2" /></>,
     slots: <><rect x="3" y="12" width="4" height="9" /><rect x="10" y="6" width="4" height="15" /><rect x="17" y="9" width="4" height="12" /></>,
     gate: <><path d="M3 21V8l9-5 9 5v13" /><path d="M7 21v-8h10v8M7 17h10" /></>,
+    clerk: <><rect x="3" y="4" width="13" height="10" rx="1" /><path d="M7 18h5M9.5 14v4" /><circle cx="19" cy="9" r="2" /><path d="M16 20c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5" /></>,
     lanes: <><path d="M4 21V3M12 21v-3M12 14v-4M12 6V3M20 21V3" /><rect x="6.5" y="13" width="3" height="5" rx="0.5" /><path d="M14.5 8h4" /></>,
     bulk: <><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4M9 12h6M9 16h6" /></>,
     kpi: <><path d="M4 20V4M4 20h16" /><path d="M7 15l4-5 3 3 5-7" /></>,

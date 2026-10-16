@@ -61,6 +61,8 @@ public class DeviceRulesTests
     {
         Assert.Equal(new[] { LaneDeviceKind.Barrier }, DeviceRules.TakenBy(LaneCommand.Open));
         Assert.Contains(LaneDeviceKind.Kiosk, DeviceRules.TakenBy(LaneCommand.Show));
+        Assert.Equal(new[] { LaneDeviceKind.Intercom }, DeviceRules.TakenBy(LaneCommand.Call));
+        Assert.Null(DeviceRules.CommandProblem(LaneCommand.Hangup, null));
         Assert.Equal(TimeSpan.FromSeconds(30), DeviceRules.Lifetime(LaneCommand.Open));
         Assert.Equal(TimeSpan.FromMinutes(2), DeviceRules.Lifetime(LaneCommand.Print));
         Assert.Null(DeviceRules.CommandProblem(LaneCommand.Show, "Go to lane 2"));

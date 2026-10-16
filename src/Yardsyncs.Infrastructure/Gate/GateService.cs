@@ -280,6 +280,13 @@ public sealed class GateService(
 
     // ================================================================ trouble desk
 
+    /// <summary>One trouble case, open or resolved.</summary>
+    public async Task<TroubleView?> TroubleAsync(int terminalId, long troubleId, CancellationToken ct = default)
+    {
+        var trouble = await db.GateTroubles.AsNoTracking().SingleOrDefaultAsync(t => t.TerminalId == terminalId && t.TroubleId == troubleId, ct);
+        return trouble is null ? null : (await ViewsAsync([trouble], ct)).Single();
+    }
+
     public async Task<IReadOnlyList<TroubleView>> ListTroublesAsync(int terminalId, bool openOnly, CancellationToken ct = default)
     {
         var since = clock.GetUtcNow().AddDays(-7);

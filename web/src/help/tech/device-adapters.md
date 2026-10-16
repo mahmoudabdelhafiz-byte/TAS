@@ -69,6 +69,7 @@ privacy period for events (90 days by default).
 | `Red`, `Green`, `Off` | Traffic lights | none |
 | `Show`, `Clear` | Displays and kiosks | `Show` carries the text to display |
 | `Print` | Ticket printers | the ticket text |
+| `Call`, `Hangup` | Intercoms | none: connect the lane intercom to the clerk desk, end the call |
 
 A command lists its `expiresAt`. Barrier and light commands live for 30 seconds, and display and print commands for
 2 minutes. Never carry out a command after it expires: a barrier that opens late, for whichever truck is there by then,
@@ -108,7 +109,10 @@ At a lane set to **Automatic**, Yardsyncs runs the lane itself, one transaction 
 A transaction with nothing to identify the truck by is given up after 2 minutes. Manual lanes and lanes that aren't
 open are left to the clerk; their reads are still stored and shown. The timings are settings: `LaneController__SettleSeconds`
 (3), `LaneController__WindowSeconds` (30), `LaneController__AbandonSeconds` (120), and `LaneController__Enabled`.
-`GET /api/terminals/{id}/gate/transactions?laneId=` lists the trucks a lane handled.
+`GET /api/terminals/{id}/gate/transactions?laneId=` lists the trucks a lane handled; `GET …/transactions/{id}` gives
+one truck's reads, photos, commands and trouble case. `POST …/transactions/{id}/recheck` with corrected `plate`,
+`containers` or `appointmentNo` has the lane check a referred truck again (the remote clerk station uses it). Photos
+show in the station when they are `https://` addresses the clerk's browser can reach.
 
 The controller runs inside Yardsyncs. When Yardsyncs is installed at the terminal, it sits next to the lanes and
 doesn't depend on any outside link (only on the TOS, as a clerk does). If the TOS can't be reached, no truck is let in

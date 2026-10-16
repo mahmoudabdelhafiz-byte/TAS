@@ -73,7 +73,7 @@ public sealed record DeviceCommandView(long CommandId, LaneCommand Command, stri
 
 /// <summary>
 /// Send a command to a lane: Open / Close go to its barriers, Red / Green / Off to its traffic lights, Show / Clear to
-/// its displays and kiosks, Print to its printers. Name a device to reach only that one.
+/// its displays and kiosks, Print to its printers, Call / Hangup to its intercoms. Name a device to reach only that one.
 /// </summary>
 public sealed record LaneCommandInput(LaneCommand Command, string? Text = null, string? DeviceCode = null);
 
@@ -150,6 +150,7 @@ public static class DeviceRules
         LaneCommand.Red or LaneCommand.Green or LaneCommand.Off => new HashSet<LaneDeviceKind> { LaneDeviceKind.TrafficLight },
         LaneCommand.Show or LaneCommand.Clear => new HashSet<LaneDeviceKind> { LaneDeviceKind.Display, LaneDeviceKind.Kiosk },
         LaneCommand.Print => new HashSet<LaneDeviceKind> { LaneDeviceKind.Printer },
+        LaneCommand.Call or LaneCommand.Hangup => new HashSet<LaneDeviceKind> { LaneDeviceKind.Intercom },
         _ => new HashSet<LaneDeviceKind>(),
     };
 

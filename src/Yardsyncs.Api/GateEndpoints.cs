@@ -87,6 +87,16 @@ public static class GateEndpoints
         gate.MapGet("/transactions", async (int terminalId, int? laneId, int? limit, HttpContext http, LaneControllerService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, laneId, limit ?? 50, ct)));
 
+        // Remote clerk station: one truck's reads, photos, commands and case; check again after correcting misreads.
+        gate.MapGet("/transactions/{transactionId:long}", async (int terminalId, long transactionId, HttpContext http, LaneControllerService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? (await service.DetailAsync(terminalId, transactionId, ct) is { } detail
+                ? Results.Ok(detail)
+                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Truck transaction {transactionId} not found.")));
+
+        gate.MapPost("/transactions/{transactionId:long}/recheck", async (
+            int terminalId, long transactionId, TransactionCorrectionInput body, HttpContext http, LaneControllerService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.RecheckAsync(YardsyncsApi.User(http)!, terminalId, transactionId, body, ct)));
+
         gate.MapPost("/lanes/{laneId:int}/devices/{deviceId:int}/key", async (
             int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>
             NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.IssueKeyAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, ct)));

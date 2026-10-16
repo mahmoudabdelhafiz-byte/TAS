@@ -251,7 +251,7 @@ public sealed class DeviceService(YardsyncsDbContext db, TimeProvider clock, ILo
             p?.Seals ?? [], p?.Damage ?? [], p?.Photos ?? [], p?.Tag, p?.AppointmentNo, p?.QrToken, p?.WeightKg, p?.Warnings ?? []);
     }
 
-    private static LaneCommandView View(LaneDeviceCommand c, string deviceCode, DateTimeOffset now) =>
+    public static LaneCommandView View(LaneDeviceCommand c, string deviceCode, DateTimeOffset now) =>
         new(c.CommandId, deviceCode, c.Command, c.Text, c.CreatedAt, c.ExpiresAt, c.DeliveredAt, c.DoneAt, c.Result, c.ResultDetail,
             DeviceRules.Progress(c, now));
 
