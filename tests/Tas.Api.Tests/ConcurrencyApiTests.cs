@@ -61,6 +61,47 @@ public sealed class ConcurrencyApiTests(TasApiFactory factory) : ApiTestBase(fac
         Assert.True(imports.Booked <= imports.Quota);
     }
 
+    [Fact]
+    public async Task Moves_in_opposite_directions_at_once_do_not_deadlock()
+    {
+        if (!Enabled) return;
+
+        long nextSlot;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
+            var start = At(Tomorrow, 11).ToUniversalTime();
+            nextSlot = await db.Slots.Where(s => s.TerminalId == Demo.TerminalId && s.StartAt == start).Select(s => s.SlotId).SingleAsync();
+        }
+
+        var alNoor = await As(DemoDataSeeder.DispatcherEmail);
+        async Task<string> BookAsync(long slot, int serial)
+        {
+            var r = await alNoor.PostAsJsonAsync(Appointments, ImportBooking(container: Container("LDTU", serial), slotId: slot));
+            Assert.Equal(HttpStatusCode.Created, r.StatusCode);
+            return (await Read<Tas.Application.Booking.AppointmentDto>(r)).AppointmentNo;
+        }
+        var at10 = new List<string>();
+        var at11 = new List<string>();
+        for (var i = 0; i < 6; i++)
+        {
+            at10.Add(await BookAsync(SlotId, 200 + i));
+            at11.Add(await BookAsync(nextSlot, 300 + i));
+        }
+
+        // Six trucks 10→11 and six 11→10, all at the same moment.
+        var moves = at10.Select(no => alNoor.PostAsJsonAsync($"{Appointments}/{no}/reschedule", new { slotId = nextSlot }))
+            .Concat(at11.Select(no => alNoor.PostAsJsonAsync($"{Appointments}/{no}/reschedule", new { slotId = SlotId })));
+        var answers = await Task.WhenAll(moves);
+        Assert.All(answers, a => Assert.Contains(a.StatusCode, new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
+
+        using var check = Factory.Services.CreateScope();
+        var counts = check.ServiceProvider.GetRequiredService<TasDbContext>();
+        foreach (var slot in new[] { SlotId, nextSlot })
+            Assert.Equal(await counts.Appointments.CountAsync(a => a.SlotId == slot),
+                await counts.Slots.Where(s => s.SlotId == slot).Select(s => s.TotalBooked).SingleAsync());
+    }
+
     private sealed class ImportQuota
     {
         public int Booked { get; set; }

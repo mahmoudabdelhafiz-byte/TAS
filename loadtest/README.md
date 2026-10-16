@@ -66,6 +66,10 @@ booked twice.
   allows by default: after the first run the rules check could not connect at all, and neither could a backup or an
   administrator. `deploy/` now caps the pool at 60 (`DB_POOL`) and gives PostgreSQL 150 (`DB_MAX_CONNECTIONS`); the
   next run held 61 connections.
+- *Moves in opposite directions deadlocked.* Two trucks moved at the same moment from 09:00 to 10:00 and from 10:00 to
+  09:00 each locked one hour and waited for the other's; the database stopped one of them with an error. Moving now
+  locks both hours first, always in the same order (`ConcurrencyApiTests`). Found on a later run; the app's error log
+  is part of the CI output, so a single failed request shows up even when the pass marks hold.
 - Capacity counters held: no slot or quota was booked past its capacity, and the counters matched the appointments.
 
 **Sizing.** One server of the size in `deploy/README.md` (4 CPU / 8 GB) carries a mid-size terminal's rush with room

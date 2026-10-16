@@ -327,6 +327,7 @@ Details and results in [`loadtest/README.md`](../loadtest/README.md).
 | ✅ | Runs in CI on every pull request against the Docker image with a fresh database; fails on > 1 % errors or slow 95th percentiles; then checks the booking rules in the database |
 | ✅ | Found and fixed: the same container booked twice at the same moment got two appointments (lock per container in the booking transaction) |
 | ✅ | Found and fixed: the database pool could take every PostgreSQL connection (pool 60, PostgreSQL 150 in `deploy/`) |
+| ✅ | Found and fixed (later run): moving two appointments in opposite directions at once could deadlock; both hours are now locked in a fixed order |
 
 
 ### 31. Releases and environments (2026-10-16)

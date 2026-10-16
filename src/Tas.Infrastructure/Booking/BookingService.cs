@@ -353,6 +353,11 @@ public sealed class BookingService(
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
+        // Two moves in opposite directions (A: 9→10 while B: 10→9) each lock one slot and wait for the other's:
+        // a deadlock (found by the load test). Lock both slots first, always the lower id first.
+        foreach (var slotId in new[] { oldSlotId, newSlotId }.Order())
+            await db.Database.ExecuteSqlAsync($"SELECT 1 FROM slot WHERE slot_id = {slotId} FOR UPDATE", ct);
+
         var capacityError = await TryConsumeSlotAsync(newSlot, appointment.CompanyId, units, now, ct);
         if (capacityError is not null)
         {
