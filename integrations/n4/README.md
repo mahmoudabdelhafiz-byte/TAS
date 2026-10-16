@@ -1,17 +1,17 @@
-# TAS ↔ Navis N4
+# Yardsyncs ↔ Navis N4
 
-TAS checks every booked move against N4 before the truck sets off — at booking, on the scheduled re-checks,
-at trip start and at the gate. The integration is **read-only**: TAS never changes N4 data.
+Yardsyncs checks every booked move against N4 before the truck sets off — at booking, on the scheduled re-checks,
+at trip start and at the gate. The integration is **read-only**: Yardsyncs never changes N4 data.
 
 ```
-TAS ──SOAP──▶ ArgoService.genericInvoke ──▶ TasLookup (Groovy code extension in N4) ──▶ JSON
+Yardsyncs ──SOAP──▶ ArgoService.genericInvoke ──▶ TasLookup (Groovy code extension in N4) ──▶ JSON
                                                                                          │
-TAS ◀── checks (availability, holds, booking, cut-off, VGM, cargo release) ◀── rules ◀──┘
+Yardsyncs ◀── checks (availability, holds, booking, cut-off, VGM, cargo release) ◀── rules ◀──┘
 ```
 
 ## 1. Install the code extension in N4
 
-1. Take `TasLookup.groovy` from this folder.
+1. Take `TasLookup.groovy` from this folder. (It keeps its name from before the product was called Yardsyncs, so terminals that already installed it need no change.)
 2. **Check the lines marked `VERIFY`** on your N4 version (test system first): VGM field, road holds,
    equipment-order and bill-of-lading fields. Everything else is plain Groovy.
 3. In N4: *Administration › System › Code Extensions* → add **TasLookup** with the file's content
@@ -34,7 +34,7 @@ The `responsePayLoad` should be JSON like:
  "bls":[]}
 ```
 
-## 2. Configure TAS
+## 2. Configure Yardsyncs
 
 ```json
 "Tos": { "Adapter": "N4", "OnUnavailable": "Warn" },
@@ -53,14 +53,14 @@ The `responsePayLoad` should be JSON like:
 }
 ```
 
-- The key under `Terminals` is the **TAS terminal code**. Put the password in an environment variable:
+- The key under `Terminals` is the **Yardsyncs terminal code**. Put the password in an environment variable:
   `N4__Terminals__JED1__Password=…`
 - The N4 user only needs rights to call web services and read units / orders / BLs.
-- `HoldMapping` maps N4 hold ids to TAS checks when the id doesn't say what it is. Without a mapping, ids are
+- `HoldMapping` maps N4 hold ids to Yardsyncs checks when the id doesn't say what it is. Without a mapping, ids are
   classified by keywords: *CUSTOM, FASAH* → customs · *LINE, CARRIER* → line release ·
   *PAY, UNPAID, INVOICE, STORAGE, DEMURRAGE* → payment · anything else → terminal hold.
 
-## 3. Rules TAS applies to the N4 answer
+## 3. Rules Yardsyncs applies to the N4 answer
 
 | Move | Checks |
 |---|---|
@@ -86,5 +86,5 @@ Timeouts, HTTP errors, SOAP faults, a missing payload or `{"error": …}` from t
 
 ## 5. Not included yet (needs your go-ahead — it writes to N4)
 
-- Pre-advising export containers / creating truck visits or gate appointments in N4 from TAS bookings.
+- Pre-advising export containers / creating truck visits or gate appointments in N4 from Yardsyncs bookings.
 - Receiving N4 events (discharge, hold released) to re-check immediately instead of on the schedule.

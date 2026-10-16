@@ -1,5 +1,5 @@
 /* =====================================================================
-   Truck Appointment System (TAS) — PostgreSQL schema, draft v1.8
+   Yardsyncs truck appointment system — PostgreSQL schema, draft v1.8
    Requires PostgreSQL 15+ and PostGIS (for geofences).
    Multi-terminal. See docs/data-model.md for the design.
 

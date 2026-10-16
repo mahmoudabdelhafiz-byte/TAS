@@ -10,7 +10,7 @@ TestResults/
 appsettings.Local.json
 node_modules/
 web/dist/
-src/Tas.Api/wwwroot/
+src/Yardsyncs.Api/wwwroot/
 deploy/.env
 deploy/backups/
 loadtest/summary.json

@@ -7,7 +7,7 @@ answers must keep, and the tests it must pass.
 
 ## The interface
 
-An adapter implements `ITosAdapter` (`src/Tas.Application/Tos/ITosAdapter.cs`):
+An adapter implements `ITosAdapter` (`src/Yardsyncs.Application/Tos/ITosAdapter.cs`):
 
 | Member | What it does |
 |---|---|
@@ -48,7 +48,7 @@ could not be reached" and logged as an error. A container on hold can't get thro
 
 ## The tests
 
-`TosAdapterConformance` (`tests/Tas.Infrastructure.Tests/TosKit/`) holds the tests every adapter must pass:
+`TosAdapterConformance` (`tests/Yardsyncs.Infrastructure.Tests/TosKit/`) holds the tests every adapter must pass:
 
 - every kind of move gets its checks
 - a ready import passes, a customs hold fails with its reason, an unknown container fails
@@ -70,7 +70,7 @@ To test a new adapter:
 
 ## Plugging it in
 
-1. Put the adapter in `src/Tas.Infrastructure/Tos/<Name>/` with its options section (connection per terminal code,
+1. Put the adapter in `src/Yardsyncs.Infrastructure/Tos/<Name>/` with its options section (connection per terminal code,
    secrets from environment variables).
 2. Register it in `DependencyInjection.cs`.
 3. Add its name to `TerminalProfiles.TosAdapters` and to `TosRouter`.

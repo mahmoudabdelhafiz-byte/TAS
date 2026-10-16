@@ -1,5 +1,5 @@
 /*
- * TasLookup — N4 Groovy code extension used by TAS (Truck Appointment System).
+ * TasLookup — N4 Groovy code extension used by Yardsyncs (truck appointment system).
  *
  * Installed in N4 as a code extension named "TasLookup" (Administration > System > Code Extensions,
  * type GROOVY_WS_CODE_EXTENSION / "Groovy plug-in" depending on the N4 version) and called through
@@ -13,7 +13,7 @@
  *
  * The N4 API differs between versions. Lines marked "VERIFY" use calls whose names should be checked on your
  * N4 version (test system first). Everything else is plain Groovy. If a lookup throws, the whole call returns
- * {"error": "..."} and TAS treats N4 as unavailable (booking gets a warning, the re-check retries later).
+ * {"error": "..."} and Yardsyncs treats N4 as unavailable (booking gets a warning, the re-check retries later).
  *
  * Answer:
  * {
@@ -25,7 +25,7 @@
  *   blUnits:       containers of an import BL still in the terminal or announced (used for "book by BL")
  *   category:      IMPRT | EXPRT | STRGE | TRSHP | THRGH
  *   transitState:  S10_ADVISED | S20_INBOUND | S30_ECIN | S40_YARD | S50_ECOUT | S60_LOADED | S70_DEPARTED | S99_RETIRED
- *   holds:         ids of ACTIVE holds that stop road delivery / receipt (TAS maps them via N4:HoldMapping)
+ *   holds:         ids of ACTIVE holds that stop road delivery / receipt (Yardsyncs maps them via N4:HoldMapping)
  *   cargoCutoff:   ISO-8601 with offset, e.g. "2026-10-21T18:00:00+03:00"
  */
 
