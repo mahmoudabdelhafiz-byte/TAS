@@ -3,7 +3,7 @@
 # Run:    see deploy/ (docker compose with PostgreSQL + PostGIS, HTTPS proxy and nightly backups).
 
 # ---- web portal
-FROM node:22-alpine AS web
+FROM node:24-alpine AS web
 WORKDIR /src/web
 COPY web/package.json ./
 RUN npm install --no-audit --no-fund

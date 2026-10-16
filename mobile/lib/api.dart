@@ -34,7 +34,7 @@ abstract class SessionStore {
 class SecureSessionStore implements SessionStore {
   const SecureSessionStore();
 
-  static const _storage = FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true));
+  static const _storage = FlutterSecureStorage(); // Android: encrypted with keys in the Android Keystore (flutter_secure_storage 10+)
 
   @override
   Future<String?> read(String key) => _storage.read(key: key);
