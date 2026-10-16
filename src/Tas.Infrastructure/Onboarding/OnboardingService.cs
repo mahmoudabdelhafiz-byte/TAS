@@ -110,7 +110,7 @@ public sealed partial class OnboardingService(
         var lanes = 0;
         if (input.Starter)
         {
-            moveTypes = AddStandardMoveTypes(terminal, []);
+            moveTypes = AddStandardMoveTypes(terminal, new HashSet<string>());
             db.GateLanes.AddRange(
                 new GateLane { TerminalId = terminal.TerminalId, GateCode = "MAIN", LaneCode = "IN-1", Direction = LaneDirection.In },
                 new GateLane { TerminalId = terminal.TerminalId, GateCode = "MAIN", LaneCode = "OUT-1", Direction = LaneDirection.Out });
