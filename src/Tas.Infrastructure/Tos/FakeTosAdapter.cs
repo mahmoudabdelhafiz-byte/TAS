@@ -11,6 +11,9 @@ namespace Tas.Infrastructure.Tos;
 /// </summary>
 public sealed class FakeTosOptions
 {
+    /// <summary>Act as a TOS that can't be reached (every call fails), to try the warning and re-check flow.</summary>
+    public bool Unreachable { get; set; }
+
     /// <summary>Import containers not yet discharged / not in the yard.</summary>
     public List<string> NotAvailable { get; set; } = [];
 
@@ -53,9 +56,12 @@ public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : IT
 {
     public string Source => "FAKE_TOS";
 
+    private FakeTosOptions Current =>
+        options.CurrentValue is { Unreachable: true } ? throw new TosUnavailableException("The demo TOS is set to unreachable (FakeTos:Unreachable).") : options.CurrentValue;
+
     public Task<IReadOnlyList<TosCheck>> ValidateAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default)
     {
-        var o = options.CurrentValue;
+        var o = Current;
         var checks = new List<TosCheck>();
 
         foreach (var item in items)
@@ -110,7 +116,7 @@ public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : IT
 
     public Task<IReadOnlyList<TosBlUnit>?> FindBlContainersAsync(int terminalId, string blNo, CancellationToken ct = default)
     {
-        var bls = options.CurrentValue.BillsOfLading;
+        var bls = Current.BillsOfLading;
         var key = bls.Keys.FirstOrDefault(k => string.Equals(k, blNo.Trim(), StringComparison.OrdinalIgnoreCase));
         if (key is null)
             return Task.FromResult<IReadOnlyList<TosBlUnit>?>(null);
@@ -124,7 +130,7 @@ public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : IT
 
     public Task<IReadOnlyList<TosYardPosition>> YardPositionsAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default)
     {
-        var o = options.CurrentValue;
+        var o = Current;
         var result = new List<TosYardPosition>();
         foreach (var item in items)
         {

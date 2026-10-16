@@ -402,6 +402,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Drivers' app: colour, logo and name from the server; messages signed with the terminal's brand (a terminal's own Brand setting still first) |
 | ✅ | Colours must carry white text (4.5:1); logos PNG / JPEG / WebP up to 256 KB, checked by their bytes, served with nosniff and a long cache |
 
+### 39. TOS adapter kit (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | The rules every adapter's answers keep, as code (`TosContract`): which checks each kind of move must get, reasons on every warning and failure, answers only for the items asked, clean BL lists and yard positions, `TosUnavailableException` when the TOS can't answer |
+| ✅ | Every live answer is held to them (`TosContractGuard`): a breach counts as "TOS unreachable" (warning and re-check, never a pass) and is logged as an error |
+| ✅ | Conformance tests any adapter must pass (`TosAdapterConformance` with `TosScenario`); the demo TOS and N4 (against a simulated TasLookup) pass them |
+| ✅ | "Connecting another TOS" in the public documentation; the demo TOS can act unreachable (`FakeTos:Unreachable`) to try the warning flow |
+
 ---
 
 ## Remaining
@@ -478,7 +486,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Country packs: plate formats, mobile number rules, national holidays, currencies, ID types | Section 36: SA, AE, OM, BH, KW, QA. More countries are new entries in `CountryPacks` with their tests |
 | ✅ | Languages as packs: portal and messages in more languages without code changes | Section 37. Help guides stay English / Arabic |
 | ✅ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | Section 38 |
-| ⬜ | TOS adapter kit: documented interface + test suite any new TOS adapter must pass | `ITosAdapter` today |
+| ✅ | TOS adapter kit: documented interface + test suite any new TOS adapter must pass | Section 39 |
 | ⬜ | Terminal onboarding wizard: terminal, move types, weekly plan, lanes, TOS connection, settings above | |
 | ⬜ | Product name in the code and repository: "TAS" → Yardsyncs | |
 
