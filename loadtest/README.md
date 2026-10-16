@@ -44,24 +44,28 @@ availability, appointment lists and positions under 0.8 s, of the control room u
 
 | | p95 | p99 | max |
 |---|---|---|---|
-| Book | 29 ms | 607 ms | 823 ms |
-| Availability | 6 ms | 610 ms | 1 058 ms |
-| Appointment list | 11 ms | 203 ms | 507 ms |
-| Position report | 13 ms | 1 058 ms | 1 132 ms |
-| Control room | 15 ms | 1 166 ms | 1 193 ms |
-| Gate board | 9 ms | 135 ms | 149 ms |
+| Book | 83 ms | 875 ms | 1 053 ms |
+| Availability | 16 ms | 1 024 ms | 1 344 ms |
+| Appointment list | 30 ms | 283 ms | 376 ms |
+| Position report | 26 ms | 1 227 ms | 1 352 ms |
+| Control room | 52 ms | 1 491 ms | 1 541 ms |
+| Gate board | 14 ms | 220 ms | 228 ms |
 
-15 085 requests (115 per second), none failed. 1 838 trucks booked; the five days were full within the run, after which
-dispatchers kept finding no free slot (5 245 times), as they do on a real rush morning. The slowest 1 % come in short
+14 954 requests (110 per second), none failed. 1 825 trucks booked; the five days were full within the run, after which
+dispatchers kept finding no free slot (5 153 times), as they do on a real rush morning. The slowest 1 % come in short
 bursts on a machine that also runs the database and the load generator; the 95th percentiles are far under the marks.
+Booking rules afterwards: 1 908 live appointments, nothing oversold, counters equal to the appointments, no container
+booked twice.
 
 **What the load test found and what changed**
 
 - *The same container booked twice at the same moment got two appointments.* The "container already booked" check ran
   before the booking's transaction. Now each container is locked for the length of the transaction and checked again
   (`ConcurrencyApiTests`).
-- *Connections.* The app's database pool defaulted to 100 connections, PostgreSQL's whole limit, leaving no room for
-  backups and administrators. `deploy/` now sets the pool to 60 (`DB_POOL`) and PostgreSQL to 150 (`DB_MAX_CONNECTIONS`).
+- *Connections.* Under load the app's database pool grows to its default of 100 connections, which is all PostgreSQL
+  allows by default: after the first run the rules check could not connect at all, and neither could a backup or an
+  administrator. `deploy/` now caps the pool at 60 (`DB_POOL`) and gives PostgreSQL 150 (`DB_MAX_CONNECTIONS`); the
+  next run held 61 connections.
 - Capacity counters held: no slot or quota was booked past its capacity, and the counters matched the appointments.
 
 **Sizing.** One server of the size in `deploy/README.md` (4 CPU / 8 GB) carries a mid-size terminal's rush with room
