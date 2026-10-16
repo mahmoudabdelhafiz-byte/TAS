@@ -89,7 +89,7 @@ public abstract class ApiTestBase(YardsyncsApiFactory factory) : IClassFixture<Y
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<YardsyncsDbContext>();
-        await db.Database.ExecuteSqlRawAsync("TRUNCATE terminal_operator, terminal, company, app_user, driver_otp RESTART IDENTITY CASCADE");
+        await db.Database.ExecuteSqlRawAsync("TRUNCATE terminal_operator, terminal, company, app_user, driver_otp, audit_log RESTART IDENTITY CASCADE");
         Demo = await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
         Yardsyncs.Infrastructure.Brands.BrandingService.Forget(); // the data was just replaced
 
