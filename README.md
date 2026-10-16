@@ -103,7 +103,7 @@ CI (GitHub Actions) builds the solution and runs both test projects against a Po
 
 ### Web portal
 
-Requires Node.js 22.
+Requires Node.js 24 (LTS).
 
 ```bash
 cd web
