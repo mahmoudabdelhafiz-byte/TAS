@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Tas.Application.Languages;
 using Tas.Domain.Booking;
 
 namespace Tas.Application.MasterData;
@@ -6,7 +7,13 @@ namespace Tas.Application.MasterData;
 /// <summary>Shape checks for master data. Pure: uniqueness and existence are checked against the database by the services.</summary>
 public static partial class MasterDataValidator
 {
-    public static readonly IReadOnlySet<string> Languages = new HashSet<string> { "ar", "en", "ur", "hi" };
+    /// <summary>Languages people can get messages in: the built-in ones and the installation's language packs.</summary>
+    public static IReadOnlySet<string> Languages => LanguageCatalog.All.Where(l => l.Messages).Select(l => l.Code).ToHashSet();
+
+    /// <summary>Languages portal users can choose: those of the portal or of the messages (their emails).</summary>
+    public static IReadOnlySet<string> UserLanguages => LanguageCatalog.All.Where(l => l.Messages || l.Portal).Select(l => l.Code).ToHashSet();
+
+    private static string LanguageError => $"Language must be one of: {string.Join(", ", Languages)}.";
 
     [GeneratedRegex("^[A-Z][A-Z0-9_]{1,29}$")]
     private static partial Regex CategoryCode();
@@ -54,7 +61,7 @@ public static partial class MasterDataValidator
         if (mobile is null)
             errors.Add($"'{input.Mobile}' is not a valid mobile number.");
         if (!Languages.Contains((input.PreferredLanguage ?? "").Trim().ToLowerInvariant()))
-            errors.Add("Language must be one of: ar, en, ur, hi.");
+            errors.Add(LanguageError);
         return (mobile, errors);
     }
 
@@ -97,8 +104,8 @@ public static partial class MasterDataValidator
             errors.Add("Full name is required (max 150 characters).");
         if (!string.IsNullOrWhiteSpace(input.Mobile) && PhoneNumber.Normalize(input.Mobile) is null)
             errors.Add($"'{input.Mobile}' is not a valid mobile number.");
-        if (!Languages.Contains((input.PreferredLanguage ?? "").Trim().ToLowerInvariant()))
-            errors.Add("Language must be one of: ar, en, ur, hi.");
+        if (!UserLanguages.Contains((input.PreferredLanguage ?? "").Trim().ToLowerInvariant()))
+            errors.Add($"Language must be one of: {string.Join(", ", UserLanguages)}.");
         return errors;
     }
 }

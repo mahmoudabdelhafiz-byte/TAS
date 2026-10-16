@@ -5,6 +5,7 @@ import type { TextKey } from '../lib/i18n.ts';
 import type { Lang } from '../lib/time.ts';
 import type { UserProfile } from '../lib/types.ts';
 import { Mark } from './Shell.tsx';
+import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
 
 export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn }: {
   api: ApiClient;
@@ -55,10 +56,7 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn }: {
         <YardPicture />
       </section>
       <section className="login-form-side">
-        <button type="button" className="link-btn login-lang" onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
-          lang={lang === 'en' ? 'ar' : 'en'}>
-          {t('lang.switch')}
-        </button>
+        <div className="login-lang"><LanguageSwitch lang={lang} setLang={setLang} label={t('lang.switch')} /></div>
         {forgot ? (
           <form className="login-form" onSubmit={askForLink}>
             <h1>{t('login.forgotTitle')}</h1>

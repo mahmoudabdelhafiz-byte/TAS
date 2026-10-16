@@ -51,6 +51,14 @@ companies and drivers are shared by its terminals. Each terminal can have its ow
 (shown on the slot board, never closing anything by themselves) and its currency. An unknown country stops the server
 from starting.
 
+### Languages
+
+The portal is in English and Arabic; the drivers' app and the messages are also in Urdu and Hindi. A language pack
+adds a language (any of the portal, the app and the messages) or corrects a built-in one, without a new version: a JSON
+file per language in the `languages` folder of the install kit, made from its `template.json`, then
+`docker compose restart app`. The folder's README explains the steps. A pack with a mistake (an unknown placeholder,
+a code that doesn't match the file name) stops the start with the reason; `GET /api/ops/status` lists the packs in use.
+
 ### Operators
 
 When one company runs several of the installation's terminals, a system admin groups them under an operator

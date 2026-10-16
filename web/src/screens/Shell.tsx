@@ -17,6 +17,7 @@ import { TrackContainers } from './TrackContainers.tsx';
 import { GateScreen } from './Gate.tsx';
 import { SlotBoard } from './SlotBoard.tsx';
 import { Help } from './Help.tsx';
+import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
 
 const navText: Record<Screen, TextKey> = {
   book: 'nav.book',
@@ -78,9 +79,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
             )}
           </div>
           <div className="topbar-end">
-            <button type="button" className="link-btn" lang={lang === 'en' ? 'ar' : 'en'} onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}>
-              {t('lang.switch')}
-            </button>
+            <LanguageSwitch lang={lang} setLang={setLang} label={t('lang.switch')} />
             <div className="who">
               <span className="who-name">{user.fullName}</span>
               <span className="who-role">{user.companyName ?? tx('role', user.role)}</span>

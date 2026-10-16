@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { guideText, techText } from '../help/content.ts';
+import { guidesIn, techText } from '../help/content.ts';
 import { guides, techPages } from '../help/guides.ts';
 import type { TextKey } from '../lib/i18n.ts';
 import { parseMarkdown } from '../lib/markdown.ts';
 import type { Lang } from '../lib/time.ts';
 import { BlockView } from '../ui/Markdown.tsx';
 import { Mark } from './Shell.tsx';
+import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
 
 /** The public documentation (#/docs/<page>): every user guide and the technical pages, no sign-in needed. */
 export function Docs({ page, lang, setLang, t, signedIn }: {
@@ -17,7 +18,7 @@ export function Docs({ page, lang, setLang, t, signedIn }: {
 }) {
   const isTech = (techPages as readonly string[]).includes(page);
   const current = isTech || guides.some(g => g.id === page) ? page : 'start';
-  const source = isTech ? techText[current] : guideText[lang][current];
+  const source = isTech ? techText[current] : guidesIn(lang)[current];
   const blocks = useMemo(() => parseMarkdown(source ?? ''), [source]);
   const titleOf = (text: string | undefined, id: string) => /^#\s+(.*)$/m.exec(text ?? '')?.[1] ?? id;
   const link = (id: string, text: string | undefined) => (
@@ -33,16 +34,14 @@ export function Docs({ page, lang, setLang, t, signedIn }: {
       <header className="docs-bar no-print">
         <a href="#/docs" className="docs-brand"><Mark /><span>{t('docs.title')}</span></a>
         <div className="docs-bar-end">
-          <button type="button" className="link-btn" lang={lang === 'en' ? 'ar' : 'en'} onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}>
-            {t('lang.switch')}
-          </button>
+          <LanguageSwitch lang={lang} setLang={setLang} label={t('lang.switch')} />
           <a className="btn btn-secondary" href="#/">{signedIn ? t('docs.open') : t('login.submit')}</a>
         </div>
       </header>
       <div className="docs-body">
         <nav className="help-list no-print" aria-label={t('docs.title')}>
           <h2>{t('docs.users')}</h2>
-          <ul>{guides.map(g => link(g.id, guideText[lang][g.id]))}</ul>
+          <ul>{guides.map(g => link(g.id, guidesIn(lang)[g.id]))}</ul>
           <h2>{t('docs.it')}</h2>
           <ul lang="en" dir="ltr">{techPages.map(id => link(id, techText[id]))}</ul>
         </nav>

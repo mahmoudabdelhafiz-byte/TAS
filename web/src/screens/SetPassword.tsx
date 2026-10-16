@@ -4,6 +4,8 @@ import { ApiError } from '../lib/api.ts';
 import type { TextKey } from '../lib/i18n.ts';
 import type { Lang } from '../lib/time.ts';
 import { Mark } from './Shell.tsx';
+import { isPortalLanguage } from '../lib/languages.ts';
+import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
 
 interface LinkInfo {
   purpose: 'RESET' | 'INVITE';
@@ -37,7 +39,7 @@ export function SetPassword({ api, token, lang, t, setLang, onDone }: {
         if (r.ok) {
           const data = (await r.json()) as LinkInfo;
           setInfo(data);
-          if (data.preferredLanguage === 'ar' || data.preferredLanguage === 'en') setLang(data.preferredLanguage);
+          if (isPortalLanguage(data.preferredLanguage)) setLang(data.preferredLanguage);
         } else {
           setProblem(t('password.badLink'));
         }
@@ -64,9 +66,7 @@ export function SetPassword({ api, token, lang, t, setLang, onDone }: {
   return (
     <main className="login single">
       <section className="login-form-side">
-        <button type="button" className="link-btn login-lang" onClick={() => setLang(lang === 'en' ? 'ar' : 'en')} lang={lang === 'en' ? 'ar' : 'en'}>
-          {t('lang.switch')}
-        </button>
+        <div className="login-lang"><LanguageSwitch lang={lang} setLang={setLang} label={t('lang.switch')} /></div>
         <div className="login-form">
           <div className="login-brand dark"><Mark /> <span>Yardsyncs</span></div>
           {problem && (

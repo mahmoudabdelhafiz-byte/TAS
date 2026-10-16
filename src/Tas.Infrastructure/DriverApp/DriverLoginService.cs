@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Tas.Application.MasterData;
+using Tas.Application.Languages;
 using Tas.Application.Notifications;
 using Tas.Domain;
 using Tas.Domain.Parties;
@@ -241,12 +242,11 @@ public sealed partial class DriverLoginService(
     private static byte[] Hash(string mobile, string installId, string code) =>
         SHA256.HashData(Encoding.UTF8.GetBytes($"{mobile}|{installId}|{code}"));
 
-    /// <summary>The SMS with the code, in the driver's language.</summary>
-    public static RenderedMessage CodeMessage(string language, string code, int minutes) => language switch
-    {
-        "ar" => new("Yardsyncs", $"Yardsyncs: رمز الدخول {code}. صالح لمدة {minutes} دقائق. لا تشاركه مع أحد."),
-        "ur" => new("Yardsyncs", $"Yardsyncs: لاگ اِن کوڈ {code}۔ {minutes} منٹ کے لیے درست۔ کسی کو نہ بتائیں۔"),
-        "hi" => new("Yardsyncs", $"Yardsyncs: लॉगिन कोड {code}। {minutes} मिनट तक मान्य। किसी को न बताएं।"),
-        _ => new("Yardsyncs", $"Yardsyncs: sign-in code {code}. Valid for {minutes} minutes. Do not share it."),
-    };
+    /// <summary>The SMS with the code, in the driver's language (a language pack can add or correct it).</summary>
+    public static RenderedMessage CodeMessage(string language, string code, int minutes) =>
+        new("Yardsyncs", NotificationText.Render(LanguageCatalog.Messages.SignInCode, language, new Dictionary<string, string>
+        {
+            ["code"] = code,
+            ["minutes"] = minutes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        }).Body);
 }

@@ -128,6 +128,15 @@ public static class MasterDataEndpoints
         app.MapGet("/api/country", (Tas.Infrastructure.TerminalProfiles profiles) => Results.Ok(CountryView.From(profiles.InstallationCountry)))
             .AllowAnonymous();
 
+        // Languages: the built-in ones and the installation's language packs (public: the sign-in page and the app need them).
+        app.MapGet("/api/languages", () => Results.Ok(Tas.Application.Languages.LanguageCatalog.All)).AllowAnonymous();
+
+        // A pack's texts for the portal and the app (the built-in languages' texts ship with the portal and the app).
+        app.MapGet("/api/languages/{code}", (string code) =>
+            Tas.Application.Languages.LanguageCatalog.Pack(code) is { } pack
+                ? Results.Ok(new { pack.Code, pack.Name, pack.Direction, pack.Portal, pack.App })
+                : TasApi.Problem(StatusCodes.Status404NotFound, $"No language pack '{code}'.")).AllowAnonymous();
+
         // The terminal's public holidays in a year (lunar ones are expected dates: they follow the moon sighting).
         app.MapGet("/api/terminals/{terminalId:int}/holidays", async (
             int terminalId, int? year, HttpContext http, TasDbContext db, Tas.Infrastructure.TerminalProfiles profiles, CancellationToken ct) =>

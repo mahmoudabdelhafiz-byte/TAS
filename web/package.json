@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json && vite build",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --experimental-strip-types --no-warnings --test tests/*.test.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "language-template": "node --experimental-strip-types --no-warnings scripts/language-template.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans": "^5.2.5",

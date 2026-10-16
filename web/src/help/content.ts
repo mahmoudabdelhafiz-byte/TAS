@@ -35,3 +35,6 @@ export const guideText: Record<Lang, Record<string, string>> = {
 export const techText: Record<string, string> = {
   overview: overviewTech, api: apiTech, integration: integrationTech, operations: operationsTech, security: securityTech, assistant: assistantTech,
 };
+
+/** The guides in a language: English for languages without guides of their own. */
+export const guidesIn = (lang: Lang): Record<string, string> => guideText[lang] ?? guideText.en;

@@ -1,0 +1,18 @@
+{
+  "code": "fr",
+  "name": "Français",
+  "direction": "ltr",
+  "portal": {
+    "nav.book": "Réserver un camion",
+    "nav.appointments": "Rendez-vous"
+  },
+  "app": {
+    "signOut": "Se déconnecter"
+  },
+  "messages": {
+    "STATUS_RED": {
+      "subject": "Rendez-vous {appointmentNo} suspendu",
+      "body": "Yardsyncs : le rendez-vous {appointmentNo} ({slot}) est suspendu : {reason}. Ne partez pas avant sa levée."
+    }
+  }
+}

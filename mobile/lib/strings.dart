@@ -1,8 +1,27 @@
 // Texts of the driver app in Arabic, English, Urdu and Hindi.
 // Every language must have every key (checked by test/strings_test.dart).
+// Language packs on the server add languages, or correct these texts, without a new app version (addLanguagePack).
 // Messages that come from the server (reasons, errors) are shown as they come.
 
+/// The languages built into the app.
 const supportedLanguages = ['ar', 'en', 'ur', 'hi'];
+
+final Map<String, Map<String, String>> _packTexts = {};
+final Map<String, String> _packNames = {};
+final Set<String> _packRtl = {};
+
+/// Adds a language pack's app texts (over the built-in ones for ar, en, ur, hi).
+void addLanguagePack(String code, String name, bool rtl, Map<String, String> packTexts) {
+  _packTexts[code] = {...?_packTexts[code], ...packTexts};
+  _packNames[code] = name;
+  if (rtl) _packRtl.add(code);
+}
+
+/// The built-in languages, then the ones language packs add.
+List<String> get appLanguages => [...supportedLanguages, ..._packNames.keys.where((c) => !supportedLanguages.contains(c))];
+
+/// A language named in itself ("العربية", "Français").
+String languageName(String code) => languageNames[code] ?? _packNames[code] ?? code;
 
 const languageNames = {
   'ar': 'العربية',
@@ -11,7 +30,7 @@ const languageNames = {
   'hi': 'हिन्दी',
 };
 
-bool isRtl(String lang) => lang == 'ar' || lang == 'ur';
+bool isRtl(String lang) => lang == 'ar' || lang == 'ur' || _packRtl.contains(lang);
 
 const Map<String, Map<String, String>> texts = {
   'en': {
@@ -338,7 +357,7 @@ const Map<String, Map<String, String>> texts = {
 
 /// Text in a language, with {name} placeholders filled; falls back to English, then to the key.
 String tr(String lang, String key, [Map<String, String> values = const {}]) {
-  var text = texts[lang]?[key] ?? texts['en']![key] ?? key;
+  var text = _packTexts[lang]?[key] ?? texts[lang]?[key] ?? _packTexts['en']?[key] ?? texts['en']![key] ?? key;
   values.forEach((name, value) => text = text.replaceAll('{$name}', value));
   return text;
 }

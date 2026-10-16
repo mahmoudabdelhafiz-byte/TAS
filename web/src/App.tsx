@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiClient, browserStore } from './lib/api.ts';
 import { translate, translateDynamic, type TextKey } from './lib/i18n.ts';
+import { direction, isPortalLanguage, loadLanguages } from './lib/languages.ts';
 import { buildHash, parseHash, screensFor, type Route, type Screen } from './lib/routes.ts';
 import { localDate, type Lang } from './lib/time.ts';
 import type { Terminal, UserProfile } from './lib/types.ts';
@@ -14,12 +15,13 @@ const api = new ApiClient(browserStore);
 
 function initialLang(user: UserProfile | null): Lang {
   try {
+    // Checked against the installation's languages once they are loaded (a pack may have been removed).
     const saved = localStorage.getItem('yardsyncs.lang');
-    if (saved === 'en' || saved === 'ar') return saved;
+    if (saved && /^[a-z]{2}$/.test(saved)) return saved;
   } catch {
     // ignore
   }
-  if (user) return user.preferredLanguage === 'ar' ? 'ar' : 'en';
+  if (user && isPortalLanguage(user.preferredLanguage.trim())) return user.preferredLanguage.trim();
   return typeof navigator !== 'undefined' && navigator.language?.startsWith('ar') ? 'ar' : 'en';
 }
 
@@ -37,7 +39,16 @@ export function App() {
   const [user, setUser] = useState<UserProfile | null>(api.user);
   const [lang, setLangState] = useState<Lang>(() => initialLang(api.user));
   const [ended, setEnded] = useState(false);
+  const [, setLanguagesLoaded] = useState(false);
   const route = useHashRoute();
+
+  // Language packs on the server: more portal languages, or corrected texts.
+  useEffect(() => {
+    void loadLanguages().then(() => {
+      setLanguagesLoaded(true);
+      setLangState(current => (isPortalLanguage(current) ? current : 'en'));
+    });
+  }, []);
 
   useEffect(() => {
     api.onSessionEnded = () => { setUser(null); setEnded(true); };
@@ -45,7 +56,7 @@ export function App() {
 
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.dir = direction(lang);
   }, [lang]);
 
   const setLang = useCallback((next: Lang) => {

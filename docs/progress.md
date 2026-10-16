@@ -384,6 +384,15 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Public holidays: fixed days and lunar ones from the Umm al-Qura calendar (expected dates); `GET /api/terminals/{id}/holidays?year=`; the slot board names the holiday and offers **Close the whole day** (nothing closes by itself) |
 | ✅ | `GET /api/country` (public): the portal's driver form shows the country's ID document and mobile example; the drivers' app shows the example before sign-in |
 
+### 37. Language packs (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | A language pack is one JSON file per language (`deploy/languages/<code>.json`, mounted into the app) with any of three parts: portal, drivers' app, messages (notifications, sign-in code, password emails) |
+| ✅ | New languages, or corrections to the built-in ones (e.g. a native speaker's review of Arabic, Urdu or Hindi) without a new version; whatever a pack leaves out shows in English |
+| ✅ | Checked at start: code matches the file name, known messages only, only each message's own `{placeholders}`; a mistake stops the start with the reason |
+| ✅ | `GET /api/languages` and `GET /api/languages/{code}` (public); the portal's language link becomes a list with a third language; the app adds pack languages to its menu; drivers' and users' languages are checked against the installation's |
+| ✅ | `template.json` for translators with every English text; `npm run language-template` keeps it current (checked by tests on both sides) |
+
 ---
 
 ## Remaining
@@ -458,7 +467,7 @@ Details in [`releasing.md`](releasing.md).
 | 🟡 | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Done: TOS, message providers, sender names, brand (section 34). Still per installation: driver message channel (SMS / WhatsApp), gate identification, driver identity, fees |
 | ✅ | Tenants: terminal operator → terminals; operator admins | Section 35. Competitors: separate installations / cloud instances |
 | ✅ | Country packs: plate formats, mobile number rules, national holidays, currencies, ID types | Section 36: SA, AE, OM, BH, KW, QA. More countries are new entries in `CountryPacks` with their tests |
-| ⬜ | Languages as packs: portal and messages in more languages without code changes | Arabic, English, Urdu, Hindi today |
+| ✅ | Languages as packs: portal and messages in more languages without code changes | Section 37. Help guides stay English / Arabic |
 | ⬜ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | |
 | ⬜ | TOS adapter kit: documented interface + test suite any new TOS adapter must pass | `ITosAdapter` today |
 | ⬜ | Terminal onboarding wizard: terminal, move types, weekly plan, lanes, TOS connection, settings above | |

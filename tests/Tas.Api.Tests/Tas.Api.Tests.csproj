@@ -16,6 +16,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- A language pack the API tests run with (Languages:Path). -->
+  <ItemGroup>
+    <None Include="languages\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Tas.Api\Tas.Api.csproj" />
   </ItemGroup>

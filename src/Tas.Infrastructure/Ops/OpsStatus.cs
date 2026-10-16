@@ -13,7 +13,8 @@ public sealed record OutboxStatus(int Queued, int FailedLast24h, int SentLast24h
 public sealed record OpsStatus(
     string Version, string Environment, DateTimeOffset StartedAt, DateTimeOffset Now, string Tos,
     DatabaseStatus Database, OutboxStatus Notifications, OutboxStatus IntegrationEvents, int FollowedContainers, int LiveVisits,
-    IReadOnlyList<string> Warnings, RetentionRun? LastCleanUp, AssistantToday Assistant, IReadOnlyList<TerminalSetup> Terminals);
+    IReadOnlyList<string> Warnings, RetentionRun? LastCleanUp, AssistantToday Assistant, IReadOnlyList<TerminalSetup> Terminals,
+    IReadOnlyList<string>? LanguagePacks = null);
 
 /// <summary>How one terminal is set up (no secrets): its TOS, message providers and sender names, and its webhook.</summary>
 public sealed record TerminalSetup(
@@ -95,7 +96,10 @@ public sealed class OpsStatusService(
             SecurityChecks.Warnings(config, env),
             RetentionService.LastRun,
             await AssistantTodayAsync(now, ct),
-            setups);
+            setups,
+            Tas.Application.Languages.LanguageCatalog.Packs.Select(p => $"{p.Code} {p.Name}: " + string.Join(", ",
+                new[] { (p.Portal.Count, "portal"), (p.App.Count, "app"), (p.Messages.Count, "messages") }
+                    .Where(x => x.Item1 > 0).Select(x => $"{x.Item2} {x.Item1}"))).ToList());
     }
 
     private async Task<AssistantToday> AssistantTodayAsync(DateTimeOffset now, CancellationToken ct)

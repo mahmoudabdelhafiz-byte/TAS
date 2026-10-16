@@ -86,7 +86,8 @@ class Voice {
   }
 
   Future<String?> _pickVoice(String lang) async {
-    for (final (locale, textLang) in speechVoices[lang] ?? const [('en-US', 'en')]) {
+    // A language from a pack: its own voice if the phone has one, else English.
+    for (final (locale, textLang) in speechVoices[lang] ?? [(lang, lang), ('en-US', 'en')]) {
       final ok = await _tts.isLanguageAvailable(locale);
       if (ok == true || ok == 1) {
         await _tts.setLanguage(locale);

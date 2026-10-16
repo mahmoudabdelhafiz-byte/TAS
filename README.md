@@ -63,6 +63,9 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   are signed with (`Terminals__<code>__Brand`) and any message setting (`Terminals__<code>__Notifications__…`:
   providers, accounts, SMS sender name, email sender); the installation's settings fill the rest. `/api/ops/status`
   lists each terminal's set-up.
+- Language packs: a JSON file per language in `deploy/languages/` (from `template.json`) adds a portal, app or
+  message language, or corrects a built-in one, without a new version; `GET /api/languages`. After changing portal or
+  app texts run `npm run language-template` in `web/` (a test checks the template is current).
 - Country packs (`Country`, default SA; also AE, OM, BH, KW, QA): local mobile forms, plate letters, the drivers' ID
   document, currency and public holidays; a terminal can have its own (`Terminals__<code>__Country`) for holidays and
   currency. `GET /api/country`, `GET /api/terminals/{id}/holidays?year=`.

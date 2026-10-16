@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Tas.Application.Auth;
+using Tas.Application.Languages;
 using Tas.Application.Notifications;
 using Tas.Domain;
 using Tas.Domain.Parties;
@@ -207,21 +208,13 @@ public sealed class PasswordLinkService(
         }
     }
 
-    /// <summary>The email, in Arabic or English (the portal's languages).</summary>
+    /// <summary>The email in the user's language (Arabic or English built in; a language pack can add others).</summary>
     public static RenderedMessage Message(string purpose, string language, string name, string link, int validFor)
     {
-        var ar = language == "ar";
-        return (purpose, ar) switch
-        {
-            (PasswordTokenPurpose.Invite, false) => new("Yardsyncs — your account is ready",
-                $"Hello {name},\n\nAn account was created for you on Yardsyncs. Set your password here (the link works once, for {validFor} days):\n\n{link}\n\nIf you did not expect this, ignore this email."),
-            (PasswordTokenPurpose.Invite, true) => new("Yardsyncs — حسابك جاهز",
-                $"مرحباً {name}،\n\nتم إنشاء حساب لك على Yardsyncs. عيّن كلمة المرور من هنا (يعمل الرابط مرة واحدة لمدة {validFor} أيام):\n\n{link}\n\nإذا لم تكن تتوقع هذه الرسالة فتجاهلها."),
-            (_, false) => new("Yardsyncs — set a new password",
-                $"Hello {name},\n\nSomeone asked to reset the password of your Yardsyncs account. Set a new password here (the link works once, for {validFor} minutes):\n\n{link}\n\nIf it wasn't you, ignore this email: your password stays as it is."),
-            _ => new("Yardsyncs — تعيين كلمة مرور جديدة",
-                $"مرحباً {name}،\n\nطُلب تغيير كلمة مرور حسابك على Yardsyncs. عيّن كلمة مرور جديدة من هنا (يعمل الرابط مرة واحدة لمدة {validFor} دقيقة):\n\n{link}\n\nإذا لم تكن أنت صاحب الطلب فتجاهل الرسالة: تبقى كلمة المرور كما هي."),
-        };
+        var invite = purpose == PasswordTokenPurpose.Invite;
+        var valid = validFor.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return NotificationText.Render(invite ? LanguageCatalog.Messages.PasswordInvite : LanguageCatalog.Messages.PasswordReset, language,
+            new Dictionary<string, string> { ["name"] = name, ["link"] = link, [invite ? "days" : "minutes"] = valid });
     }
 
     private static byte[] Hash(string token) => SHA256.HashData(Encoding.UTF8.GetBytes(token));
