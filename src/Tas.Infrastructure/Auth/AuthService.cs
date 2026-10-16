@@ -66,22 +66,25 @@ public sealed class AuthService(
         var result = passwords.Verify(user, password ?? "");
         if (result == PasswordVerificationResult.Failed)
         {
-            user.FailedLoginCount++;
-            if (user.FailedLoginCount >= MaxFailedLogins)
+            // Counted in the database, so guesses sent at the same moment can't get past the limit.
+            await db.AppUsers.Where(u => u.UserId == user.UserId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.FailedLoginCount, u => u.FailedLoginCount + 1), ct);
+            var failed = await db.AppUsers.AsNoTracking().Where(u => u.UserId == user.UserId).Select(u => u.FailedLoginCount).SingleAsync(ct);
+            if (failed >= MaxFailedLogins)
             {
-                user.LockedUntil = now + LockoutDuration;
-                user.FailedLoginCount = 0;
+                var locked = now + LockoutDuration;
+                await db.AppUsers.Where(u => u.UserId == user.UserId && u.FailedLoginCount >= MaxFailedLogins)
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.LockedUntil, locked).SetProperty(u => u.FailedLoginCount, 0), ct);
                 logger.LogWarning("User {UserId} locked out after {Count} failed logins from {Ip}", user.UserId, MaxFailedLogins, ip);
             }
-            await db.SaveChangesAsync(ct);
             return new AuthResult(AuthStatus.InvalidCredentials);
         }
 
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
             user.PasswordHash = passwords.Hash(user, password!);
 
-        user.FailedLoginCount = 0;
-        user.LockedUntil = null;
+        await db.AppUsers.Where(u => u.UserId == user.UserId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.FailedLoginCount, 0).SetProperty(u => u.LockedUntil, (DateTimeOffset?)null), ct);
         user.LastLoginAt = now;
 
         var issued = await IssueAsync(user, ip, null, ct);

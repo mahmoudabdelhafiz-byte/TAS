@@ -28,6 +28,10 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<DatabaseMigrator>();
         services.AddScoped<Tas.Infrastructure.Ops.OpsStatusService>();
+        services.Configure<Tas.Infrastructure.Ops.PrivacyOptions>(config.GetSection("Privacy"));
+        services.AddScoped<Tas.Infrastructure.Ops.RetentionService>();
+        services.AddScoped<Tas.Infrastructure.Ops.PersonalDataService>();
+        services.AddHostedService<Tas.Infrastructure.Ops.RetentionWorker>();
         services.AddTasAuthentication(config);
 
         // Capacity
@@ -118,7 +122,9 @@ public static class DependencyInjection
 
         return (channel, provider) switch
         {
-            (_, "log" or "") => new LogSender(channel, sp.GetRequiredService<ILogger<LogSender>>()),
+            (_, "log" or "") => new LogSender(channel, sp.GetRequiredService<ILogger<LogSender>>(),
+                showBody: Ops.SecurityChecks.IsTestHost(sp.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>())
+                          || sp.GetRequiredService<IConfiguration>().GetValue("Notifications:LogMessageText", false)),
             (NotificationChannel.Sms, "unifonic") => new UnifonicSmsSender(Http(), o.Unifonic),
             (NotificationChannel.Sms or NotificationChannel.Whatsapp, "twilio") => new TwilioSender(Http(), o.Twilio, channel),
             (NotificationChannel.Email, "smtp") => new SmtpEmailSender(o.Smtp),

@@ -93,6 +93,21 @@ public static class MasterDataEndpoints
                 ? TasApi.Forbidden("Only terminal admins can block or unblock drivers.")
                 : TasApi.Admin(await service.SetDriverBlockedAsync(TasApi.User(http)!, companyId, driverId, body, ct)));
 
+        // Personal data (Saudi PDPL): a copy of everything held about a driver, and erasure on request.
+        companies.MapGet("/{companyId:int}/drivers/{driverId:int}/personal-data", async (
+            int companyId, int driverId, HttpContext http, Tas.Infrastructure.Ops.PersonalDataService service, CancellationToken ct) =>
+        {
+            var result = await service.ExportAsync(TasApi.User(http)!, companyId, driverId, ct);
+            if (result.Status != Tas.Application.Capacity.AdminStatus.Ok)
+                return TasApi.Admin(result);
+            http.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(result.Value);
+        });
+
+        companies.MapPost("/{companyId:int}/drivers/{driverId:int}/erase", async (
+            int companyId, int driverId, EraseBody body, HttpContext http, Tas.Infrastructure.Ops.PersonalDataService service, CancellationToken ct) =>
+            TasApi.Admin(await service.EraseAsync(TasApi.User(http)!, companyId, driverId, body.Reason, ct)));
+
         // ================================================================ terminals
 
         // The terminals the signed-in user can work at (the portal's terminal picker).

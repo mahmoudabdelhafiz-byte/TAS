@@ -29,6 +29,8 @@ public sealed record CreateAppointmentBody(
 
 public sealed record CancelBody(string? Reason);
 
+public sealed record EraseBody(string? Reason);
+
 public sealed record RescheduleBody(long SlotId);
 
 public sealed record AssignBody(int? TruckId, int? DriverId);

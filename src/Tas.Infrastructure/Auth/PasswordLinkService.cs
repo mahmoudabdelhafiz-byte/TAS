@@ -15,7 +15,11 @@ namespace Tas.Infrastructure.Auth;
 /// <summary>Configuration section "PasswordLinks".</summary>
 public sealed class PasswordLinkOptions
 {
-    /// <summary>The portal's address for the links in the emails, e.g. https://tas.example.com. Empty: the address the request came to.</summary>
+    /// <summary>
+    /// The portal's address for the links in the emails, e.g. https://tas.example.com. Required on a real server: the
+    /// address a request came to is set by the caller, so a link built from it could point to someone else's site.
+    /// Empty on a developer's machine or in tests: the address the request came to.
+    /// </summary>
     public string PortalUrl { get; set; } = "";
 
     public int ResetMinutes { get; set; } = 60;
@@ -48,6 +52,7 @@ public sealed class PasswordLinkService(
     NotificationSenders senders,
     IOptions<PasswordLinkOptions> options,
     TimeProvider clock,
+    Microsoft.Extensions.Hosting.IHostEnvironment env,
     ILogger<PasswordLinkService> logger)
 {
     public const string BadLink = "This link is not valid any more. Ask for a new one.";
@@ -162,14 +167,22 @@ public sealed class PasswordLinkService(
         return token;
     }
 
-    private string Link(string requestBaseUrl, string token)
+    /// <summary>The link, or null when the portal's address isn't configured on a real server.</summary>
+    private string? Link(string requestBaseUrl, string token)
     {
-        var portal = string.IsNullOrWhiteSpace(options.Value.PortalUrl) ? requestBaseUrl : options.Value.PortalUrl;
-        return $"{portal.TrimEnd('/')}/#/password?token={token}";
+        var portal = !string.IsNullOrWhiteSpace(options.Value.PortalUrl) ? options.Value.PortalUrl
+            : Ops.SecurityChecks.IsTestHost(env) ? requestBaseUrl
+            : null;
+        return portal is null ? null : $"{portal.TrimEnd('/')}/#/password?token={token}";
     }
 
-    private async Task SendAsync(AppUser user, string purpose, string link, CancellationToken ct)
+    private async Task SendAsync(AppUser user, string purpose, string? link, CancellationToken ct)
     {
+        if (link is null)
+        {
+            logger.LogError("PasswordLinks:PortalUrl is not set; password link for user {UserId} not sent", user.UserId);
+            return;
+        }
         var sender = senders.For(NotificationChannel.Email);
         if (sender is null)
         {

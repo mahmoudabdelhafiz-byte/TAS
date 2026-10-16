@@ -303,6 +303,20 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Security headers (CSP, no framing, nosniff), HSTS, client address and https from the reverse proxy (rate limits per real client) |
 | ✅ | CI builds the image and starts it with a fresh database: schema created, ready, portal served, admin signs in, restart, backup |
 
+### 29. Security and personal data review (2026-10-16)
+Findings and the PDPL picture in [`security.md`](security.md).
+
+| | Item |
+|---|---|
+| ✅ | Password links built only from `PasswordLinks:PortalUrl` on a real server (no forged `Host` header in reset emails) |
+| ✅ | Sign-in codes and password links kept out of the logs when no provider is configured; recipients masked |
+| ✅ | Driver codes and portal passwords: tries counted atomically (no parallel guessing past the limit); a code signs in once; 10 codes per number per day |
+| ✅ | App refuses to start with test switches on outside Development / Testing; `/api/ops/status` lists settings to look at |
+| ✅ | Bulk upload: zip-bomb workbooks refused, rows / columns read capped, request size capped |
+| ✅ | Daily clean-up of personal data (positions, message addresses, events, codes, sessions, links, old push addresses), periods per installation |
+| ✅ | Drivers: copy of data and erasure (portal and API), audited, refused while a visit is under way |
+| ✅ | Yardsyncs mobile: location notice before the first trip (what, why, until when, rights), in the four languages |
+
 ---
 
 ## Remaining
@@ -363,7 +377,8 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ⬜ | Licensing for on-premise installations; SQL Server support if a terminal does not allow PostgreSQL ❓ |
 | ✅ | Backups, health checks, JSON logging, status for monitoring |
 | ⬜ | Alerting wired to the customer's monitoring (rules listed in `deploy/README.md`); off-site copy of backups |
-| ⬜ | Security review; PDPL privacy (location only during active visits, consent) |
+| ✅ | Security review; PDPL privacy: retention, drivers' copy and erasure, location notice (`docs/security.md`) |
+| ⬜ | Outside penetration test; dependency scanning in CI; two-step sign-in for admins; audit trail screen; secret rotation procedure |
 | ⬜ | Load test for peak booking times |
 | ⬜ | User guides (Arabic / English) and onboarding for trucking companies |
 | ⬜ | **Reminder for Mahmoud when development is finished:** make the GitHub repository private (Settings → Danger Zone → Change visibility) |

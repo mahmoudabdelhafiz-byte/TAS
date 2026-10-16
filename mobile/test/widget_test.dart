@@ -40,4 +40,12 @@ void main() {
     expect(find.text('Send code'), findsOneWidget);
     expect(Directionality.of(tester.element(find.text('Send code'))), TextDirection.ltr);
   });
+
+  test('the location notice is asked once', () async {
+    final store = MemoryStore();
+    final api = DriverApi(store: store);
+    expect(await api.locationNoticeAccepted(), isFalse);
+    await api.acceptLocationNotice();
+    expect(await DriverApi(store: store).locationNoticeAccepted(), isTrue);
+  });
 }

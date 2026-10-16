@@ -11,17 +11,32 @@ public static class BulkFiles
     public const long MaxUploadBytes = 2 * 1024 * 1024;
 
     /// <summary>First worksheet as text. Dates become yyyy-MM-dd and times HH:mm whatever Excel turned them into.</summary>
+    /// <summary>
+    /// An .xlsx is a zip: a 2 MB file can unpack to gigabytes and take the server down. A real bulk sheet
+    /// (≤ 500 rows) unpacks to well under a megabyte.
+    /// </summary>
+    public const long MaxUnpackedBytes = 40 * 1024 * 1024;
+
+    public const int MaxColumns = 40;
+
     public static IReadOnlyList<IReadOnlyList<string>> ReadExcel(Stream stream)
     {
-        using var workbook = new XLWorkbook(stream);
+        var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        buffer.Position = 0;
+        CheckUnpackedSize(buffer);
+        buffer.Position = 0;
+
+        using var workbook = new XLWorkbook(buffer);
         var sheet = workbook.Worksheets.First();
         var used = sheet.RangeUsed();
         if (used is null)
             return [];
 
         var table = new List<IReadOnlyList<string>>();
-        var lastColumn = used.LastColumn().ColumnNumber();
-        foreach (var row in used.Rows())
+        var lastColumn = Math.Min(used.LastColumn().ColumnNumber(), MaxColumns);
+        // One row past the limit, so the sheet check reports "too many rows" instead of reading a million.
+        foreach (var row in used.Rows().Take(Tas.Application.Booking.Bulk.BulkSheet.MaxRows + 2))
         {
             var cells = new List<string>();
             for (var col = 1; col <= lastColumn; col++)
@@ -29,6 +44,19 @@ public static class BulkFiles
             table.Add(cells);
         }
         return table;
+    }
+
+    /// <exception cref="InvalidDataException">The workbook unpacks to more than <see cref="MaxUnpackedBytes"/>.</exception>
+    public static void CheckUnpackedSize(Stream xlsx)
+    {
+        using var zip = new System.IO.Compression.ZipArchive(xlsx, System.IO.Compression.ZipArchiveMode.Read, leaveOpen: true);
+        long total = 0;
+        foreach (var entry in zip.Entries)
+        {
+            total += entry.Length;
+            if (total > MaxUnpackedBytes || zip.Entries.Count > 1000)
+                throw new InvalidDataException("The workbook is too large when unpacked. Upload only the booking sheet.");
+        }
     }
 
     public static IReadOnlyList<IReadOnlyList<string>> ReadCsv(Stream stream)
