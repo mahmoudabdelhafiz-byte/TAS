@@ -70,6 +70,20 @@ public class TerminalProfilesTests
         Profiles(("Country", "qa")).Validate();
     }
 
+    [Fact]
+    public void Drivers_without_the_app_get_the_terminals_channel()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Notifications:DriverChannel"] = "Sms",
+            ["Terminals:DEMO:Notifications:DriverChannel"] = "Whatsapp",
+        }).Build();
+        Assert.Equal(NotificationChannel.Whatsapp, NotificationQueue.DriverChannel(config, "DEMO"));
+        Assert.Equal(NotificationChannel.Sms, NotificationQueue.DriverChannel(config, "JED1"));
+        Assert.Equal(NotificationChannel.Sms, NotificationQueue.DriverChannel(config));
+        Assert.Equal(NotificationChannel.Whatsapp, new TerminalProfiles(config).NotificationsFor("DEMO").DriverChannel);
+    }
+
     private sealed class NamedSender(NotificationChannel channel, string name) : INotificationSender
     {
         public NotificationChannel Channel => channel;

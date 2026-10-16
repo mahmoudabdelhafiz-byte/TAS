@@ -417,6 +417,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | The checklist (`GET /api/terminals/{id}/setup`): move types, weekly plan, bookable slots, gate lanes, TOS, staff, companies, map; "ready to book" once the first four are done |
 | ✅ | **Terminal set-up** screen: the steps in order, each with its quick actions (usual move types, a starter weekly plan, make slots, add lanes and move types, test the TOS connection) or a link to the screen that does it |
 
+### 41. Settings per terminal, part 2 (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Driver message channel per terminal (`Terminals:<code>:Notifications:DriverChannel`: SMS or WhatsApp) for drivers without the app, including push fall-back and reminders |
+| ✅ | Gate identification per terminal: the gate pass always; appointment number, plate and container number can each be turned off (**At the gate** in Capacity setup → Rules) |
+| ✅ | Driver identity per terminal: not checked, a named driver, or the named driver's own gate pass; trucks that don't meet it go to the trouble desk as "Driver not identified" (migration 016) |
+
 ---
 
 ## Remaining
@@ -488,7 +495,7 @@ Details in [`releasing.md`](releasing.md).
 ### Phase G — Generic product (any terminal operator)
 | | Item | Notes |
 |---|---|---|
-| 🟡 | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Done: TOS, message providers, sender names, brand (section 34). Still per installation: driver message channel (SMS / WhatsApp), gate identification, driver identity, fees |
+| 🟡 | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Done: TOS, message providers, sender names, brand (section 34); driver channel, gate identification, driver identity (section 41). Left: fees (no fees in Yardsyncs yet) |
 | ✅ | Tenants: terminal operator → terminals; operator admins | Section 35. Competitors: separate installations / cloud instances |
 | ✅ | Country packs: plate formats, mobile number rules, national holidays, currencies, ID types | Section 36: SA, AE, OM, BH, KW, QA. More countries are new entries in `CountryPacks` with their tests |
 | ✅ | Languages as packs: portal and messages in more languages without code changes | Section 37. Help guides stay English / Arabic |

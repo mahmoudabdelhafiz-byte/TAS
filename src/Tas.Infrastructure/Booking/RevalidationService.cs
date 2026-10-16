@@ -129,7 +129,7 @@ public sealed class RevalidationService(
                     [NotificationText.Keys.Slot] = NotificationText.SlotLabel(a.Slot.StartAt, a.Slot.EndAt, timeZone),
                     [NotificationText.Keys.Reason] = reason,
                 };
-                await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, template, values, NotificationQueue.DriverChannel(config), now, ct,
+                await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, template, values, await NotificationQueue.DriverChannelAsync(db, config, a.TerminalId, ct), now, ct,
                     pushFirst: NotificationQueue.PushFirst(config));
             }
 

@@ -23,6 +23,13 @@ a vessel peak) replaces it between two dates; when two seasonal plans overlap, t
 - **Release of unused limits** — hours before the slot when a move type's unused places become free for any move.
 - **Booking rules** — how early and late a truck may arrive, until when companies may cancel or move, and the
   appointments per truck per day.
+- **At the gate** — how the gate finds a truck's appointment: the driver's gate pass always, and the appointment
+  number, the plate or a container number unless you turn them off. Also how strictly the driver is checked:
+  - not at all
+  - the appointment must name its driver
+  - the named driver shows the gate pass from Yardsyncs mobile
+
+  Trucks that don't meet the rules go to the trouble desk as **Driver not identified**.
 
 Every change is kept in the change history with who made it and the reason.
 

@@ -32,6 +32,7 @@ Terminals__JED1__Tos=N4                                     the TOS: N4 or Fake 
 N4__Terminals__JED1__Url=...                                 that terminal's N4 connection
 Terminals__JED1__Brand=Harbor One Terminal                       the name messages are signed with; default Brand, then Yardsyncs
 Terminals__JED1__Country=AE                                  public holidays and currency; default Country
+Terminals__JED1__Notifications__DriverChannel=Whatsapp       drivers without the app: Sms or Whatsapp
 Terminals__JED1__Notifications__SmsProvider=Unifonic         any message setting: provider, account,
 Terminals__JED1__Notifications__Unifonic__SenderId=HARBOR1      SMS sender name,
 Terminals__JED1__Notifications__Smtp__From=tas@harbor-one.example  email sender address and name

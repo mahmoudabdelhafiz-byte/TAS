@@ -508,6 +508,8 @@ function Rules({ editable }: { editable: boolean }) {
         )}
       </div>
 
+      <GateRules editable={editable} />
+
       <div className="book-side form-stack">
         <h2>{t('setup.settings')}</h2>
         {done && <Notice kind="ok" onClose={() => setDone(null)}>{done}</Notice>}
@@ -525,6 +527,61 @@ function Rules({ editable }: { editable: boolean }) {
           }}>{t('setup.saveSettings')}</ActionButton>
         )}
       </div>
+    </div>
+  );
+}
+
+const gateKeys = ['gate_by_number', 'gate_by_plate', 'gate_by_container'] as const;
+const gateText = { gate_by_number: 'setup.gateByNumber', gate_by_plate: 'setup.gateByPlate', gate_by_container: 'setup.gateByContainer' } as const;
+const identityText = ['setup.identity0', 'setup.identity1', 'setup.identity2'] as const;
+
+/** How the gate finds the truck's appointment, and how strictly it identifies the driver (per terminal). */
+function GateRules({ editable }: { editable: boolean }) {
+  const { api, t, terminal } = useApp();
+  const base = `/api/terminals/${terminal.terminalId}/settings`;
+  const settings = useLoad(() => api.get<Record<string, number>>(base), [base]);
+  const [values, setValues] = useState<Record<string, number> | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const current = values ?? settings.data;
+
+  return (
+    <div className="book-side form-stack">
+      <h2>{t('setup.gate')}</h2>
+      {done && <Notice kind="ok" onClose={() => setDone(null)}>{done}</Notice>}
+      {error && <Notice kind="error" onClose={() => setError(null)}>{error}</Notice>}
+      {current && (
+        <>
+          <fieldset className="plain-fieldset">
+            <legend>{t('setup.gateFinds')}</legend>
+            <label className="radio"><input type="checkbox" checked disabled /> {t('setup.gateByPass')}</label>
+            {gateKeys.map(k => (
+              <label key={k} className="radio">
+                <input type="checkbox" checked={current[k] !== 0} disabled={!editable}
+                  onChange={e => setValues({ ...current, [k]: e.target.checked ? 1 : 0 })} /> {t(gateText[k])}
+              </label>
+            ))}
+          </fieldset>
+          <fieldset className="plain-fieldset">
+            <legend>{t('setup.identity')}</legend>
+            {identityText.map((text, level) => (
+              <label key={level} className="radio">
+                <input type="radio" name="driver_identity" checked={(current.driver_identity ?? 0) === level} disabled={!editable}
+                  onChange={() => setValues({ ...current, driver_identity: level })} /> {t(text)}
+              </label>
+            ))}
+          </fieldset>
+          <p className="hint">{t('setup.identityHint')}</p>
+          {editable && (
+            <ActionButton kind="primary" disabled={values === null} onError={setError} onRun={async () => {
+              await api.put(base, { values: Object.fromEntries([...gateKeys, 'driver_identity'].map(k => [k, current[k] ?? 0])), reason: null });
+              setValues(null);
+              settings.reload();
+              setDone(t('slots.applied'));
+            }}>{t('setup.saveGate')}</ActionButton>
+          )}
+        </>
+      )}
     </div>
   );
 }

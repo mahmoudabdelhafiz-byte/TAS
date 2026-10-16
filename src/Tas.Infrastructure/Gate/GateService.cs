@@ -51,12 +51,16 @@ public sealed class GateService(
         // A rotating gate pass from the driver app: verify the live code, then match by its appointment number.
         string? passProblem = null;
         var passScanned = false;
+        var passValid = false;
         if (gatePasses is not null && qr is not null && qr.StartsWith(GatePassCode.Prefix + ":", StringComparison.Ordinal))
         {
             passScanned = true;
             var pass = await gatePasses.VerifyAsync(terminalId, qr, ct);
             if (pass.Valid)
+            {
                 number = pass.AppointmentNo;
+                passValid = true;
+            }
             else
                 passProblem = pass.Problem;
             qr = null;
@@ -87,14 +91,16 @@ public sealed class GateService(
                 Containers = a.Items.Where(i => i.ContainerNo != null).Select(i => i.ContainerNo!).ToList(),
                 TruckBlocked = a.Truck != null && a.Truck.IsBlocked,
                 DriverBlocked = a.Driver != null && a.Driver.IsBlocked,
+                HasDriver = a.DriverId != null,
             })
             .Take(50)
             .ToListAsync(ct);
 
         var candidates = rows
-            .Select(r => new GateCandidate(r.AppointmentId, r.AppointmentNo, r.QrToken, r.Status, r.SlotStart, r.SlotEnd, r.Plate, r.Containers.ToHashSet()))
+            .Select(r => new GateCandidate(r.AppointmentId, r.AppointmentNo, r.QrToken, r.Status, r.SlotStart, r.SlotEnd, r.Plate, r.Containers.ToHashSet(), r.HasDriver))
             .ToList();
-        var match = GateMatcher.Match(reads, candidates, now);
+        // A valid gate pass is the driver's own QR code: it always finds its appointment, whatever the number setting.
+        var match = GateMatcher.Match(reads, candidates, now, passValid ? settings with { GateByNumber = true } : settings);
         if (passProblem is not null)
             match = match with { Warnings = match.Warnings.Append(passProblem).ToList() };
         var found = match.Appointment is null ? null : rows.Single(r => r.AppointmentId == match.Appointment.AppointmentId);
@@ -120,7 +126,7 @@ public sealed class GateService(
         db.ChangeTracker.Clear();
 
         var decision = GateDecider.Decide(
-            match.Appointment, light, lightReason, found?.TruckBlocked ?? false, found?.DriverBlocked ?? false, now, settings, timeZone);
+            match.Appointment, light, lightReason, found?.TruckBlocked ?? false, found?.DriverBlocked ?? false, now, settings, timeZone, passValid);
 
         // Never admit a truck we could not check: the clerk verifies in N4 and admits from the trouble desk.
         if (tosDown && decision.Kind == GateDecisionKind.Admit)
@@ -503,7 +509,9 @@ public sealed class GateService(
                 [Tas.Application.Notifications.NotificationText.Keys.Stops] = stops,
             };
             await Tas.Infrastructure.Notifications.NotificationQueue.ForAppointmentAsync(db, appointmentId, NotificationTemplates.GateIn, values,
-                Tas.Infrastructure.Notifications.NotificationQueue.DriverChannel(config), clock.GetUtcNow(), ct,
+                await Tas.Infrastructure.Notifications.NotificationQueue.DriverChannelAsync(db, config,
+                    await db.Appointments.AsNoTracking().Where(a => a.AppointmentId == appointmentId).Select(a => a.TerminalId).SingleAsync(ct), ct),
+                clock.GetUtcNow(), ct,
                 includeBooker: false, pushFirst: Tas.Infrastructure.Notifications.NotificationQueue.PushFirst(config));
             await db.SaveChangesAsync(ct);
         }
