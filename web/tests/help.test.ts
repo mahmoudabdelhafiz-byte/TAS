@@ -94,3 +94,12 @@ for (const lang of ['en', 'ar'] as const) {
     assert.deepEqual(missing, []);
   });
 }
+
+test('the technical pages of the public documentation exist and start with a title', async () => {
+  const { techPages } = await import('../src/help/guides.ts');
+  for (const id of techPages) {
+    const blocks = parseMarkdown(read('tech', id));
+    assert.equal(blocks[0].kind, 'heading', id);
+    assert.ok(blocks.length > 5, id);
+  }
+});

@@ -57,6 +57,14 @@ builder.Services.AddRateLimiter(o =>
             PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimit:AuthPerMinute", 10),
             Window = TimeSpan.FromMinutes(1),
         }));
+    // AI assistant: questions per minute per signed-in user (Assistant:PerMinute, default 10); the daily limit is in the service.
+    o.AddPolicy("assistant", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        TasApi.User(ctx)?.UserId.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("Assistant:PerMinute", 10),
+            Window = TimeSpan.FromMinutes(1),
+        }));
 });
 
 var app = builder.Build();
@@ -102,8 +110,8 @@ app.Use(async (context, next) =>
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter(); // after authentication, so limits can be per signed-in user
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
@@ -322,6 +330,25 @@ terminal.MapDelete("/containers/followed/{containerNo}", async (int terminalId, 
         ? Results.NoContent()
         : TasApi.Problem(StatusCodes.Status404NotFound, $"You don't follow {containerNo}.");
 });
+
+// ================================================================ AI assistant
+
+app.MapGet("/api/assistant", (Tas.Infrastructure.Assistant.AssistantService service) => Results.Ok(service.Info())).RequireAuthorization();
+
+// A question with the conversation so far (kept by the browser); read-only look-ups with the user's permissions.
+terminal.MapPost("/assistant", async (
+    int terminalId, Tas.Infrastructure.Assistant.ChatInput body, HttpContext http, Tas.Infrastructure.Assistant.AssistantService service, CancellationToken ct) =>
+{
+    var result = await service.ChatAsync(TasApi.User(http)!, terminalId, body, ct);
+    return result.Status switch
+    {
+        Tas.Infrastructure.Assistant.ChatStatus.Ok => Results.Ok(result.Answer),
+        Tas.Infrastructure.Assistant.ChatStatus.Off => TasApi.Problem(StatusCodes.Status404NotFound, result.Error!),
+        Tas.Infrastructure.Assistant.ChatStatus.Limit => TasApi.Problem(StatusCodes.Status429TooManyRequests, result.Error!),
+        Tas.Infrastructure.Assistant.ChatStatus.Unavailable => TasApi.Problem(StatusCodes.Status503ServiceUnavailable, result.Error!),
+        _ => TasApi.Problem(StatusCodes.Status400BadRequest, result.Error!),
+    };
+}).RequireRateLimiting("assistant");
 
 // ================================================================ terminal: appointments
 

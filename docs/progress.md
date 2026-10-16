@@ -349,6 +349,15 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Guides are Markdown in `web/src/help/{en,ar}/`; tests check both languages have the same sections and that every button or label the guides name in bold is a word on the screen (portal and app), so the guides can't drift from the screens unnoticed |
 | ✅ | Yardsyncs mobile: the Arabic, Urdu and Hindi location texts said sharing stops at the pre-gate; now they say what the app does (on the way and inside, not while waiting at the gate, not after leaving) |
 
+
+### 33. Public documentation and AI assistant (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Public documentation at `#/docs` on every installation, no sign-in: all user guides (Arabic / English) and technical pages for IT teams and integrators — system overview, API, integration events (payload, signature, retries), installing and running, security and personal data, the AI assistant; linked from the sign-in page and from Help; printable |
+| ✅ | AI assistant in the portal (Anthropic Claude, `claude-sonnet-5-5` by default): chat panel on every page, Arabic / English, suggestions per role; answers from the guides (technical pages too for terminal staff) and read-only look-ups with the user's own permissions; never changes anything; off until an API key is set; live data can be switched off |
+| ✅ | Limits and cost: 60 questions per user per day, 10 per minute, at most 5 look-ups per question; no conversation text stored; today's questions and tokens in `/api/ops/status`; prompt caching for the guides |
+| ✅ | Tests with a scripted model: guides and context in the prompt, look-ups scoped to the user's company, limits, provider errors, the look-up cap; Anthropic client against a fake server |
+
 ---
 
 ## Remaining

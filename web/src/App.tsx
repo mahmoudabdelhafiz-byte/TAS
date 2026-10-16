@@ -8,6 +8,7 @@ import { AppContext, type AppState } from './ui/context.tsx';
 import { Login } from './screens/Login.tsx';
 import { Shell } from './screens/Shell.tsx';
 import { SetPassword } from './screens/SetPassword.tsx';
+import { Docs } from './screens/Docs.tsx';
 
 const api = new ApiClient(browserStore);
 
@@ -53,6 +54,11 @@ export function App() {
   }, []);
 
   const t = useCallback((key: TextKey, values?: Record<string, string | number>) => translate(lang, key, values), [lang]);
+
+  // The documentation is public: readable signed in or not.
+  if (window.location.hash.startsWith('#/docs')) {
+    return <Docs page={window.location.hash.replace(/^#\/docs\/?/, '').split(/[?#]/)[0]} lang={lang} setLang={setLang} t={t} signedIn={!!user} />;
+  }
 
   // The emailed link to set a password works whether or not someone is signed in on this browser.
   if (window.location.hash.startsWith('#/password')) {

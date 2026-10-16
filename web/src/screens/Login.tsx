@@ -96,6 +96,7 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn }: {
           <button type="button" className="link-btn" onClick={() => { setForgot(true); setError(null); }}>{t('login.forgot')}</button>
         </form>
         )}
+        <a className="login-docs" href="#/docs">{t('login.docs')}</a>
       </section>
     </main>
   );

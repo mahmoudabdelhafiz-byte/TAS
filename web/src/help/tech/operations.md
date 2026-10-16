@@ -1,0 +1,55 @@
+# Installing and running Yardsyncs
+
+For the terminal's IT team. The full step-by-step guide comes with the install kit (`deploy/README.md`).
+
+## What it needs
+
+- A Linux server with Docker and Docker Compose: 4 CPU, 8 GB memory and 100 GB disk for a mid-size terminal.
+- A name such as `tas.terminal.com` and ports 80 and 443. Drivers' phones reach the server over mobile data, so the
+  address must be reachable from the internet (only the HTTPS proxy's ports).
+- An SMTP account for email and an SMS provider (Unifonic or Twilio); for push messages to the app, a Firebase project.
+- For the TOS link: the N4 web services address and an account (read-only lookups).
+
+## Install
+
+1. Unpack the install kit of the version (from the release page) on the server.
+2. Copy `.env.example` to `.env` and fill it in: the address, the database password, the sign-in key and the gate
+   pass key (random values), the first administrator, the TOS and the message providers.
+3. `docker compose up -d`. The database is created on the first start; `https://<address>/health/ready` answers
+   when it is ready.
+4. Sign in as the first administrator, change the password, then set up the terminal, its users and capacity.
+
+HTTPS: a free certificate from Let's Encrypt, the terminal's own certificate, or, on a network without internet, a
+certificate from the proxy's own authority (installed on the terminal's PCs).
+
+## Upgrade and roll back
+
+```
+./upgrade.sh 1.2.0       backup, new version, wait until ready (the database upgrades itself)
+./upgrade.sh --rollback  the version before, with the database from the backup taken before the upgrade
+```
+
+Without internet, load the image file from the release page first (`docker load < yardsyncs-1.2.0.tar.gz`).
+
+## Backups
+
+A backup of the database every night (kept 14 days by default). Copy the `backups` folder off the server every day;
+test a restore every few months.
+
+## Monitoring
+
+| What | Where |
+|---|---|
+| Alive | `GET /health/live` |
+| Ready (database up and current) | `GET /health/ready` — 200 or 503 |
+| Version, backlogs, warnings | `GET /api/ops/status` (as a terminal admin) |
+| Logs | One JSON object per line on the container's output |
+
+Alert when ready fails for 2 minutes, when messages wait longer than 15 minutes, when events to the terminal's
+systems fail, when no backup appeared for 26 hours, and on log lines about locked-out accounts or reused sessions.
+
+## Load
+
+Every version is tested in CI with a morning rush (dispatchers booking the busy hours, trucks reporting positions,
+the control room watching): about 110 requests a second on a small machine with 95 % of answers under 200 ms. Before
+go-live a larger test runs against a copy of the terminal's installation with its own capacity plan.

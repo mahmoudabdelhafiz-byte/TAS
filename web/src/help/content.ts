@@ -18,9 +18,20 @@ import gateEn from './en/gate.md?raw';
 import planningEn from './en/planning.md?raw';
 import startEn from './en/start.md?raw';
 import trackEn from './en/track.md?raw';
+import apiTech from './tech/api.md?raw';
+import assistantTech from './tech/assistant.md?raw';
+import integrationTech from './tech/integration.md?raw';
+import operationsTech from './tech/operations.md?raw';
+import overviewTech from './tech/overview.md?raw';
+import securityTech from './tech/security.md?raw';
 import type { Lang } from '../lib/time.ts';
 
 export const guideText: Record<Lang, Record<string, string>> = {
   en: { start: startEn, booking: bookingEn, track: trackEn, fleet: fleetEn, driver: driverEn, gate: gateEn, control: controlEn, planning: planningEn, admin: adminEn },
   ar: { start: startAr, booking: bookingAr, track: trackAr, fleet: fleetAr, driver: driverAr, gate: gateAr, control: controlAr, planning: planningAr, admin: adminAr },
+};
+
+/** Pages for IT teams and integrators (English). */
+export const techText: Record<string, string> = {
+  overview: overviewTech, api: apiTech, integration: integrationTech, operations: operationsTech, security: securityTech, assistant: assistantTech,
 };

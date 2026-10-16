@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Tas.Infrastructure;
@@ -19,6 +20,9 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
 {
     public static readonly string? ConnectionString = Environment.GetEnvironmentVariable("TAS_API_TEST_DB");
 
+    /// <summary>Stands in for the AI model: each test scripts its answers.</summary>
+    public FakeAssistantModel Assistant { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -31,6 +35,9 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Notifications:Enabled", "false");
         builder.UseSetting("Integration:Enabled", "false");
         builder.UseSetting("Privacy:CleanUpEnabled", "false"); // run by the test
+        builder.UseSetting("Assistant:ApiKey", "test-key"); // the model is FakeAssistantModel below
+        builder.UseSetting("Assistant:PerMinute", "1000");
+        builder.ConfigureTestServices(services => services.AddSingleton<Tas.Infrastructure.Assistant.IAssistantModel>(Assistant));
         builder.UseSetting("Tracking:Enabled", "false"); // followed containers are checked by the test // events stay QUEUED; delivery is tested in Tas.Infrastructure.Tests
         builder.UseSetting("Notifications:PushProvider", "Fcm"); // push first for drivers with the app (not sent: the worker is off)
         builder.UseSetting("DriverLogin:ExposeCodeForTesting", "true");
@@ -123,4 +130,43 @@ public abstract class ApiTestBase(TasApiFactory factory) : IClassFixture<TasApiF
     };
 
     protected static async Task<T> Read<T>(HttpResponseMessage response) => (await response.Content.ReadFromJsonAsync<T>(Json))!;
+}
+
+/// <summary>A scripted AI model: answers in order, and keeps the requests it got.</summary>
+public sealed class FakeAssistantModel : Tas.Infrastructure.Assistant.IAssistantModel
+{
+    private readonly Queue<Func<System.Text.Json.Nodes.JsonObject, System.Text.Json.Nodes.JsonObject>> _answers = new();
+    public List<System.Text.Json.Nodes.JsonObject> Requests { get; } = [];
+
+    public void Reset()
+    {
+        _answers.Clear();
+        Requests.Clear();
+    }
+
+    public void Then(Func<System.Text.Json.Nodes.JsonObject, System.Text.Json.Nodes.JsonObject> answer) => _answers.Enqueue(answer);
+
+    public Task<System.Text.Json.Nodes.JsonObject> SendAsync(System.Text.Json.Nodes.JsonObject request, CancellationToken ct)
+    {
+        Requests.Add(request);
+        if (_answers.Count == 0)
+            throw new InvalidOperationException("The test did not script an answer.");
+        return Task.FromResult(_answers.Dequeue()(request));
+    }
+
+    public static System.Text.Json.Nodes.JsonObject Text(string text) => System.Text.Json.Nodes.JsonNode.Parse(
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            stop_reason = "end_turn",
+            content = new object[] { new { type = "text", text } },
+            usage = new { input_tokens = 100, output_tokens = 20, cache_read_input_tokens = 900 },
+        }))!.AsObject();
+
+    public static System.Text.Json.Nodes.JsonObject Tool(string id, string name, object input) => System.Text.Json.Nodes.JsonNode.Parse(
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            stop_reason = "tool_use",
+            content = new object[] { new { type = "text", text = "Let me check." }, new { type = "tool_use", id, name, input } },
+            usage = new { input_tokens = 120, output_tokens = 30 },
+        }))!.AsObject();
 }

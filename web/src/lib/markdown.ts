@@ -1,5 +1,5 @@
-// The small part of Markdown the user guides use (src/help/): headings, paragraphs, lists, tables, notes, bold,
-// code and links. Parsed into plain data and rendered as React elements, so no guide text ever becomes raw HTML.
+// The small part of Markdown the user guides use (src/help/): headings, paragraphs, lists, tables, notes, code
+// blocks, bold, code and links. Parsed into plain data and rendered as React elements, so no guide text ever becomes raw HTML.
 
 export type Inline =
   | { kind: 'text'; text: string }
@@ -12,7 +12,8 @@ export type Block =
   | { kind: 'paragraph'; inline: Inline[] }
   | { kind: 'list'; ordered: boolean; items: Inline[][] }
   | { kind: 'table'; head: Inline[][]; rows: Inline[][][] }
-  | { kind: 'note'; inline: Inline[] };
+  | { kind: 'note'; inline: Inline[] }
+  | { kind: 'code'; text: string };
 
 /** Only links inside the portal (#/…) and to https pages. */
 export function safeHref(href: string): string | null {
@@ -52,6 +53,15 @@ export function parseMarkdown(source: string): Block[] {
     const line = lines[i];
     if (!line.trim()) { i++; continue; }
 
+    if (line.startsWith('```')) {
+      const code: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith('```')) code.push(lines[i++]);
+      i++; // the closing fence
+      blocks.push({ kind: 'code', text: code.join('\n') });
+      continue;
+    }
+
     const heading = /^(#{1,3})\s+(.*)$/.exec(line);
     if (heading) {
       const text = heading[2].trim();
@@ -89,7 +99,7 @@ export function parseMarkdown(source: string): Block[] {
     }
 
     const text: string[] = [];
-    while (i < lines.length && lines[i].trim() && !/^(#|\||>|\s*([-*]|\d+\.)\s)/.test(lines[i])) text.push(lines[i++].trim());
+    while (i < lines.length && lines[i].trim() && !/^(#|\||>|```|\s*([-*]|\d+\.)\s)/.test(lines[i])) text.push(lines[i++].trim());
     blocks.push({ kind: 'paragraph', inline: parseInline(text.join(' ')) });
   }
   return blocks;

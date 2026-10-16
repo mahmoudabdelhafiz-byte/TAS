@@ -125,6 +125,16 @@ The terminal map editor draws blocks, gates, exits and roads (one-way in the dra
 
 Arabic and English, right-to-left in Arabic. Times are shown in the terminal's time zone. Messages that come from the server (check results, errors) are in English for now.
 
+**Documentation** (`#/docs`) is public — no sign-in — on every installation: all user guides, and for IT teams and
+integrators the system overview, API, integration events, operations, security and personal data, and the AI
+assistant (English). The sign-in page links to it.
+
+**AI assistant**: a chat panel on every page, in Arabic or English, when `Assistant__ApiKey` (Anthropic) is set. It
+answers from the guides and, unless `Assistant__LiveData=false`, from read-only look-ups made with the user's own
+permissions (an appointment, the day's appointments, free hours, container status, and for terminal staff the
+terminal right now). It never changes anything. No conversation text is stored; questions and tokens per user and day
+are (daily limit `Assistant__DailyQuestionsPerUser`, 60). `POST /api/terminals/{id}/assistant`, `GET /api/assistant`.
+
 **Help** (`#/help`) has the user guides for each role in Arabic and English, ready to print. They are Markdown in
 `web/src/help/en` and `web/src/help/ar`; when a screen's wording changes, the web tests point at the guides that
 name it.

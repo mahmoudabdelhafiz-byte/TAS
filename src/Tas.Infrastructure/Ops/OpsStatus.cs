@@ -13,13 +13,24 @@ public sealed record OutboxStatus(int Queued, int FailedLast24h, int SentLast24h
 public sealed record OpsStatus(
     string Version, string Environment, DateTimeOffset StartedAt, DateTimeOffset Now, string Tos,
     DatabaseStatus Database, OutboxStatus Notifications, OutboxStatus IntegrationEvents, int FollowedContainers, int LiveVisits,
-    IReadOnlyList<string> Warnings, RetentionRun? LastCleanUp);
+    IReadOnlyList<string> Warnings, RetentionRun? LastCleanUp, AssistantToday Assistant);
+
+/// <summary>The AI assistant today (UTC day): questions asked and tokens used, for cost.</summary>
+public sealed record AssistantToday(bool Enabled, bool LiveData, int Questions, long InputTokens, long OutputTokens);
 
 /// <summary>Version, database and background work (message and event outboxes) for the ops screen and monitoring.</summary>
 public sealed class OpsStatusService(
     TasDbContext db, DatabaseMigrator migrator, ITosAdapter tos, TimeProvider clock,
-    Microsoft.Extensions.Configuration.IConfiguration config, Microsoft.Extensions.Hosting.IHostEnvironment env)
+    Microsoft.Extensions.Configuration.IConfiguration config, Microsoft.Extensions.Hosting.IHostEnvironment env,
+    Microsoft.Extensions.Options.IOptions<Assistant.AssistantOptions> assistant)
 {
+    private sealed class UsageRow
+    {
+        public int Questions { get; set; }
+        public long InputTokens { get; set; }
+        public long OutputTokens { get; set; }
+    }
+
     private static readonly DateTimeOffset Started = DateTimeOffset.UtcNow;
 
     public static string Version { get; } =
@@ -60,7 +71,19 @@ public sealed class OpsStatusService(
                                                   || a.Status == Tas.Domain.Booking.AppointmentStatus.Arrived
                                                   || a.Status == Tas.Domain.Booking.AppointmentStatus.GateIn, ct),
             SecurityChecks.Warnings(config, env),
-            RetentionService.LastRun);
+            RetentionService.LastRun,
+            await AssistantTodayAsync(now, ct));
+    }
+
+    private async Task<AssistantToday> AssistantTodayAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        var day = DateOnly.FromDateTime(now.UtcDateTime);
+        var usage = await db.Database.SqlQuery<UsageRow>($"""
+            SELECT coalesce(sum(questions), 0)::int AS "Questions", coalesce(sum(input_tokens), 0)::bigint AS "InputTokens",
+                   coalesce(sum(output_tokens), 0)::bigint AS "OutputTokens"
+            FROM assistant_usage WHERE day = {day}
+            """).SingleAsync(ct);
+        return new AssistantToday(assistant.Value.Enabled, assistant.Value.LiveData, usage.Questions, usage.InputTokens, usage.OutputTokens);
     }
 }
 

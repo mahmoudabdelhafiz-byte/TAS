@@ -18,6 +18,10 @@
   <ItemGroup>
     <EmbeddedResource Include="..\..\db\schema.sql" LogicalName="db/schema.sql" />
     <EmbeddedResource Include="..\..\db\migrations\*.sql" LogicalName="db/migrations/%(Filename)%(Extension)" />
+    <!-- The user guides and technical pages (also shown by the portal), for the AI assistant. -->
+    <EmbeddedResource Include="..\..\web\src\help\en\*.md" LogicalName="help/en/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\web\src\help\ar\*.md" LogicalName="help/ar/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\web\src\help\tech\*.md" LogicalName="help/tech/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -112,3 +112,16 @@ database query today and gets a screen when a customer needs it.
 Done since the first review: dependency scanning — Dependabot weekly; `dotnet list package --vulnerable` and
 `npm audit` on every pull request; the image scanned with Grype on every pull request and release (a critical
 problem with a fix stops a release). See `docs/releasing.md`.
+
+## AI assistant (added 2026-10-16)
+
+Off unless `Assistant__ApiKey` is set. When on, the portal sends the user's question and the conversation so far to
+the Yardsyncs server, which adds the guides and the user's context and calls Anthropic's Messages API. Look-ups run on
+the server as the user, through the same services and access rules as the portal; they only read. Their results
+(appointments with plates and drivers' names, container status, free hours, the terminal's figures) go to Anthropic
+as part of the conversation, which is a transfer of personal data abroad: the terminal names Anthropic as a processor
+in its privacy notice, or sets `Assistant__LiveData=false` so only the guides are used. Anthropic does not train on
+API data. Yardsyncs stores no conversation text, only questions and tokens per user and day (`assistant_usage`), for
+the daily limit and the cost shown in `/api/ops/status`; `/api/ops/status` warns while live data is on. Text in
+look-up results is treated as data: the instructions tell the model to ignore requests inside it, and the answer is
+rendered as plain Markdown without HTML, with links only to the portal and https.

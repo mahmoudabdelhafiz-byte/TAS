@@ -1,7 +1,8 @@
-import { Fragment, useMemo, type ReactNode } from 'react';
+import { useMemo } from 'react';
 import { guideText } from '../help/content.ts';
 import { guidesFor } from '../help/guides.ts';
-import { parseMarkdown, type Block, type Inline } from '../lib/markdown.ts';
+import { parseMarkdown } from '../lib/markdown.ts';
+import { BlockView } from '../ui/Markdown.tsx';
 import { screensFor } from '../lib/routes.ts';
 import { useApp } from '../ui/context.tsx';
 
@@ -17,7 +18,10 @@ export function Help() {
     <section className="screen help">
       <header className="screen-head no-print">
         <h1>{t('help.title')}</h1>
-        <button type="button" className="btn btn-secondary" onClick={() => window.print()}>{t('help.print')}</button>
+        <div className="actions">
+          <a className="btn btn-quiet" href="#/docs" target="_blank" rel="noreferrer">{t('help.allDocs')}</a>
+          <button type="button" className="btn btn-secondary" onClick={() => window.print()}>{t('help.print')}</button>
+        </div>
       </header>
       <div className="help-grid">
         <nav className="help-list no-print" aria-label={t('help.guides')}>
@@ -39,43 +43,4 @@ export function Help() {
       </div>
     </section>
   );
-}
-
-function BlockView({ block }: { block: Block }) {
-  switch (block.kind) {
-    case 'heading': {
-      const H = (`h${Math.min(block.level + 1, 4)}`) as 'h2' | 'h3' | 'h4'; // the page has its own h1
-      return <H id={block.id}>{block.text}</H>;
-    }
-    case 'paragraph':
-      return <p><Inlines items={block.inline} /></p>;
-    case 'note':
-      return <p className="guide-note"><Inlines items={block.inline} /></p>;
-    case 'list': {
-      const items = block.items.map((item, i) => <li key={i}><Inlines items={item} /></li>);
-      return block.ordered ? <ol>{items}</ol> : <ul>{items}</ul>;
-    }
-    case 'table':
-      return (
-        <div className="table-wrap">
-          <table className="grid guide-table">
-            <thead><tr>{block.head.map((c, i) => <th key={i}><Inlines items={c} /></th>)}</tr></thead>
-            <tbody>
-              {block.rows.map((row, r) => <tr key={r}>{row.map((c, i) => <td key={i}><Inlines items={c} /></td>)}</tr>)}
-            </tbody>
-          </table>
-        </div>
-      );
-  }
-}
-
-function Inlines({ items }: { items: Inline[] }): ReactNode {
-  return items.map((x, i) => {
-    switch (x.kind) {
-      case 'bold': return <strong key={i}>{x.text}</strong>;
-      case 'code': return <code key={i} dir="ltr">{x.text}</code>;
-      case 'link': return <a key={i} href={x.href} {...(x.href.startsWith('https://') ? { target: '_blank', rel: 'noreferrer' } : {})}>{x.text}</a>;
-      default: return <Fragment key={i}>{x.text}</Fragment>;
-    }
-  });
 }
