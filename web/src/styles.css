@@ -183,6 +183,7 @@ legend { padding: 0; margin-bottom: 10px; font-weight: 600; font-size: 15px; }
 .login-form h1 { font-size: 26px; }
 .lead { color: var(--muted); margin: -6px 0 6px; }
 
+.brand-mark { display: block; flex: none; }
 .mark-a { fill: var(--teal); }
 .mark-b { fill: #c9d3da; }
 

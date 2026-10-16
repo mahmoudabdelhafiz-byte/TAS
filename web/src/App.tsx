@@ -77,10 +77,10 @@ export function App() {
     try { localStorage.setItem('yardsyncs.lang', next); } catch { /* ignore */ }
   }, []);
 
-  // Texts name the brand (the product documentation and the app's store name stay Yardsyncs).
+  // Texts name the brand (the product documentation, the branding settings and the app's store name stay Yardsyncs).
   const t = useCallback((key: TextKey, values?: Record<string, string | number>) => {
     const text = translate(lang, key, values);
-    return brand.name === defaultBrand.name || key.startsWith('docs.') ? text : text.replace(/Yardsyncs(?! mobile)/g, brand.name);
+    return brand.name === defaultBrand.name || key.startsWith('docs.') || key.startsWith('brand.') ? text : text.replace(/Yardsyncs(?! mobile)/g, brand.name);
   }, [lang, brand.name]);
 
   // The documentation is public: readable signed in or not.

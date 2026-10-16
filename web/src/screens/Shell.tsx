@@ -117,7 +117,7 @@ export function BrandMark({ brand }: { brand: Brand }) {
 /** The Yardsyncs mark: three boxes, one placed — a yard stack in sync. */
 export function Mark() {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" className="mark">
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" className="brand-mark">
       <rect x="5" y="17" width="10" height="10" rx="1" className="mark-a" />
       <rect x="17" y="17" width="10" height="10" rx="1" className="mark-b" />
       <rect x="17" y="5" width="10" height="10" rx="1" className="mark-a" />
