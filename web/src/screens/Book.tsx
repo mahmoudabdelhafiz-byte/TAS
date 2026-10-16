@@ -6,6 +6,7 @@ import type { Appointment, BookingItemInput, Category, Company, Driver, SlotAvai
 import { useApp } from '../ui/context.tsx';
 import { DayStepper, LoadError, Notice, TrafficLight, useLoad } from '../ui/kit.tsx';
 import { ManyTrucks } from './ManyTrucks.tsx';
+import { money, type FeeSchedule } from '../lib/money.ts';
 
 interface ItemDraft {
   category: string;
@@ -283,6 +284,8 @@ export function Book() {
             </Notice>
           )}
 
+          <FeeNotice />
+
           <button type="button" className="btn btn-primary btn-wide" disabled={!chosen || !companyId || busy} onClick={submit}>
             {busy ? t('book.busy') : chosen ? t('book.submit', { time: slotRange(chosen.startAt, chosen.endAt, terminal.timeZone) }) : t('book.pickHour')}
           </button>
@@ -290,5 +293,22 @@ export function Book() {
         )}
       </div>
     </section>
+  );
+}
+
+/** The terminal's fees, shown before booking (nothing when it charges none). */
+function FeeNotice() {
+  const { api, t, lang, terminal } = useApp();
+  const fees = useLoad(() => api.get<FeeSchedule>(`/api/terminals/${terminal.terminalId}/fees`), [terminal.terminalId]).data;
+  if (!fees || (fees.booking === 0 && fees.noShow === 0 && fees.lateCancel === 0)) return null;
+  const m = (minor: number) => money(minor, fees.currency, fees.decimals, lang);
+  return (
+    <p className="fee-notice">
+      {[
+        fees.booking > 0 ? t('fees.bookingLine', { amount: m(fees.booking) }) : null,
+        fees.noShow > 0 ? t('fees.noShowLine', { amount: m(fees.noShow) }) : null,
+        fees.lateCancel > 0 && fees.lateCancelHours > 0 ? t('fees.lateCancelLine', { amount: m(fees.lateCancel), hours: fees.lateCancelHours }) : null,
+      ].filter(Boolean).join(' ')}
+    </p>
   );
 }

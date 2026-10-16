@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<FleetService>();
         services.AddScoped<TerminalDataService>();
         services.AddScoped<OperatorService>();
+        services.AddScoped<ChargeService>();
         services.AddScoped<Tas.Infrastructure.Brands.BrandingService>();
         services.AddScoped<Tas.Infrastructure.Onboarding.OnboardingService>();
         services.AddHostedService<SlotGenerationWorker>();

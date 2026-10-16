@@ -33,8 +33,20 @@ public sealed record TerminalSettings(
     bool GateByNumber = true,
     bool GateByPlate = true,
     bool GateByContainer = true,
-    DriverIdentity DriverIdentity = DriverIdentity.NotChecked)
+    DriverIdentity DriverIdentity = DriverIdentity.NotChecked,
+    long FeeBooking = 0,
+    long FeeNoShow = 0,
+    long FeeLateCancel = 0,
+    int LateCancelHours = 0)
 {
+    /// <summary>Fees, in the currency's smallest unit (halalas for SAR); 0 = no fee.</summary>
+    public const string FeeBookingKey = "fee_booking";
+    public const string FeeNoShowKey = "fee_no_show";
+    public const string FeeLateCancelKey = "fee_late_cancel";
+
+    /// <summary>A company cancelling less than this many hours before the slot pays the late-cancellation fee.</summary>
+    public const string LateCancelHoursKey = "late_cancel_hours";
+
     public const string EarlyGraceKey = "early_grace_min";
     public const string LateGraceKey = "late_grace_min";
     public const string CancelCutoffKey = "cancel_cutoff_min";
@@ -61,6 +73,10 @@ public sealed record TerminalSettings(
             Get(GateByNumberKey, 1) != 0,
             Get(GateByPlateKey, 1) != 0,
             Get(GateByContainerKey, 1) != 0,
-            (DriverIdentity)Math.Min(Get(DriverIdentityKey, 0), 2));
+            (DriverIdentity)Math.Min(Get(DriverIdentityKey, 0), 2),
+            Get(FeeBookingKey, 0),
+            Get(FeeNoShowKey, 0),
+            Get(FeeLateCancelKey, 0),
+            Get(LateCancelHoursKey, 0));
     }
 }

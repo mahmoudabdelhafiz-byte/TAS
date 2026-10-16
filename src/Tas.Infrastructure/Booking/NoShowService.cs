@@ -13,7 +13,7 @@ namespace Tas.Infrastructure.Booking;
 /// Marks appointments as NO_SHOW once their slot plus the late-grace window has passed without the truck
 /// arriving, gives the capacity back and counts the no-show against the company.
 /// </summary>
-public sealed class NoShowService(TasDbContext db, BookingService booking, TimeProvider clock, ILogger<NoShowService> logger)
+public sealed class NoShowService(TasDbContext db, BookingService booking, TimeProvider clock, ILogger<NoShowService> logger, ChargeService? charges = null)
 {
     public async Task<int> MarkNoShowsAsync(CancellationToken ct = default)
     {
@@ -49,6 +49,8 @@ public sealed class NoShowService(TasDbContext db, BookingService booking, TimeP
                     .Where(c => c.CompanyId == appointment.CompanyId)
                     .ExecuteUpdateAsync(s => s.SetProperty(c => c.NoShowCount, c => c.NoShowCount + 1), ct);
                 booking.AddHistory(appointment, AppointmentStatus.NoShow, null, "No-show: not arrived by the end of the late-grace window", now);
+                if (charges is not null)
+                    await charges.ChargeAsync(appointment, ChargeKind.NoShow, ct);
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
                 marked++;

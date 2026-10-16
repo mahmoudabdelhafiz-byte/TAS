@@ -30,6 +30,9 @@ a vessel peak) replaces it between two dates; when two seasonal plans overlap, t
   - the named driver shows the gate pass from Yardsyncs mobile
 
   Trucks that don't meet the rules go to the trouble desk as **Driver not identified**.
+- **Fees** (terminal admins) — booking, no-show and late-cancellation fees in the terminal's currency, and how many
+  hours before the slot a cancellation counts as late. **Charges** lists what was charged per company. Download it for
+  billing, or **Waive** a charge with a reason.
 
 Every change is kept in the change history with who made it and the reason.
 

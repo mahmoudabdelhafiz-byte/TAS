@@ -2,7 +2,7 @@
 
 import type { UserRole } from './types.ts';
 
-export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'map' | 'control' | 'gate' | 'kpi' | 'fleet' | 'help';
+export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'gate' | 'kpi' | 'fleet' | 'help';
 
 export interface Route {
   screen: Screen | null;
@@ -14,7 +14,7 @@ export function parseHash(hash: string): Route {
   const [path, query = ''] = clean.split('?');
   const params: Record<string, string> = {};
   for (const [key, value] of new URLSearchParams(query)) params[key] = value;
-  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'map', 'control', 'gate', 'kpi', 'fleet', 'help'] as const).find(s => s === path) ?? null;
+  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'gate', 'kpi', 'fleet', 'help'] as const).find(s => s === path) ?? null;
   return { screen, params };
 }
 
@@ -33,16 +33,17 @@ export function screensFor(role: UserRole): Screen[] {
 function workScreens(role: UserRole): Screen[] {
   switch (role) {
     case 'CompanyAdmin':
+      return ['book', 'track', 'bulk', 'appointments', 'fleet', 'charges'];
     case 'CompanyUser':
       return ['book', 'track', 'bulk', 'appointments', 'fleet'];
     case 'GateClerk':
       return ['gate', 'control', 'appointments'];
     case 'Planner':
-      return ['slots', 'control', 'kpi', 'setup', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'fleet'];
+      return ['slots', 'control', 'kpi', 'setup', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'fleet', 'charges'];
     case 'TerminalAdmin':
     case 'OperatorAdmin':
     case 'SysAdmin':
-      return ['slots', 'control', 'kpi', 'setup', 'onboard', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'fleet'];
+      return ['slots', 'control', 'kpi', 'setup', 'onboard', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'fleet', 'charges'];
   }
 }
 

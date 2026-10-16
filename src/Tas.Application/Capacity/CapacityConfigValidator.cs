@@ -25,6 +25,10 @@ public static class CapacityConfigValidator
         [TerminalSettings.GateByPlateKey] = (0, 1),
         [TerminalSettings.GateByContainerKey] = (0, 1),
         [TerminalSettings.DriverIdentityKey] = (0, 2),
+        [TerminalSettings.FeeBookingKey] = (0, 100_000_000),
+        [TerminalSettings.FeeNoShowKey] = (0, 100_000_000),
+        [TerminalSettings.FeeLateCancelKey] = (0, 100_000_000),
+        [TerminalSettings.LateCancelHoursKey] = (0, 168),
     };
 
     // ------------------------------------------------------------ templates
