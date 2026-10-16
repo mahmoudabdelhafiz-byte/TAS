@@ -268,6 +268,8 @@ export interface DeviceRead {
   plateConfidence: number | null;
   containers: { number: string; checkDigitOk: boolean; isoCode: string | null; confidence: number | null; position: string | null }[];
   seals: string[];
+  damage: { photo: string | null; note: string | null; side: string | null }[];
+  photos: string[];
   tag: string | null;
   appointmentNo: string | null;
   gatePassScanned: boolean;
@@ -300,6 +302,7 @@ export type LaneTransactionStatus = 'Open' | 'Admitted' | 'Referred' | 'Passed' 
 
 export interface LaneTransaction {
   transactionId: number;
+  laneId: number;
   laneCode: string;
   status: LaneTransactionStatus;
   startedAt: string;
@@ -315,6 +318,30 @@ export interface LaneTransaction {
   troubleId: number | null;
   reason: string | null;
   message: string | null;
+  /** A clerk corrected what the cameras read. */
+  corrected: boolean;
+}
+
+export interface LaneCommandView {
+  commandId: number;
+  deviceCode: string;
+  command: string;
+  text: string | null;
+  createdAt: string;
+  expiresAt: string;
+  deliveredAt: string | null;
+  doneAt: string | null;
+  result: 'Done' | 'Failed' | null;
+  resultDetail: string | null;
+  progress: 'Waiting' | 'Delivered' | 'Done' | 'Failed' | 'Expired';
+}
+
+export interface LaneTransactionDetail {
+  transaction: LaneTransaction;
+  reads: DeviceRead[];
+  commands: LaneCommandView[];
+  trouble: Trouble | null;
+  devices: LaneDevice[];
 }
 
 export interface ArrivalResult {

@@ -127,7 +127,7 @@ CREATE TABLE lane_device_command (
     terminal_id    integer      NOT NULL REFERENCES terminal(terminal_id),
     lane_id        integer      NOT NULL REFERENCES gate_lane(lane_id) ON DELETE CASCADE,
     device_id      integer      NOT NULL REFERENCES gate_lane_device(device_id) ON DELETE CASCADE,
-    command        varchar(6)   NOT NULL CHECK (command IN ('OPEN','CLOSE','RED','GREEN','OFF','SHOW','CLEAR','PRINT')),
+    command        varchar(6)   NOT NULL CHECK (command IN ('OPEN','CLOSE','RED','GREEN','OFF','SHOW','CLEAR','PRINT','CALL','HANGUP')),
     text           varchar(400) NULL,                        -- display / ticket text
     created_at     timestamptz  NOT NULL DEFAULT now(),
     created_by     integer      NULL,                        -- app_user.user_id; NULL = the lane itself
@@ -736,7 +736,12 @@ CREATE TABLE lane_transaction (
     appointment_no    varchar(30)   NULL,
     trouble_id        bigint        NULL REFERENCES gate_trouble(trouble_id) ON DELETE SET NULL,
     reason            varchar(20)   NULL,   -- why referred (trouble reason, or EXIT for an exit the lane could not match)
-    message           varchar(400)  NULL
+    message           varchar(400)  NULL,
+    -- Remote clerk corrections (migration 021), for the OCR read rate.
+    plate_corrected       boolean      NOT NULL DEFAULT false,
+    containers_corrected  boolean      NOT NULL DEFAULT false,
+    corrected_by          integer      NULL,   -- app_user.user_id
+    corrected_at          timestamptz  NULL
 );
 CREATE INDEX ix_lane_tx_lane_time ON lane_transaction (lane_id, last_read_at);
 CREATE INDEX ix_lane_tx_open ON lane_transaction (status, last_read_at) WHERE status = 'OPEN';

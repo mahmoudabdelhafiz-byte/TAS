@@ -464,6 +464,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Exit lanes: gate-out by plate or appointment number, then green and open, or a clerk |
 | ✅ | Gate screen shows each automatic lane's current truck; `GET …/gate/transactions`; settings `LaneController__*`; runs inside Yardsyncs (next to the lanes when installed at the terminal) |
 
+### 47. Remote clerk station (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | **Remote clerk** screen (gate clerks, planners, admins): lane tiles, trucks waiting for a clerk oldest first, and per truck its reads with photos, misread containers flagged, the commands and the case |
+| ✅ | Correct the plate / containers or type the appointment number, then **Check again**: the old case closes, the lane decides anew (barrier opens or a fresh case); corrections recorded per transaction for the OCR read rate (migration 021) |
+| ✅ | Let in / turn away with a note (barrier opens / display tells the driver); intercom `Call` / `Hangup` commands; message on the lane display; open barrier |
+
 ---
 
 ## Remaining
@@ -552,7 +559,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Device adapters, vendor-neutral: OCR results in (plate, container numbers, ISO code, seal, damage photos), barrier / light / display commands out | Section 45; vendor-specific adapters (a given OCR make's own protocol) per customer |
 | ✅ | Lane controller service at the terminal: one transaction per truck — identify, match appointment, re-check, decide, open barrier or send to remote clerk | Section 46; runs inside Yardsyncs, so at the terminal when Yardsyncs is installed there |
 | ⬜ | Edge mode for cloud-hosted terminals: a small lane agent at the terminal with today's appointments cached, so automatic lanes keep deciding when the link to the cloud drops, and sync back afterwards | Needed only where Yardsyncs is hosted in the cloud and the lanes run automatic |
-| ⬜ | Remote clerk station: live lane view, photos, OCR corrections, intercom, admit / refer / reject — grows out of today's trouble desk | |
+| ✅ | Remote clerk station: live lane view, photos, OCR corrections, intercom, admit / refer / reject — grows out of today's trouble desk | Section 47; the intercom audio itself is the intercom system's |
 | ⬜ | TOS gate transaction: create the truck visit and gate-in / gate-out in the TOS (N4 gate API), print or send the EIR / gate ticket | Needs TOS write access |
 | ⬜ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | |
 | ⬜ | Exit gate: match outbound container, check delivered against booked, close the visit, turn time | Gate-out exists in the API |

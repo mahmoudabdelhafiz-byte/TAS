@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Yardsyncs.Application.Capacity;
 using Yardsyncs.Application.Gate;
 using Yardsyncs.Domain;
 using Yardsyncs.Domain.Gate;
@@ -158,6 +159,112 @@ public sealed class LaneControllerService(
         await devices.QueueAsync(lane.TerminalId, lane.LaneId, tx.TransactionId, plan, ct);
     }
 
+    /// <summary>Everything about one truck at a lane, for the remote clerk.</summary>
+    public async Task<LaneTransactionDetail?> DetailAsync(int terminalId, long transactionId, CancellationToken ct = default)
+    {
+        var tx = await db.LaneTransactions.AsNoTracking().SingleOrDefaultAsync(t => t.TerminalId == terminalId && t.TransactionId == transactionId, ct);
+        if (tx is null)
+            return null;
+        var lane = await db.GateLanes.AsNoTracking().SingleAsync(l => l.LaneId == tx.LaneId, ct);
+        var laneDevices = await db.LaneDevices.AsNoTracking().Where(d => d.LaneId == tx.LaneId).ToListAsync(ct);
+        var codes = laneDevices.ToDictionary(d => d.DeviceId, d => d.DeviceCode);
+        var reads = await db.LaneDeviceReads.AsNoTracking().Where(r => r.TransactionId == transactionId)
+            .OrderBy(r => r.ReceivedAt).ThenBy(r => r.ReadId).Take(50).ToListAsync(ct);
+        var commands = await db.LaneDeviceCommands.AsNoTracking().Where(c => c.TransactionId == transactionId)
+            .OrderBy(c => c.CreatedAt).ThenBy(c => c.CommandId).Take(50).ToListAsync(ct);
+        var now = clock.GetUtcNow();
+        return new LaneTransactionDetail(
+            LaneTransactionView.From(tx, lane.LaneCode),
+            reads.Select(r => DeviceService.View(r, codes.GetValueOrDefault(r.DeviceId, "?"))).ToList(),
+            commands.Select(c => DeviceService.View(c, codes.GetValueOrDefault(c.DeviceId, "?"), now)).ToList(),
+            tx.TroubleId is { } troubleId ? await gate.TroubleAsync(terminalId, troubleId, ct) : null,
+            laneDevices.OrderBy(d => d.Kind).ThenBy(d => d.DeviceCode).Select(d => LaneDeviceView.From(d, now)).ToList());
+    }
+
+    /// <summary>
+    /// The clerk corrected what the cameras misread (or typed the appointment number the driver gave over the intercom):
+    /// the referred truck's trouble case is closed and the lane checks the truck again — let in with the barrier opening,
+    /// or referred anew with a fresh case.
+    /// </summary>
+    public async Task<AdminResult<LaneTransactionView>> RecheckAsync(
+        Yardsyncs.Application.Auth.CurrentUser clerk, int terminalId, long transactionId, TransactionCorrectionInput input, CancellationToken ct = default)
+    {
+        var tx = await db.LaneTransactions.SingleOrDefaultAsync(t => t.TerminalId == terminalId && t.TransactionId == transactionId, ct);
+        if (tx is null)
+            return AdminResult<LaneTransactionView>.NotFound($"Truck transaction {transactionId} not found.");
+        var now = clock.GetUtcNow();
+        if (tx.Status != LaneTransactionStatus.Referred)
+            return AdminResult<LaneTransactionView>.Conflict($"Only a truck waiting for a clerk can be checked again (this one is {tx.Status}).");
+        if (now - tx.LastReadAt > RecheckWindow)
+            return AdminResult<LaneTransactionView>.Conflict("This truck was read too long ago to still be at the lane; check it in from the gate screen.");
+
+        var errors = new List<string>();
+        string? plate = null;
+        if (input.Plate is not null)
+        {
+            plate = Yardsyncs.Application.MasterData.PlateNumber.Normalize(input.Plate);
+            if (plate.Length > 0 && !Yardsyncs.Application.MasterData.PlateNumber.IsValid(plate))
+                errors.Add($"'{input.Plate.Trim()}' is not a plate.");
+        }
+        List<string>? containers = null;
+        if (input.Containers is not null)
+        {
+            containers = input.Containers.Select(Yardsyncs.Application.Booking.ContainerNumber.Normalize).Where(c => c.Length > 0).Distinct().ToList();
+            errors.AddRange(containers.Where(c => !Yardsyncs.Application.Booking.ContainerNumber.IsValid(c)).Select(c => $"{c} is not a valid container number."));
+            if (containers.Count > LaneControllerRules.MaxContainers)
+                errors.Add($"At most {LaneControllerRules.MaxContainers} containers.");
+        }
+        var number = string.IsNullOrWhiteSpace(input.AppointmentNo) ? null : input.AppointmentNo.Trim().ToUpperInvariant();
+        if (number?.Length > 30)
+            errors.Add("The appointment number is too long.");
+        if (errors.Count > 0)
+            return AdminResult<LaneTransactionView>.Invalid(errors);
+
+        if (plate is not null && plate != (tx.Plate ?? ""))
+        {
+            tx.Plate = plate.Length == 0 ? null : plate;
+            tx.PlateConfidence = null;
+            tx.PlateCorrected = true;
+        }
+        if (containers is not null && string.Join(",", containers) != (tx.Containers ?? ""))
+        {
+            tx.Containers = containers.Count == 0 ? null : string.Join(",", containers);
+            tx.ContainersCorrected = true;
+        }
+        if (number is not null)
+            tx.AppointmentRead = number;
+        if (!LaneControllerRules.CanIdentify(tx))
+            return AdminResult<LaneTransactionView>.Invalid("Give a plate, a container number or the appointment number.");
+        tx.CorrectedBy = clerk.UserId;
+        tx.CorrectedAt = now;
+
+        // The old case is settled by this check.
+        if (tx.TroubleId is { } troubleId)
+            await db.GateTroubles.Where(t => t.TroubleId == troubleId && t.Status == TroubleStatus.Open)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(t => t.Status, TroubleStatus.Resolved)
+                    .SetProperty(t => t.Resolution, TroubleResolution.Dismissed)
+                    .SetProperty(t => t.ResolutionNote, "Checked again with corrected reads")
+                    .SetProperty(t => t.ResolvedBy, clerk.UserId)
+                    .SetProperty(t => t.ResolvedAt, now), ct);
+        tx.Status = LaneTransactionStatus.Open;
+        tx.DecidedAt = null;
+        tx.TroubleId = null;
+        tx.Reason = null;
+        tx.Message = null;
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Lane transaction {Tx} checked again by user {UserId} (plate corrected: {Plate}, containers corrected: {Containers})",
+            transactionId, clerk.UserId, tx.PlateCorrected, tx.ContainersCorrected);
+        var decided = await DecideAsync(transactionId, ct, clerk);
+        return decided is null
+            ? AdminResult<LaneTransactionView>.Conflict("The lane is already deciding this truck.")
+            : AdminResult<LaneTransactionView>.Ok(decided);
+    }
+
+    /// <summary>How long after its last read a referred truck can be checked again from the station.</summary>
+    public static readonly TimeSpan RecheckWindow = TimeSpan.FromMinutes(15);
+
     /// <summary>The lane's recent transactions (all lanes when laneId is null), newest first.</summary>
     public async Task<IReadOnlyList<LaneTransactionView>> ListAsync(int terminalId, int? laneId, int limit, CancellationToken ct = default)
     {
@@ -172,7 +279,7 @@ public sealed class LaneControllerService(
 
     // ================================================================ deciding
 
-    private async Task<LaneTransactionView?> DecideAsync(long transactionId, CancellationToken ct)
+    private async Task<LaneTransactionView?> DecideAsync(long transactionId, CancellationToken ct, Yardsyncs.Application.Auth.CurrentUser? clerk = null)
     {
         // Claim the transaction, so the worker and a read arriving at the same moment don't both decide it.
         var now = clock.GetUtcNow();
@@ -193,7 +300,7 @@ public sealed class LaneControllerService(
 
         if (lane.Direction == LaneDirection.In)
         {
-            var result = await gate.ArriveAsync(null, tx.TerminalId,
+            var result = await gate.ArriveAsync(clerk, tx.TerminalId,
                 new ArrivalInput(lane.LaneCode, tx.Plate, containers, tx.QrToken, tx.AppointmentRead), ct);
             if (result.Value is { } arrival)
             {
@@ -212,7 +319,7 @@ public sealed class LaneControllerService(
         }
         else
         {
-            var result = await gate.GateOutAsync(null, tx.TerminalId, new GateOutInput(lane.LaneCode, tx.AppointmentRead, tx.Plate), ct);
+            var result = await gate.GateOutAsync(clerk, tx.TerminalId, new GateOutInput(lane.LaneCode, tx.AppointmentRead, tx.Plate), ct);
             if (result.Value is { } exit)
             {
                 status = LaneTransactionStatus.Admitted;

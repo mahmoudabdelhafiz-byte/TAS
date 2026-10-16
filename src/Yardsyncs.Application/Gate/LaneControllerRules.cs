@@ -27,8 +27,10 @@ public sealed class LaneControllerOptions
 public sealed record PlannedCommand(LaneCommand Command, string? Text = null);
 
 /// <summary>A transaction as the gate screen and the clerks see it.</summary>
+/// <param name="Corrected">A clerk corrected what the cameras read.</param>
 public sealed record LaneTransactionView(
     long TransactionId,
+    int LaneId,
     string LaneCode,
     LaneTransactionStatus Status,
     DateTimeOffset StartedAt,
@@ -43,12 +45,28 @@ public sealed record LaneTransactionView(
     decimal? WeightKg,
     long? TroubleId,
     string? Reason,
-    string? Message)
+    string? Message,
+    bool Corrected = false)
 {
     public static LaneTransactionView From(LaneTransaction t, string laneCode) => new(
-        t.TransactionId, laneCode, t.Status, t.StartedAt, t.LastReadAt, t.DecidedAt, t.ClosedAt, t.ReadCount, t.Plate,
-        LaneControllerRules.ContainersOf(t), t.AppointmentNo ?? t.AppointmentRead, t.QrToken is not null, t.WeightKg, t.TroubleId, t.Reason, t.Message);
+        t.TransactionId, t.LaneId, laneCode, t.Status, t.StartedAt, t.LastReadAt, t.DecidedAt, t.ClosedAt, t.ReadCount, t.Plate,
+        LaneControllerRules.ContainersOf(t), t.AppointmentNo ?? t.AppointmentRead, t.QrToken is not null, t.WeightKg, t.TroubleId, t.Reason, t.Message,
+        t.PlateCorrected || t.ContainersCorrected);
 }
+
+/// <summary>
+/// What the cameras should have read, from the clerk. Leave a field out to keep it; an empty container list clears
+/// them. The lane then checks the truck again.
+/// </summary>
+public sealed record TransactionCorrectionInput(string? Plate = null, IReadOnlyList<string>? Containers = null, string? AppointmentNo = null);
+
+/// <summary>Everything about one truck at a lane, for the remote clerk: its reads with photos, the commands, its trouble case.</summary>
+public sealed record LaneTransactionDetail(
+    LaneTransactionView Transaction,
+    IReadOnlyList<DeviceReadView> Reads,
+    IReadOnlyList<LaneCommandView> Commands,
+    TroubleView? Trouble,
+    IReadOnlyList<LaneDeviceView> Devices);
 
 /// <summary>
 /// The lane controller's rules, free of the database: which reads belong to the same truck, how they add up, when the

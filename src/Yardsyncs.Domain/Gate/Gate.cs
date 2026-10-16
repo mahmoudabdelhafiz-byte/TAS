@@ -114,6 +114,12 @@ public enum LaneCommand
     Show,
     Clear,
     Print,
+
+    /// <summary>Connect the lane intercom to the clerk desk.</summary>
+    Call,
+
+    /// <summary>End the intercom call.</summary>
+    Hangup,
 }
 
 public enum CommandResult
@@ -225,6 +231,15 @@ public sealed class LaneTransaction
     public string? Reason { get; set; }
 
     public string? Message { get; set; }
+
+    /// <summary>A clerk corrected the plate the cameras read (for the OCR read rate).</summary>
+    public bool PlateCorrected { get; set; }
+
+    /// <summary>A clerk corrected the container numbers the cameras read.</summary>
+    public bool ContainersCorrected { get; set; }
+
+    public int? CorrectedBy { get; set; }
+    public DateTimeOffset? CorrectedAt { get; set; }
 }
 
 public enum GateEventType

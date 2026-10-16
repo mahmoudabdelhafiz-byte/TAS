@@ -228,14 +228,14 @@ function TroubleCase({ trouble, onResolved, onError }: { trouble: Trouble; onRes
   );
 }
 
-const txText = {
+export const txText = {
   Open: 'lanes.tx.Open', Admitted: 'lanes.tx.Admitted', Referred: 'lanes.tx.Referred', Passed: 'lanes.tx.Passed', Abandoned: 'lanes.tx.Abandoned',
 } as const;
 
 export const laneStateText = { Open: 'lanes.state.Open', Closed: 'lanes.state.Closed', OutOfOrder: 'lanes.state.OutOfOrder' } as const;
 
 /** Every lane at a glance; the gate staff close a lane (with a reason everyone then sees) and open it again. */
-function LaneStrip({ lanes, onChanged, onError }: { lanes: Lane[]; onChanged: () => void; onError: (m: string) => void }) {
+export function LaneStrip({ lanes, onChanged, onError }: { lanes: Lane[]; onChanged: () => void; onError: (m: string) => void }) {
   const { t } = useApp();
   return (
     <ul className="lane-strip" aria-label={t('lanes.strip')}>

@@ -1081,3 +1081,31 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .lane-tx-Referred { background: var(--amber-tint); color: #6b4804; }
 .lane-tx-why { display: block; margin-top: 2px; color: var(--text); }
 .lane-tx bdi { white-space: nowrap; }
+
+/* ---------- Remote clerk station ---------- */
+.clerk-grid { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.clerk-queue ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.case-pick {
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "lane plate wait" "why why why";
+  gap: 2px 10px; width: 100%; padding: 10px 12px; text-align: start; font: inherit; color: inherit; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line-soft); border-inline-start: 4px solid var(--amber); border-radius: var(--radius);
+}
+.case-pick:hover { background: #fbfcfd; }
+.case-pick.on { border-color: var(--teal); border-inline-start-color: var(--teal); background: var(--teal-tint); }
+.case-pick:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.case-lane { grid-area: lane; font-weight: 600; }
+.case-plate { grid-area: plate; }
+.case-wait { grid-area: wait; color: var(--muted); font-size: 14px; }
+.case-why { grid-area: why; font-size: 14px; color: #6b4804; }
+.case { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 16px 18px; min-width: 0; }
+.case-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.case-head h2 { margin: 0; font-size: 22px; }
+.case-head .lane-tx { margin: 0; }
+.case-reason { margin: 10px 0; }
+.case h3 { font-size: 16px; margin: 18px 0 6px; }
+.photos { list-style: none; display: flex; gap: 8px; overflow-x: auto; margin: 12px 0; padding: 0 0 4px; }
+.photos img { display: block; height: 120px; width: auto; border-radius: var(--radius); border: 1px solid var(--line-soft); background: var(--page); }
+.case-fix, .case-actions, .case-driver { border-top: 1px solid var(--line-soft); margin-top: 14px; }
+.case .misread { color: #8a5d05; text-decoration: underline dotted; }
+@media (max-width: 860px) { .clerk-grid { grid-template-columns: minmax(0, 1fr); } }
+.case td bdi, .lane-read bdi { display: inline-block; margin-inline-end: 6px; }

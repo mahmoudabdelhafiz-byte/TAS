@@ -38,6 +38,21 @@ At an **Automatic** lane the lane decides for itself, as you would: a truck on t
 otherwise it waits on red with the reason on the lane display, and the tile shows **Waiting for a clerk**. Its case is
 on the trouble desk: **Let in** there opens that lane's barrier.
 
+## Remote clerk
+
+**Remote clerk** is for handling automatic lanes from a desk. The lane tiles are on top, and **Waiting for a clerk**
+lists the trucks the lanes referred, oldest first. Choose one to see what the cameras read, with their photos; a
+container number underlined in amber may be misread.
+
+- **Correct the reads**: fix the plate or the containers, or type the appointment number the driver gives you, then
+  **Check again**. The lane checks the truck as before: if it is in order the barrier opens, otherwise it waits with
+  the new reason. Corrections are counted for the cameras' read rate.
+- **Decide**: write a note, then **Let in** (the barrier opens) or **Turn away** (the display tells the driver).
+- **The driver**: **Call the driver** connects the lane intercom, **Open barrier** raises the barrier, and a message
+  can be shown on the lane display.
+
+Cases from manual lanes stay on the gate screen's trouble desk.
+
 ## Trouble desk
 
 Every truck sent to the trouble desk waits in **Trouble desk** with its reason. Write a **Note** (required), then
