@@ -12,7 +12,7 @@ test('hash routes round-trip', () => {
 });
 
 test('each role gets its own menu', () => {
-  assert.deepEqual(screensFor('CompanyUser'), ['book', 'bulk', 'appointments', 'fleet']);
+  assert.deepEqual(screensFor('CompanyUser'), ['book', 'track', 'bulk', 'appointments', 'fleet']);
   assert.ok(!screensFor('CompanyAdmin').includes('kpi'));
   assert.deepEqual(screensFor('GateClerk'), ['gate', 'control', 'appointments']);
   assert.ok(screensFor('Planner').includes('control') && !screensFor('CompanyUser').includes('control'));

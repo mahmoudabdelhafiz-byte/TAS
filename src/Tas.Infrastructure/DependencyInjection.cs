@@ -44,6 +44,9 @@ public static class DependencyInjection
         services.AddScoped<BookingService>();
         services.AddScoped<BulkBookingService>();
         services.AddScoped<ContainerLookupService>();
+        services.Configure<TrackingOptions>(config.GetSection("Tracking"));
+        services.AddScoped<ContainerTrackingService>();
+        services.AddHostedService<TrackingWorker>();
         services.Configure<Tas.Infrastructure.DriverApp.DriverLoginOptions>(config.GetSection("DriverLogin"));
         services.AddScoped<Tas.Infrastructure.DriverApp.DriverLoginService>();
         services.AddScoped<Tas.Infrastructure.DriverApp.DriverAppService>();

@@ -94,7 +94,7 @@ Screens by role:
 
 | Role | Screens |
 |---|---|
-| Company admin / dispatcher | Book a truck (one, or several by BL / container list), Bulk upload, Appointments (own company), Fleet & users |
+| Company admin / dispatcher | Book a truck (one, or several by BL / container list), Track containers (status, follow, book the ready ones), Bulk upload, Appointments (own company), Fleet & users |
 | Planner, terminal admin | Slot board, Control room, KPIs, Capacity setup, Terminal map (terminal admins edit, planners view), Appointments (all companies), Book a truck / Bulk upload (on behalf of a company), Gate, Fleet & users (companies for terminal admins) |
 | Gate clerk | Gate (board, truck check, gate in/out, trouble desk), Control room, Appointments |
 
@@ -120,6 +120,8 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | `GET` | `/api/terminals/{id}/availability?date=2026-10-20&category=IMP_PICKUP&companyId=1` | Slots of a day with remaining capacity for a category |
 | `POST` | `/api/terminals/{id}/appointments` | Book a truck visit (1–4 moves; 2+ = dual transaction) |
 | `POST` | `/api/terminals/{id}/containers/lookup` | Book by BL or several containers: `{category, blNo}` or `{category, containers[], bookingRef?}` → each container with size and status (Ready / Warning / Blocked / Booked) and what stops it. Books nothing |
+| `POST` | `/api/terminals/{id}/containers/track` | `{blNo}` or `{containers}`: where each container stands — `READY` to collect, `NOT_AVAILABLE`, `ON_HOLD` (with the reason), `BOOKED` (own appointment shown; others only "booked"), `COLLECTED` — and each check (in yard, customs, line release, terminal hold, charges). Books nothing |
+| `GET` / `POST` / `DELETE` | `/api/terminals/{id}/containers/followed[/{no}]` | Containers the user follows: re-checked every 15 min (`Tracking:IntervalMinutes`), email (`CONTAINER_READY`) the moment one becomes ready; 30 days or until collected; 200 per user |
 | `GET` | `/api/terminals/{id}/appointments/{no}` | One appointment with checks and live traffic light |
 | `GET` | `/api/terminals/{id}/appointments?date=2026-10-20&companyId=1` | Appointments of a day |
 | `POST` | `/api/terminals/{id}/appointments/{no}/cancel` | Cancel (until the cancellation cut-off; terminal staff any time) |
