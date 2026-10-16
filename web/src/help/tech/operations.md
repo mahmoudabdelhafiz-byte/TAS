@@ -22,6 +22,25 @@ For the terminal's IT team. The full step-by-step guide comes with the install k
 HTTPS: a free certificate from Let's Encrypt, the terminal's own certificate, or, on a network without internet, a
 certificate from the proxy's own authority (installed on the terminal's PCs).
 
+## Several terminals on one installation
+
+One installation (our cloud service, or an operator's own server) can serve several terminals, each with settings of
+its own, by terminal code. Whatever a terminal doesn't set comes from the installation's settings:
+
+```
+Terminals__JED1__Tos=N4                                     the TOS: N4 or Fake (demo data); default Tos__Adapter
+N4__Terminals__JED1__Url=...                                 that terminal's N4 connection
+Terminals__JED1__Brand=Harbor One Terminal                       the name messages are signed with; default Brand, then Yardsyncs
+Terminals__JED1__Notifications__SmsProvider=Unifonic         any message setting: provider, account,
+Terminals__JED1__Notifications__Unifonic__SenderId=HARBOR1      SMS sender name,
+Terminals__JED1__Notifications__Smtp__From=tas@harbor-one.example  email sender address and name
+Integration__Terminals__JED1__Url=...                        events to that terminal's systems
+```
+
+`GET /api/ops/status` lists each terminal's set-up: TOS, name, message providers and sender names, webhook. Sign-in
+codes for drivers use the installation's settings, because a driver works at several terminals. An unknown TOS name
+stops the server from starting, so a typo can't turn into failed bookings.
+
 ## Upgrade and roll back
 
 ```

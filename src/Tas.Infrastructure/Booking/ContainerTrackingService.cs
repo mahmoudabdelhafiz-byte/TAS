@@ -307,6 +307,7 @@ public sealed class ContainerTrackingService(
                     db.NotificationLogs.Add(new NotificationLog
                     {
                         UserId = w.UserId,
+                        TerminalId = terminalId,
                         Channel = NotificationChannel.Email,
                         TemplateCode = NotificationTemplates.ContainerReady,
                         Language = string.IsNullOrWhiteSpace(language) ? "en" : language.Trim().ToLowerInvariant(),

@@ -309,7 +309,7 @@ public sealed class AuthApiTests(TasApiFactory factory) : ApiTestBase(factory)
         var status = await Read<Tas.Infrastructure.Ops.OpsStatus>(await (await As(DemoDataSeeder.TerminalAdminEmail)).GetAsync("/api/ops/status"));
         Assert.True(status.Database.UpToDate);
         Assert.Equal(DatabaseMigrator.Latest, status.Database.Latest);
-        Assert.Equal("FAKE_TOS", status.Tos);
+        Assert.Equal("DEMO: Fake", status.Tos); // the TOS of each terminal
         Assert.False(string.IsNullOrEmpty(status.Version));
     }
 }

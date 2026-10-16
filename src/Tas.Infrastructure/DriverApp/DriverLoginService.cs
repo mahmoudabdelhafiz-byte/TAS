@@ -61,7 +61,8 @@ public sealed partial class DriverLoginService(
     NotificationSenders senders,
     IOptions<DriverLoginOptions> options,
     TimeProvider clock,
-    ILogger<DriverLoginService> logger)
+    ILogger<DriverLoginService> logger,
+    TerminalProfiles? profiles = null)
 {
     public const string WrongCode = "The code is wrong or has expired. Ask for a new one.";
 
@@ -114,7 +115,11 @@ public sealed partial class DriverLoginService(
         {
             try
             {
-                await sender.SendAsync(mobile, CodeMessage(driver.PreferredLanguage.Trim(), code, o.CodeMinutes), ct);
+                var message = CodeMessage(driver.PreferredLanguage.Trim(), code, o.CodeMinutes);
+                var brand = profiles?.BrandFor(null) ?? TerminalProfiles.DefaultBrand; // drivers work at several terminals
+                if (brand != TerminalProfiles.DefaultBrand)
+                    message = new RenderedMessage(brand, message.Body.Replace(TerminalProfiles.DefaultBrand, brand));
+                await sender.SendAsync(mobile, message, ct);
             }
             catch (NotificationSendException ex)
             {

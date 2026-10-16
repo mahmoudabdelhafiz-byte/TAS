@@ -53,6 +53,7 @@ public static class NotificationQueue
             .Where(a => a.AppointmentId == appointmentId)
             .Select(a => new
             {
+                a.TerminalId,
                 a.DriverId,
                 DriverLanguage = a.Driver != null ? a.Driver.PreferredLanguage : null,
                 DriverBlocked = a.Driver != null && a.Driver.IsBlocked,
@@ -68,7 +69,7 @@ public static class NotificationQueue
         if (target.DriverId is { } driverId && !target.DriverBlocked)
         {
             var channel = pushFirst && await PushTokenAsync(db, driverId, ct) is not null ? NotificationChannel.Push : driverChannel;
-            db.NotificationLogs.Add(New(appointmentId, template, channel, target.DriverLanguage, json, now, driverId: driverId));
+            db.NotificationLogs.Add(New(appointmentId, target.TerminalId, template, channel, target.DriverLanguage, json, now, driverId: driverId));
             queued++;
         }
 
@@ -81,7 +82,7 @@ public static class NotificationQueue
             .SingleOrDefaultAsync(ct);
         if (booker is not null)
         {
-            db.NotificationLogs.Add(New(appointmentId, template, NotificationChannel.Email, booker.PreferredLanguage, json, now, userId: booker.UserId));
+            db.NotificationLogs.Add(New(appointmentId, target.TerminalId, template, NotificationChannel.Email, booker.PreferredLanguage, json, now, userId: booker.UserId));
             queued++;
         }
 
@@ -89,11 +90,12 @@ public static class NotificationQueue
     }
 
     private static NotificationLog New(
-        long appointmentId, string template, NotificationChannel channel, string? language, string json, DateTimeOffset now,
+        long appointmentId, int terminalId, string template, NotificationChannel channel, string? language, string json, DateTimeOffset now,
         int? driverId = null, int? userId = null) =>
         new()
         {
             AppointmentId = appointmentId,
+            TerminalId = terminalId,
             DriverId = driverId,
             UserId = userId,
             Channel = channel,

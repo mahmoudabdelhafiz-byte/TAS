@@ -34,7 +34,7 @@ public static class SecurityChecks
         if (string.IsNullOrWhiteSpace(config["PasswordLinks:PortalUrl"]) && !IsTestHost(env))
             warnings.Add("PasswordLinks:PortalUrl is not set: invitation and password emails are not sent.");
         if (string.Equals(config.GetValue("Tos:Adapter", "Fake"), "Fake", StringComparison.OrdinalIgnoreCase))
-            warnings.Add("Tos:Adapter is Fake: containers are checked against demo data, not the terminal's TOS.");
+            warnings.Add("Tos:Adapter is Fake: terminals without their own Terminals:<code>:Tos setting check containers against demo data, not a TOS.");
         foreach (var (key, what) in new[]
                  {
                      ("Notifications:SmsProvider", "SMS (driver sign-in codes, reminders)"),

@@ -1,5 +1,5 @@
 /* =====================================================================
-   Truck Appointment System (TAS) — PostgreSQL schema, draft v1.3
+   Truck Appointment System (TAS) — PostgreSQL schema, draft v1.4
    Requires PostgreSQL 15+ and PostGIS (for geofences).
    Multi-terminal. See docs/data-model.md for the design.
 
@@ -554,7 +554,8 @@ CREATE TABLE notification_log (   -- outbound push / SMS / WhatsApp / email
     recipient        varchar(200) NULL,       -- phone or email actually used
     attempts         integer      NOT NULL DEFAULT 0,
     last_error       varchar(400) NULL,
-    next_attempt_at  timestamptz  NULL        -- NULL = as soon as possible
+    next_attempt_at  timestamptz  NULL,       -- NULL = as soon as possible
+    terminal_id      integer      NULL REFERENCES terminal(terminal_id)  -- whose providers and sender names (migration 013)
 );
 CREATE INDEX ix_notification_due ON notification_log(status, next_attempt_at);
 CREATE INDEX ix_notification_appt ON notification_log(appointment_id, template_code);

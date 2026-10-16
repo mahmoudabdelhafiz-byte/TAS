@@ -59,6 +59,10 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   the logs; `/api/ops/status` lists `warnings` for settings to look at.
 - Versions, images (`ghcr.io/mahmoudabdelhafiz-byte/yardsyncs`), environments, releases, upgrade and rollback:
   [`docs/releasing.md`](docs/releasing.md).
+- Several terminals on one installation: per terminal code, its own TOS (`Terminals__<code>__Tos`), the name messages
+  are signed with (`Terminals__<code>__Brand`) and any message setting (`Terminals__<code>__Notifications__…`:
+  providers, accounts, SMS sender name, email sender); the installation's settings fill the rest. `/api/ops/status`
+  lists each terminal's set-up.
 - Load test of the peak booking hour: [`loadtest/`](loadtest/README.md) (k6; runs in CI on every pull request).
 - Personal data is cleaned up daily (`Privacy:LocationDays` 30, `Privacy:MessageDays` 180, `Privacy:EventDays` 90,
   `Privacy:TokenDays` 30). Drivers: `GET /api/companies/{c}/drivers/{d}/personal-data` (copy) and
