@@ -14,6 +14,12 @@ public sealed class FakeTosOptions
     /// <summary>Act as a TOS that can't be reached (every call fails), to try the warning and re-check flow.</summary>
     public bool Unreachable { get; set; }
 
+    /// <summary>Gate passages can't be recorded (retried later).</summary>
+    public bool GateUnreachable { get; set; }
+
+    /// <summary>Containers the demo TOS refuses at the gate.</summary>
+    public List<string> GateRefused { get; set; } = [];
+
     /// <summary>Import containers not yet discharged / not in the yard.</summary>
     public List<string> NotAvailable { get; set; } = [];
 
@@ -52,8 +58,26 @@ public sealed class FakeTosOptions
     public Dictionary<string, List<string>> BillsOfLading { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
-public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : ITosAdapter
+public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : ITosAdapter, ITosGateWriter
 {
+    /// <summary>Gate passages the demo TOS was given, newest last (for demos and tests).</summary>
+    public static readonly System.Collections.Concurrent.ConcurrentQueue<(int TerminalId, TosGateRequest Request)> GateRecords = new();
+
+    /// <summary>
+    /// Records the passage. FakeTos:GateUnreachable makes it unreachable (retried); a container listed in
+    /// FakeTos:GateRefused is refused. The visit key is TV- and the appointment number.
+    /// </summary>
+    public Task<TosGateResult> RecordAsync(int terminalId, TosGateRequest request, CancellationToken ct = default)
+    {
+        var o = options.CurrentValue;
+        if (o.GateUnreachable)
+            return Task.FromResult(TosGateResult.Unreachable("The demo TOS gate is set to unreachable (FakeTos:GateUnreachable)."));
+        if (request.Moves.FirstOrDefault(m => m.ContainerNo is not null && o.GateRefused.Contains(m.ContainerNo, StringComparer.OrdinalIgnoreCase)) is { } refused)
+            return Task.FromResult(TosGateResult.Refused($"The demo TOS refuses {refused.ContainerNo} at the gate."));
+        GateRecords.Enqueue((terminalId, request));
+        return Task.FromResult(TosGateResult.Done(request.VisitReference ?? $"TV-{request.AppointmentNo}"));
+    }
+
     public string Source => "FAKE_TOS";
 
     private FakeTosOptions Current =>

@@ -574,9 +574,17 @@ function GateRules({ editable }: { editable: boolean }) {
             ))}
           </fieldset>
           <p className="hint">{t('setup.identityHint')}</p>
+          <fieldset className="plain-fieldset">
+            <legend>{t('setup.tosGate')}</legend>
+            <label className="radio">
+              <input type="checkbox" checked={(current.tos_gate_write ?? 0) !== 0} disabled={!editable}
+                onChange={e => setValues({ ...current, tos_gate_write: e.target.checked ? 1 : 0 })} /> {t('setup.tosGateWrite')}
+            </label>
+            <p className="hint">{t('setup.tosGateHint')}</p>
+          </fieldset>
           {editable && (
             <ActionButton kind="primary" disabled={values === null} onError={setError} onRun={async () => {
-              await api.put(base, { values: Object.fromEntries([...gateKeys, 'driver_identity'].map(k => [k, current[k] ?? 0])), reason: null });
+              await api.put(base, { values: Object.fromEntries([...gateKeys, 'driver_identity', 'tos_gate_write'].map(k => [k, current[k] ?? 0])), reason: null });
               setValues(null);
               settings.reload();
               setDone(t('slots.applied'));

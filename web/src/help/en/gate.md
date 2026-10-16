@@ -64,6 +64,10 @@ kept with the visit.
 Trucks inside are listed with how long they have been in. **Gate out** when the truck leaves: the visit is completed
 and the turn time counted.
 
+**Gate ticket** shows the visit's interchange receipt: company, truck, driver, times and lanes, the moves with their
+seals, damage seen at the gate, and the TOS visit once recorded. **Print** prints only the ticket. After a gate out,
+the link below the list opens that truck's ticket.
+
 ## The figures on top
 
 **At the gate**, **In the terminal**, **Completed today**, **Average turn time** and **At the trouble desk** are for

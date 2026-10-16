@@ -65,6 +65,7 @@ export function Lanes() {
         {(list.data ?? []).map(l => <LaneCard key={l.laneId} lane={l} base={`${base}/${l.laneId}`} onChanged={changed} onError={setError} />)}
       </div>
       <AddLane base={base} onChanged={changed} onError={setError} />
+      <TosRecords onDone={setDone} onError={setError} />
     </section>
   );
 }
@@ -309,5 +310,68 @@ function AddLane({ base, onChanged, onError }: { base: string; onChanged: (m?: s
         onChanged(t('lanes.added', { lane: form.laneCode.trim() }));
       }}>{t('onboard.addLane')}</ActionButton>
     </form>
+  );
+}
+
+interface TosRecord {
+  messageId: number;
+  appointmentNo: string;
+  stage: 'GateIn' | 'GateOut';
+  laneCode: string | null;
+  occurredAt: string;
+  status: 'Queued' | 'Sent' | 'Failed';
+  attempts: number;
+  nextAttemptAt: string;
+  sentAt: string | null;
+  tosReference: string | null;
+  lastError: string | null;
+}
+
+const recordStatusText = { Queued: 'tosrec.Queued', Sent: 'tosrec.Sent', Failed: 'tosrec.Failed' } as const;
+
+/** Gate passages recorded in the TOS (terminals that record them): what is waiting or failed, sent again on demand. */
+function TosRecords({ onDone, onError }: { onDone: (m: string) => void; onError: (m: string) => void }) {
+  const { api, t, lang, terminal } = useApp();
+  const base = `/api/terminals/${terminal.terminalId}/gate/tos-records`;
+  const list = useLoad(() => api.get<TosRecord[]>(base), [base], 30_000);
+  const rows = list.data ?? [];
+  if (rows.length === 0) return null;
+  const problems = rows.filter(r => r.status !== 'Sent').length;
+  return (
+    <section className="tos-records" aria-labelledby="tos-records">
+      <div className="section-row">
+        <h2 className="section-title" id="tos-records">{t('tosrec.title')}</h2>
+        <ActionButton onError={onError} onRun={async () => {
+          const result = await api.post<{ tried: number }>(`${base}/send`);
+          list.reload();
+          onDone(t('tosrec.sent', { n: result.tried }));
+        }}>{t('tosrec.sendNow')}</ActionButton>
+      </div>
+      <p className={problems > 0 ? 'warn-text' : 'hint'}>{problems > 0 ? t('tosrec.problems', { n: problems }) : t('tosrec.allSent')}</p>
+      <div className="table-wrap">
+        <table className="grid compact">
+          <thead><tr><th>{t('clerk.when')}</th><th>{t('tosrec.appointment')}</th><th>{t('tosrec.stage')}</th><th>{t('tosrec.status')}</th><th>{t('tosrec.reference')}</th><th /></tr></thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.messageId}>
+                <td className="num">{stamp(r.occurredAt, terminal.timeZone, lang)}</td>
+                <td><bdi>{r.appointmentNo}</bdi>{r.laneCode && <span className="muted"> · <bdi>{r.laneCode}</bdi></span>}</td>
+                <td>{t(r.stage === 'GateIn' ? 'tosrec.in' : 'tosrec.out')}</td>
+                <td className={r.status === 'Failed' ? 'check-fail' : undefined}>{t(recordStatusText[r.status])}{r.status === 'Queued' && r.attempts > 0 ? ` (${r.attempts})` : ''}</td>
+                <td dir="auto">{r.status === 'Sent' ? <bdi>{r.tosReference ?? '—'}</bdi> : r.lastError ?? '—'}</td>
+                <td className="cell-action">
+                  {r.status === 'Failed' && (
+                    <ActionButton onError={onError} onRun={async () => {
+                      await api.post(`${base}/${r.messageId}/retry`);
+                      list.reload();
+                    }}>{t('tosrec.retry')}</ActionButton>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

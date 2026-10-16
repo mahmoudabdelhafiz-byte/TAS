@@ -75,6 +75,7 @@ public static class DependencyInjection
         services.AddScoped<GateService>();
         services.AddScoped<LaneService>();
         services.AddScoped<DeviceService>();
+        services.AddScoped<GateTicketService>();
         services.Configure<Yardsyncs.Application.Gate.LaneControllerOptions>(config.GetSection("LaneController"));
         services.AddScoped<LaneControllerService>();
         services.AddHostedService<LaneControllerWorker>();
@@ -121,6 +122,11 @@ public static class DependencyInjection
         services.AddScoped<N4TosAdapter>();
         services.AddScoped<TosRouter>();
         services.AddScoped<ITosAdapter>(sp => sp.GetRequiredService<TosRouter>());
+        services.AddScoped<N4GateWriter>();
+        services.AddScoped<ITosGateWriter>(sp => sp.GetRequiredService<TosRouter>());
+        services.Configure<TosGateOptions>(config.GetSection("TosGate"));
+        services.AddScoped<TosGateService>();
+        services.AddHostedService<TosGateWorker>();
 
         return services;
     }

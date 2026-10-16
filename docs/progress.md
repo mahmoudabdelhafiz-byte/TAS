@@ -471,6 +471,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Correct the plate / containers or type the appointment number, then **Check again**: the old case closes, the lane decides anew (barrier opens or a fresh case); corrections recorded per transaction for the OCR read rate (migration 021) |
 | ✅ | Let in / turn away with a note (barrier opens / display tells the driver); intercom `Call` / `Hangup` commands; message on the lane display; open barrier |
 
+### 48. Gate passages in the TOS, gate ticket (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Per terminal (`tos_gate_write`, off by default): each gate-in (truck visit + one transaction per move, with seals seen at the gate) and gate-out is queued with the passage (migration 022) and sent by a worker; retried while the TOS is unreachable, refused ones wait for a person; gate-out only after its gate-in |
+| ✅ | `ITosGateWriter` for adapters; demo TOS records them; N4 through its gate web service (`process-truck` at in / out stage, transaction types per move type) — **to verify on the customer's N4 test system** |
+| ✅ | Lanes screen: gate records not yet in the TOS, send now / send again; settings switch under Capacity setup → Gate |
+| ✅ | Gate ticket (equipment interchange receipt): company, truck, driver, times and lanes, moves with seals, damage seen at the gate, TOS visit; printable from the gate screen |
+
 ---
 
 ## Remaining
@@ -560,7 +568,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Lane controller service at the terminal: one transaction per truck — identify, match appointment, re-check, decide, open barrier or send to remote clerk | Section 46; runs inside Yardsyncs, so at the terminal when Yardsyncs is installed there |
 | ⬜ | Edge mode for cloud-hosted terminals: a small lane agent at the terminal with today's appointments cached, so automatic lanes keep deciding when the link to the cloud drops, and sync back afterwards | Needed only where Yardsyncs is hosted in the cloud and the lanes run automatic |
 | ✅ | Remote clerk station: live lane view, photos, OCR corrections, intercom, admit / refer / reject — grows out of today's trouble desk | Section 47; the intercom audio itself is the intercom system's |
-| ⬜ | TOS gate transaction: create the truck visit and gate-in / gate-out in the TOS (N4 gate API), print or send the EIR / gate ticket | Needs TOS write access |
+| ✅ | TOS gate transaction: create the truck visit and gate-in / gate-out in the TOS (N4 gate API), print or send the EIR / gate ticket | Section 48; N4 documents to verify on the customer's N4 test system ❓ test access; sending the ticket to the driver app with push (Phase E) |
 | ⬜ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | |
 | ⬜ | Exit gate: match outbound container, check delivered against booked, close the visit, turn time | Gate-out exists in the API |
 | ⬜ | Lane KPIs: transaction time, OCR read rate, exception rate per lane | |

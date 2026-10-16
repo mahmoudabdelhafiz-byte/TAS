@@ -87,6 +87,10 @@ is shown only once; choosing it again replaces it). **Connection** then shows ea
 what the device reports), **Offline** (silent for two minutes) or **Not connected**. The technical page *Connecting
 lane devices* is for the integrator.
 
+If the terminal records gate passages in its TOS (Capacity setup → Gate), **Gate records in the TOS** at the bottom
+of **Lanes** lists what is waiting or was not taken, with the TOS's reason. **Send again** once the cause is fixed;
+**Send now** doesn't wait for the next round.
+
 ## Personal data
 
 Drivers' **Copy of data** and **Erase personal data** are in **Fleet & users** → **Drivers** (see the guide Your

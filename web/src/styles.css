@@ -1109,3 +1109,29 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .case .misread { color: #8a5d05; text-decoration: underline dotted; }
 @media (max-width: 860px) { .clerk-grid { grid-template-columns: minmax(0, 1fr); } }
 .case td bdi, .lane-read bdi { display: inline-block; margin-inline-end: 6px; }
+
+/* ---------- Gate ticket ---------- */
+.row-actions { display: inline-flex; align-items: center; gap: 14px; }
+.ticket-sheet { position: fixed; inset: 0; z-index: 60; display: grid; place-items: start center; overflow-y: auto; padding: 32px 16px; background: rgba(15, 42, 58, 0.45); }
+.ticket-paper { width: min(44rem, 100%); background: var(--surface); color: var(--text); border-radius: var(--radius); padding: 28px 32px; box-shadow: 0 12px 32px rgba(15, 42, 58, 0.3); font-family: var(--font); }
+[dir='rtl'] .ticket-paper { font-family: var(--font-ar); }
+.ticket-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+.ticket-head h2 { margin: 2px 0 0; font-size: 24px; }
+.ticket-terminal { margin: 0; color: var(--muted); }
+.ticket-no { margin: 0; font-size: 20px; font-weight: 600; }
+.ticket-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 10px 24px; margin: 18px 0; }
+.ticket-facts dt { font-size: 13px; color: var(--muted); }
+.ticket-facts dd { margin: 2px 0 0; font-weight: 500; }
+.ticket-moves { margin: 8px 0 18px; }
+.ticket-paper h3 { font-size: 15px; margin: 0 0 6px; }
+.ticket-damage { margin: 0; padding-inline-start: 20px; }
+.ticket-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 42px; }
+.ticket-sign p { margin: 0; padding-top: 8px; border-top: 1px solid var(--text); font-size: 14px; }
+.ticket-actions { margin-top: 24px; }
+.tos-records { margin-top: 28px; }
+@media print {
+  body.print-ticket > *:not(.ticket-sheet) { display: none !important; }
+  body.print-ticket .ticket-sheet { position: static; background: none; padding: 0; display: block; }
+  body.print-ticket .ticket-paper { box-shadow: none; width: auto; padding: 0; }
+  body.print-ticket .ticket-actions { display: none; }
+}

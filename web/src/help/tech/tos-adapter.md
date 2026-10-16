@@ -76,3 +76,36 @@ To test a new adapter:
 3. Add its name to `TerminalProfiles.TosAdapters` and to `TosRouter`.
 4. Choose it per terminal: `Terminals__<code>__Tos=<Name>`.
 5. Run the conformance tests in CI, then against the customer's test TOS before go-live.
+
+## Recording gate passages (optional)
+
+A terminal can have Yardsyncs record each gate passage in its TOS. It turns this on with **Record each gate-in and
+gate-out in the TOS** under Capacity setup → Gate (setting `tos_gate_write`). An adapter that supports this also
+implements `ITosGateWriter` (`src/Yardsyncs.Application/Tos/TosGate.cs`):
+
+| Member | What it does |
+|---|---|
+| `RecordAsync(terminalId, request)` | Gate-in: create the truck visit with one transaction per move and pass the in-gate. Gate-out: pass the out-gate for the visit |
+
+The request carries the appointment number, truck, driver, company, gate and lane, the time, and the moves (move type,
+container and ISO type, booking / EDO / cargo reference, seals seen at the gate). At gate-out it also carries
+`VisitReference`, the TOS's own key that the gate-in returned. The answer is one of three:
+
+- `Done(visitReference)`: the TOS recorded the passage.
+- `Refused(message)`: the TOS said no, and sending again won't help. The record waits for a person.
+- `Unreachable(message)`: the TOS couldn't be reached. The record is tried again after 1, 2, 4… minutes (at most an
+  hour apart), up to ten tries.
+
+The gate never waits for the TOS. Each passage is queued in the same save as the passage itself, and a worker sends it
+(`TosGate__IntervalSeconds`, 10). A gate-out goes only after its gate-in. Records that weren't taken show under **Gate
+records in the TOS** on the Lanes screen, with **Send again**, and on `GET /api/terminals/{id}/gate/tos-records`.
+
+**Navis N4.** `N4GateWriter` sends N4 gate web-service documents through ArgoService `genericInvoke`:
+`process-truck` at the in-gate stage with the truck transactions, and at the out-gate stage by `tv-key`. Set the gate
+per terminal: `N4__Terminals__<code>__GateId`, `…__IngateStage` (`ingate`), `…__OutgateStage` (`outgate`), and
+`…__TranTypes__<move type>` where the defaults don't fit. The defaults are IMP_PICKUP → DI, EXP_DROP → RE,
+MTY_RETURN → RM, MTY_PICKUP → DM, BB_DELIVERY / BULK_DELIVERY → DB. The N4 user needs gate rights.
+
+The documents in `N4GateRequests` follow the N4 gate API, but N4 versions and gate configurations differ. Check them
+on the terminal's N4 test system before turning `tos_gate_write` on.
+
