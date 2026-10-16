@@ -12,7 +12,10 @@ namespace Tas.Api;
 public sealed record ActiveBody(bool Active, string? Reason);
 
 public sealed record TerminalView(
-    int TerminalId, string Code, string Name, Tas.Domain.TerminalType TerminalType, string TimeZone, int SlotMinutes, int BookingHorizonDays);
+    int TerminalId, string Code, string Name, Tas.Domain.TerminalType TerminalType, string TimeZone, int SlotMinutes, int BookingHorizonDays,
+    int? OperatorId = null);
+
+public sealed record TerminalOperatorBody(int? OperatorId);
 
 /// <summary>Companies, trucks, drivers, categories, cargo releases and users.</summary>
 public static class MasterDataEndpoints
@@ -111,19 +114,45 @@ public static class MasterDataEndpoints
         // ================================================================ terminals
 
         // The terminals the signed-in user can work at (the portal's terminal picker).
-        // Companies and system admins see every active terminal; terminal staff see their own.
+        // Companies and system admins see every active terminal; terminal staff see their own; operator admins their operator's.
         app.MapGet("/api/terminals", async (HttpContext http, TasDbContext db, CancellationToken ct) =>
         {
             var user = TasApi.User(http)!;
             var query = db.Terminals.AsNoTracking().Where(t => t.IsActive);
-            if (user.IsTerminalStaff && !user.IsSysAdmin)
+            if (user.IsOperatorAdmin)
+            {
+                var mine = user.OperatorTerminals ?? [];
+                query = query.Where(t => mine.Contains(t.TerminalId));
+            }
+            else if (user.IsTerminalStaff && !user.IsSysAdmin)
                 query = query.Where(t => t.TerminalId == user.TerminalId);
 
             return Results.Ok(await query
                 .OrderBy(t => t.Code)
-                .Select(t => new TerminalView(t.TerminalId, t.Code, t.Name, t.TerminalType, t.TimeZone, t.SlotMinutes, t.BookingHorizonDays))
+                .Select(t => new TerminalView(t.TerminalId, t.Code, t.Name, t.TerminalType, t.TimeZone, t.SlotMinutes, t.BookingHorizonDays, t.OperatorId))
                 .ToListAsync(ct));
         }).RequireAuthorization();
+
+        // ================================================================ operators (system admins; operator admins see their own)
+
+        var operators = app.MapGroup("/api/operators").RequireAuthorization();
+
+        operators.MapGet("/", async (HttpContext http, OperatorService service, CancellationToken ct) =>
+        {
+            var result = await service.ListAsync(TasApi.User(http)!, ct);
+            return result.Status == AdminStatus.Ok ? Results.Ok(result.Value) : TasApi.Admin(result);
+        });
+
+        operators.MapPost("/", async (OperatorInput body, HttpContext http, OperatorService service, CancellationToken ct) =>
+            TasApi.Admin(await service.CreateAsync(TasApi.User(http)!, body, ct), o => $"/api/operators/{o.OperatorId}"));
+
+        operators.MapPut("/{operatorId:int}", async (int operatorId, OperatorUpdate body, HttpContext http, OperatorService service, CancellationToken ct) =>
+            TasApi.Admin(await service.UpdateAsync(TasApi.User(http)!, operatorId, body, ct)));
+
+        // Put a terminal in an operator, move it, or take it out ({ "operatorId": null }).
+        app.MapPut("/api/terminals/{terminalId:int}/operator", async (
+            int terminalId, TerminalOperatorBody body, HttpContext http, OperatorService service, CancellationToken ct) =>
+            TasApi.Admin(await service.AssignTerminalAsync(TasApi.User(http)!, terminalId, body.OperatorId, ct))).RequireAuthorization();
 
         // ================================================================ terminal: categories & cargo
 
@@ -166,9 +195,9 @@ public static class MasterDataEndpoints
 
         var users = app.MapGroup("/api/users").RequireAuthorization();
 
-        users.MapGet("/", async (int? companyId, int? terminalId, HttpContext http, UserAdminService service, CancellationToken ct) =>
+        users.MapGet("/", async (int? companyId, int? terminalId, int? operatorId, HttpContext http, UserAdminService service, CancellationToken ct) =>
         {
-            var result = await service.ListAsync(TasApi.User(http)!, companyId, terminalId, ct);
+            var result = await service.ListAsync(TasApi.User(http)!, companyId, terminalId, ct, operatorId);
             return result.Status == AdminStatus.Ok ? Results.Ok(result.Value) : TasApi.Admin(result);
         });
 

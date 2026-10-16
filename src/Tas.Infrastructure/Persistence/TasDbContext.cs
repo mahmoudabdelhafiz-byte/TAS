@@ -16,6 +16,7 @@ namespace Tas.Infrastructure.Persistence;
 /// </summary>
 public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbContext(options)
 {
+    public DbSet<TerminalOperator> TerminalOperators => Set<TerminalOperator>();
     public DbSet<Terminal> Terminals => Set<Terminal>();
     public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
     public DbSet<CapacityTemplate> CapacityTemplates => Set<CapacityTemplate>();
@@ -62,6 +63,12 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.Entity<TerminalOperator>(e =>
+        {
+            e.HasKey(x => x.OperatorId);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
         b.Entity<Terminal>(e =>
         {
             e.HasKey(x => x.TerminalId);

@@ -41,6 +41,22 @@ Integration__Terminals__JED1__Url=...                        events to that term
 codes for drivers use the installation's settings, because a driver works at several terminals. An unknown TOS name
 stops the server from starting, so a typo can't turn into failed bookings.
 
+### Operators
+
+When one company runs several of the installation's terminals, a system admin groups them under an operator
+(**Fleet & users → Operators**, or the API below). The operator's admins (role `OperatorAdmin`) are terminal admins at
+each of its terminals and see nothing of the others. Terminals that aren't in an operator work as before.
+
+```
+POST /api/operators                       {"code": "HARBOR1", "name": "Harbor One"}
+PUT  /api/terminals/{id}/operator         {"operatorId": 1}      null takes the terminal out
+POST /api/users                           {"role": "OperatorAdmin", "operatorId": 1, "email": ..., "fullName": ...}
+PUT  /api/operators/{id}                  {"name": ..., "isActive": false}   signs its admins out
+```
+
+Operators group one company's terminals. Competing companies get separate installations (or separate cloud
+instances), so their data never shares a database.
+
 ## Upgrade and roll back
 
 ```

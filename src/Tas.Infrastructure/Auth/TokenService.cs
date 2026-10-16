@@ -57,6 +57,8 @@ public sealed class TokenService(IOptions<JwtOptions> options, TimeProvider cloc
             claims[TasClaims.CompanyId] = companyId.ToString(CultureInfo.InvariantCulture);
         if (user.TerminalId is { } terminalId)
             claims[TasClaims.TerminalId] = terminalId.ToString(CultureInfo.InvariantCulture);
+        if (user.OperatorId is { } operatorId)
+            claims[TasClaims.OperatorId] = operatorId.ToString(CultureInfo.InvariantCulture);
 
         var descriptor = new SecurityTokenDescriptor
         {

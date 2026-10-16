@@ -102,7 +102,7 @@ public sealed class BookingService(
             return (null, BookingOutcome.Rejected($"Company {company.Name} is {company.Status.ToString().ToLowerInvariant()} and cannot book."));
 
         var user = await db.AppUsers.AsNoTracking().SingleOrDefaultAsync(u => u.UserId == request.UserId, ct);
-        if (user is null || !CanActFor(user, company.CompanyId, terminalId))
+        if (user is null || !CanActFor(user, company.CompanyId, terminalId, terminal.OperatorId))
             return (null, BookingOutcome.Invalid("This user cannot book for this company."));
 
         var slot = await db.Slots.AsNoTracking().SingleOrDefaultAsync(s => s.SlotId == request.SlotId && s.TerminalId == terminalId, ct);
@@ -421,11 +421,13 @@ public sealed class BookingService(
 
     // ------------------------------------------------------------------ shared
 
-    internal static bool CanActFor(AppUser user, int companyId, int terminalId) =>
+    /// <param name="terminalOperatorId">The terminal's operator (checked for operator admins).</param>
+    internal static bool CanActFor(AppUser user, int companyId, int terminalId, int? terminalOperatorId) =>
         user.IsActive
         && (user.CompanyId == companyId
             || user.Role == UserRole.SysAdmin
-            || (user.IsTerminalStaff && user.TerminalId == terminalId));
+            || (user.IsTerminalStaff && user.TerminalId == terminalId)
+            || (user.Role == UserRole.OperatorAdmin && user.OperatorId is not null && user.OperatorId == terminalOperatorId));
 
     private IQueryable<Appointment> LiveAppointments(int terminalId) =>
         db.Appointments.Where(a => a.TerminalId == terminalId
@@ -446,7 +448,10 @@ public sealed class BookingService(
             return (null, null, BookingOutcome.NotFound($"Appointment {number} not found."));
 
         var user = await db.AppUsers.AsNoTracking().SingleOrDefaultAsync(u => u.UserId == userId, ct);
-        if (user is null || !CanActFor(user, appointment.CompanyId, terminalId))
+        var operatorId = user?.Role == UserRole.OperatorAdmin
+            ? await db.Terminals.AsNoTracking().Where(t => t.TerminalId == terminalId).Select(t => t.OperatorId).SingleOrDefaultAsync(ct)
+            : null;
+        if (user is null || !CanActFor(user, appointment.CompanyId, terminalId, operatorId))
             return (null, null, BookingOutcome.Invalid("This user cannot change this appointment."));
 
         if (!Appointment.IsBeforeGate(appointment.Status))

@@ -19,7 +19,8 @@ public sealed record CreateUserRequest(
     int? TerminalId,
     string? Password = null,
     string? Mobile = null,
-    string PreferredLanguage = "en");
+    string PreferredLanguage = "en",
+    int? OperatorId = null);
 
 public enum UserAdminStatus
 {
@@ -43,7 +44,7 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
     /// </summary>
     public async Task<UserAdminResult> CreateAsync(CurrentUser actor, CreateUserRequest request, CancellationToken ct = default, string linkBaseUrl = "")
     {
-        if (!AccessRules.CanCreateUser(actor, request.Role, request.CompanyId, request.TerminalId))
+        if (!AccessRules.CanCreateUser(actor, request.Role, request.CompanyId, request.TerminalId, request.OperatorId))
             return new UserAdminResult(UserAdminStatus.Forbidden, Error: "You cannot create this kind of user here.");
 
         var email = (request.Email ?? "").Trim().ToLowerInvariant();
@@ -67,6 +68,8 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             return new UserAdminResult(UserAdminStatus.Invalid, Error: $"Company {companyId} does not exist.");
         if (request.TerminalId is { } terminalId && !await db.Terminals.AnyAsync(t => t.TerminalId == terminalId, ct))
             return new UserAdminResult(UserAdminStatus.Invalid, Error: $"Terminal {terminalId} does not exist.");
+        if (request.OperatorId is { } operatorId && !await db.TerminalOperators.AnyAsync(o => o.OperatorId == operatorId, ct))
+            return new UserAdminResult(UserAdminStatus.Invalid, Error: $"Operator {operatorId} does not exist.");
 
         if (await db.AppUsers.AnyAsync(u => u.Email == email, ct))
             return new UserAdminResult(UserAdminStatus.Conflict, Error: "A user with this email already exists.");
@@ -78,6 +81,7 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             Role = request.Role,
             CompanyId = request.CompanyId,
             TerminalId = request.TerminalId,
+            OperatorId = request.OperatorId,
             Mobile = string.IsNullOrWhiteSpace(request.Mobile) ? null : request.Mobile.Trim(),
             PreferredLanguage = language,
         };
@@ -101,10 +105,10 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
 
     /// <summary>
     /// Users the actor manages: CompanyAdmin — own company; TerminalAdmin — own terminal's staff and all
-    /// company users; SysAdmin — everyone. Optional filters narrow it further.
+    /// company users; OperatorAdmin — the operator's admins, its terminals' staff and all company users; SysAdmin — everyone. Optional filters narrow it further.
     /// </summary>
     public async Task<AdminResult<IReadOnlyList<UserView>>> ListAsync(
-        CurrentUser actor, int? companyId, int? terminalId, CancellationToken ct = default)
+        CurrentUser actor, int? companyId, int? terminalId, CancellationToken ct = default, int? operatorId = null)
     {
         var query = db.AppUsers.AsNoTracking();
         switch (actor.Role)
@@ -113,6 +117,12 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
                 break;
             case UserRole.TerminalAdmin:
                 query = query.Where(u => u.TerminalId == actor.TerminalId || u.CompanyId != null);
+                break;
+            case UserRole.OperatorAdmin:
+                var terminals = actor.OperatorTerminals ?? [];
+                query = query.Where(u => (u.TerminalId != null && terminals.Contains(u.TerminalId.Value))
+                                         || (u.OperatorId != null && u.OperatorId == actor.OperatorId)
+                                         || u.CompanyId != null);
                 break;
             case UserRole.CompanyAdmin:
                 query = query.Where(u => u.CompanyId == actor.CompanyId);
@@ -125,6 +135,8 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             query = query.Where(u => u.CompanyId == companyId);
         if (terminalId is not null)
             query = query.Where(u => u.TerminalId == terminalId);
+        if (operatorId is not null)
+            query = query.Where(u => u.OperatorId == operatorId);
 
         var users = await query.OrderBy(u => u.Email).Take(1000).ToListAsync(ct);
         return AdminResult<IReadOnlyList<UserView>>.Ok(users.Select(UserView.From).ToList());
@@ -144,7 +156,7 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
         {
             if (user.UserId == actor.UserId)
                 return AdminResult<UserView>.Invalid("You cannot change your own role.");
-            if (!AccessRules.CanCreateUser(actor, input.Role, user.CompanyId, user.TerminalId))
+            if (!AccessRules.CanCreateUser(actor, input.Role, user.CompanyId, user.TerminalId, user.OperatorId))
                 return AdminResult<UserView>.Forbidden($"You cannot give this user the role {input.Role}.");
         }
 
@@ -233,7 +245,7 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             return (null, AdminResult<UserView>.NotFound($"User {userId} not found."));
 
         // Managing an existing user needs the same rights as creating one like it — except editing yourself.
-        if (user.UserId != actor.UserId && !AccessRules.CanCreateUser(actor, user.Role, user.CompanyId, user.TerminalId))
+        if (user.UserId != actor.UserId && !AccessRules.CanCreateUser(actor, user.Role, user.CompanyId, user.TerminalId, user.OperatorId))
             return (null, AdminResult<UserView>.NotFound($"User {userId} not found."));
 
         return (user, null);

@@ -44,7 +44,8 @@ public sealed class OpsStatusService(
         typeof(OpsStatusService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0]
         ?? typeof(OpsStatusService).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 
-    public async Task<OpsStatus> StatusAsync(string environment, CancellationToken ct = default)
+    /// <param name="sees">The terminals whose set-up to list (an admin sees their own terminals); null: all.</param>
+    public async Task<OpsStatus> StatusAsync(string environment, CancellationToken ct = default, Func<int, bool>? sees = null)
     {
         var now = clock.GetUtcNow();
         var since = now.AddHours(-24);
@@ -68,7 +69,8 @@ public sealed class OpsStatusService(
 
         static double? Age(DateTimeOffset? oldest, DateTimeOffset now) => oldest is null ? null : Math.Round((now - oldest.Value).TotalMinutes, 1);
 
-        var terminals = await db.Terminals.AsNoTracking().OrderBy(t => t.Code).Select(t => new { t.Code, t.Name }).ToListAsync(ct);
+        var terminals = (await db.Terminals.AsNoTracking().OrderBy(t => t.Code).Select(t => new { t.TerminalId, t.Code, t.Name }).ToListAsync(ct))
+            .Where(t => sees is null || sees(t.TerminalId)).ToList();
         var setups = terminals.Select(t =>
         {
             var m = profiles.NotificationsFor(t.Code);

@@ -25,7 +25,9 @@ public sealed record UserProfile(
     int? CompanyId,
     string? CompanyName,
     int? TerminalId,
-    string PreferredLanguage);
+    string PreferredLanguage,
+    int? OperatorId = null,
+    string? OperatorName = null);
 
 public sealed record AuthResult(AuthStatus Status, IssuedTokens? Tokens = null, UserProfile? User = null, string? Error = null);
 
@@ -175,7 +177,11 @@ public sealed class AuthService(
         var companyName = user.CompanyId is null
             ? null
             : await db.Companies.AsNoTracking().Where(c => c.CompanyId == user.CompanyId).Select(c => c.Name).SingleOrDefaultAsync(ct);
-        return new UserProfile(user.UserId, user.Email, user.FullName, user.Role, user.CompanyId, companyName, user.TerminalId, user.PreferredLanguage.Trim());
+        var operatorName = user.OperatorId is null
+            ? null
+            : await db.TerminalOperators.AsNoTracking().Where(o => o.OperatorId == user.OperatorId).Select(o => o.Name).SingleOrDefaultAsync(ct);
+        return new UserProfile(user.UserId, user.Email, user.FullName, user.Role, user.CompanyId, companyName, user.TerminalId,
+            user.PreferredLanguage.Trim(), user.OperatorId, operatorName);
     }
 
     private async Task<IssuedTokens> IssueAsync(AppUser user, string? ip, string? refreshToken, CancellationToken ct)

@@ -1,6 +1,6 @@
 # Terminal administration
 
-For terminal admins: companies and users, the terminal map, personal data and the system's health.
+For terminal admins and operator admins: companies and users, operators, the terminal map, personal data and the system's health.
 
 ## Bringing a trucking company on board
 
@@ -17,6 +17,17 @@ reason, which the gate shows.
 
 **Users** → **Terminal staff** → **Add a user**: **Gate clerk**, **Planner** or **Terminal admin**. Each sees only this
 terminal.
+
+## Operators: several terminals, one team
+
+When one company runs several terminals on the same Yardsyncs, the system admin groups them under an operator:
+**Fleet & users** → **Operators** → **Add an operator** (a code and a name), then **Add a terminal** for each of its
+terminals and **Add an operator admin**.
+
+An **Operator admin** manages every terminal of the operator, as a terminal admin would at each one, and picks the
+terminal at the top of the screen. They can add fellow operator admins and staff for any of the operator's terminals,
+but see nothing of terminals outside it. Taking a terminal out (**Take out**) or deactivating the operator counts at
+once.
 
 ## The terminal map
 

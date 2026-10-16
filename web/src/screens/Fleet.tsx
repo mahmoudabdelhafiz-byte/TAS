@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { isCompanyRole } from '../lib/routes.ts';
+import { isAdminRole, isCompanyRole } from '../lib/routes.ts';
 import { stamp } from '../lib/time.ts';
-import type { Company, Driver, Truck, UserRole } from '../lib/types.ts';
+import type { Company, Driver, Terminal, Truck, UserRole } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, useLoad } from '../ui/kit.tsx';
 
@@ -25,15 +25,25 @@ interface CompanyRow extends Company {
   noShowCount: number;
 }
 
-type Tab = 'trucks' | 'drivers' | 'users' | 'companies';
-const tabText = { trucks: 'fleet.trucks', drivers: 'fleet.drivers', users: 'fleet.users', companies: 'fleet.companies' } as const;
+interface OperatorRow {
+  operatorId: number;
+  code: string;
+  name: string;
+  isActive: boolean;
+  terminals: { terminalId: number; code: string; name: string }[];
+  admins: number;
+}
+
+type Tab = 'trucks' | 'drivers' | 'users' | 'companies' | 'operators';
+const tabText = { trucks: 'fleet.trucks', drivers: 'fleet.drivers', users: 'fleet.users', companies: 'fleet.companies', operators: 'fleet.operators' } as const;
 
 /** Trucks, drivers and users of a company; companies for terminal admins. */
 export function Fleet() {
   const { api, t, user, route, go } = useApp();
   const companyUser = isCompanyRole(user.role);
-  const terminalAdmin = user.role === 'TerminalAdmin' || user.role === 'SysAdmin';
-  const tabs: Tab[] = terminalAdmin ? ['companies', 'trucks', 'drivers', 'users']
+  const terminalAdmin = isAdminRole(user.role);
+  const operators = user.role === 'SysAdmin' || user.role === 'OperatorAdmin';
+  const tabs: Tab[] = terminalAdmin ? ['companies', 'trucks', 'drivers', 'users', ...(operators ? ['operators' as const] : [])]
     : user.role === 'CompanyAdmin' ? ['trucks', 'drivers', 'users'] : ['trucks', 'drivers'];
   const tab: Tab = tabs.includes(route.params.tab as Tab) ? (route.params.tab as Tab) : tabs[0];
   const companies = useLoad(() => (companyUser ? Promise.resolve([] as CompanyRow[]) : api.get<CompanyRow[]>('/api/companies')), [companyUser]);
@@ -51,7 +61,7 @@ export function Fleet() {
               onClick={() => go('fleet', { tab: x })}>{t(tabText[x])}</button>
           ))}
         </div>
-        {!companyUser && tab !== 'companies' && (
+        {!companyUser && tab !== 'companies' && tab !== 'operators' && (
           <label className="field field-inline">
             <span>{t('common.company')}</span>
             <select value={companyId ?? ''} onChange={e => setPicked(e.target.value)}>
@@ -63,10 +73,11 @@ export function Fleet() {
       </header>
 
       {tab === 'companies' && <Companies list={companies.data ?? []} reload={companies.reload} />}
+      {tab === 'operators' && <Operators />}
       {tab === 'trucks' && companyId && companyId > 0 && <Trucks companyId={companyId} canEdit={canEdit} canBlock={terminalAdmin} />}
       {tab === 'drivers' && companyId && companyId > 0 && <Drivers companyId={companyId} canEdit={canEdit} canBlock={terminalAdmin} />}
       {tab === 'users' && companyId && <Users companyId={companyId} canEdit={canEdit} />}
-      {tab !== 'companies' && companyId && companyId < 0 && tab !== 'users' && <p className="muted">{t('common.chooseCompany')}</p>}
+      {tab !== 'companies' && tab !== 'operators' && companyId && companyId < 0 && tab !== 'users' && <p className="muted">{t('common.chooseCompany')}</p>}
     </section>
   );
 }
@@ -396,3 +407,167 @@ const typeText = {
   Line: 'fleet.type.Line',
   Other: 'fleet.type.Other',
 } as const;
+
+/**
+ * Operators: groups of terminals with their own administrators. System admins set them up and move terminals between
+ * them; an operator admin sees their own operator and adds fellow admins.
+ */
+function Operators() {
+  const { api, t, lang, user, terminal } = useApp();
+  const sys = user.role === 'SysAdmin';
+  const list = useLoad(() => api.get<OperatorRow[]>('/api/operators'), []);
+  const terminals = useLoad(() => (sys ? api.get<Terminal[]>('/api/terminals') : Promise.resolve([] as Terminal[])), [sys]);
+  const [picked, setPicked] = useState<number | null>(null);
+  const current = list.data?.find(o => o.operatorId === picked) ?? list.data?.[0] ?? null;
+  const admins = useLoad(
+    () => (current ? api.get<UserRow[]>(`/api/users?operatorId=${current.operatorId}`) : Promise.resolve([] as UserRow[])),
+    [current?.operatorId]);
+  const [created, setCreated] = useState({ code: '', name: '' });
+  const [admin, setAdmin] = useState({ fullName: '', email: '' });
+  const [adding, setAdding] = useState('');
+  const m = useMessages();
+  const free = (terminals.data ?? []).filter(x => !current?.terminals.some(y => y.terminalId === x.terminalId));
+
+  return (
+    <div className="setup-two">
+      <div>
+        {m.view}
+        {list.error && <LoadError error={list.error} retry={list.reload} />}
+        {list.data && list.data.length === 0 && <p className="muted">{t('fleet.noOperators')}</p>}
+        {list.data && list.data.length > 0 && (
+          <div className="table-wrap">
+            <table className="grid compact">
+              <thead><tr><th>{t('fleet.operatorCode')}</th><th>{t('fleet.name')}</th><th>{t('fleet.operatorTerminals')}</th><th className="num">{t('fleet.operatorAdmins')}</th><th /></tr></thead>
+              <tbody>
+                {list.data.map(o => (
+                  <tr key={o.operatorId} className={[o.isActive ? '' : 'inactive', o.operatorId === current?.operatorId ? 'selected' : ''].join(' ').trim() || undefined}
+                    onClick={() => setPicked(o.operatorId)}>
+                    <td><bdi>{o.code}</bdi></td>
+                    <td><button type="button" className="link-btn" aria-pressed={o.operatorId === current?.operatorId}
+                      onClick={e => { e.stopPropagation(); setPicked(o.operatorId); }}>{o.name}</button></td>
+                    <td><bdi>{o.terminals.map(x => x.code).join(', ') || '—'}</bdi></td>
+                    <td className="num">{o.admins}</td>
+                    <td className="cell-action" onClick={e => e.stopPropagation()}>
+                      {sys && (
+                        <ActionButton kind="secondary" onError={m.setError} onRun={async () => {
+                          await api.put(`/api/operators/${o.operatorId}`, { name: o.name, isActive: !o.isActive });
+                          list.reload();
+                        }}>{o.isActive ? t('fleet.deactivate') : t('fleet.activate')}</ActionButton>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {current && (
+          <div className="operator-detail">
+            <h2>{current.name}</h2>
+            <p className="hint">{t('fleet.operatorHint')}</p>
+            <div className="table-wrap">
+              <table className="grid compact">
+                <thead><tr><th>{t('fleet.operatorTerminals')}</th><th /></tr></thead>
+                <tbody>
+                  {current.terminals.map(x => (
+                    <tr key={x.terminalId}>
+                      <td><strong><bdi>{x.code}</bdi></strong> {x.name}</td>
+                      <td className="cell-action">
+                        {sys && (
+                          <ActionButton kind="secondary" onError={m.setError} onRun={async () => {
+                            await api.put(`/api/terminals/${x.terminalId}/operator`, { operatorId: null });
+                            list.reload();
+                          }}>{t('fleet.takeOut')}</ActionButton>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {sys && free.length > 0 && (
+              <div className="actions wrap">
+                <label className="field field-inline">
+                  <span>{t('fleet.addTerminal')}</span>
+                  <select value={adding} onChange={e => setAdding(e.target.value)}>
+                    <option value="">—</option>
+                    {free.map(x => <option key={x.terminalId} value={x.terminalId}>{x.code} — {x.name}</option>)}
+                  </select>
+                </label>
+                <ActionButton kind="primary" disabled={!adding} onError={m.setError} onRun={async () => {
+                  await api.put(`/api/terminals/${adding}/operator`, { operatorId: current.operatorId });
+                  setAdding('');
+                  list.reload();
+                }}>{t('fleet.addTerminal')}</ActionButton>
+              </div>
+            )}
+
+            <h2>{t('fleet.operatorAdmins')}</h2>
+            {admins.error && <LoadError error={admins.error} retry={admins.reload} />}
+            {admins.data && (
+              <div className="table-wrap">
+                <table className="grid compact">
+                  <thead><tr><th>{t('fleet.name')}</th><th>{t('login.email')}</th><th>{t('fleet.lastLogin')}</th><th /></tr></thead>
+                  <tbody>
+                    {admins.data.map(x => (
+                      <tr key={x.userId} className={x.isActive ? undefined : 'inactive'}>
+                        <td>{x.fullName}</td>
+                        <td><bdi>{x.email}</bdi></td>
+                        <td className="num">{x.lastLoginAt ? stamp(x.lastLoginAt, terminal.timeZone, lang) : '—'}</td>
+                        <td className="cell-action">
+                          {x.userId !== user.userId && (
+                            <ActionButton kind={x.isActive ? 'secondary' : 'primary'} onError={m.setError} onRun={async () => {
+                              await api.post(`/api/users/${x.userId}/active`, { active: !x.isActive, reason: x.isActive ? 'Deactivated in the portal' : null });
+                              admins.reload();
+                            }}>{x.isActive ? t('fleet.deactivate') : t('fleet.activate')}</ActionButton>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="form-stack">
+        {current && (
+          <form className="book-side form-stack" onSubmit={e => e.preventDefault()}>
+            <h2>{t('fleet.addOperatorAdmin')}</h2>
+            <p className="muted">{current.name}</p>
+            <label className="field"><span>{t('fleet.name')}</span><input value={admin.fullName} onChange={e => setAdmin({ ...admin, fullName: e.target.value })} /></label>
+            <label className="field"><span>{t('login.email')}</span><input type="email" dir="ltr" value={admin.email} onChange={e => setAdmin({ ...admin, email: e.target.value })} /></label>
+            <p className="hint">{t('fleet.inviteHint')}</p>
+            <ActionButton kind="primary" disabled={!admin.email.trim() || !admin.fullName.trim()} onError={m.setError} onRun={async () => {
+              await api.post('/api/users', {
+                email: admin.email.trim(), fullName: admin.fullName.trim(), role: 'OperatorAdmin', password: null,
+                preferredLanguage: lang, companyId: null, terminalId: null, operatorId: current.operatorId,
+              });
+              m.setDone(t('fleet.userInvited', { email: admin.email.trim() }));
+              setAdmin({ fullName: '', email: '' });
+              admins.reload();
+              list.reload();
+            }}>{t('fleet.invite')}</ActionButton>
+          </form>
+        )}
+        {sys && (
+          <form className="book-side form-stack" onSubmit={e => e.preventDefault()}>
+            <h2>{t('fleet.addOperator')}</h2>
+            <label className="field"><span>{t('fleet.operatorCode')}</span>
+              <input dir="ltr" maxLength={20} value={created.code} onChange={e => setCreated({ ...created, code: e.target.value.toUpperCase() })} /></label>
+            <label className="field"><span>{t('fleet.name')}</span><input maxLength={150} value={created.name} onChange={e => setCreated({ ...created, name: e.target.value })} /></label>
+            <ActionButton kind="primary" disabled={created.code.trim().length < 2 || !created.name.trim()} onError={m.setError} onRun={async () => {
+              const result = await api.post<{ value: OperatorRow }>('/api/operators', { code: created.code.trim(), name: created.name.trim() });
+              setCreated({ code: '', name: '' });
+              setPicked(result.value.operatorId);
+              list.reload();
+            }}>{t('fleet.addOperator')}</ActionButton>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}

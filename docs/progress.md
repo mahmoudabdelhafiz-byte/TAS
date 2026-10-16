@@ -367,6 +367,15 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | The name messages are signed with per terminal (`Terminals:<code>:Brand`, default `Brand`, then Yardsyncs); password emails for terminal staff use their terminal's |
 | ✅ | `/api/ops/status` lists every terminal's set-up (TOS, name, providers, sender names, webhook) |
 
+### 35. Operators (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Terminal operators (migration 014): an operator groups the terminals one company runs on the installation; a terminal is in one operator or none |
+| ✅ | New role **Operator admin**: a terminal admin at every terminal of the operator (capacity, gate, map, categories, staff, companies), nothing outside it. The operator's terminal list is read on every request, so moving a terminal or stopping the operator counts at once |
+| ✅ | System admins create operators, move terminals in and out, add operator admins (`/api/operators`, `PUT /api/terminals/{id}/operator`); operator admins add fellow admins and staff for the operator's terminals; all changes in the audit log |
+| ✅ | Portal: **Operators** tab under Fleet & users; operator admins pick among the operator's terminals; `/api/ops/status` shows an admin only their own terminals' set-up |
+| ✅ | Competing operators stay on separate installations (or separate cloud instances); operators group one company's terminals |
+
 ---
 
 ## Remaining
@@ -439,7 +448,7 @@ Details in [`releasing.md`](releasing.md).
 | | Item | Notes |
 |---|---|---|
 | 🟡 | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Done: TOS, message providers, sender names, brand (section 34). Still per installation: driver message channel (SMS / WhatsApp), gate identification, driver identity, fees |
-| ⬜ | Tenants: terminal operator → terminals; operator admins; data separated per operator in the cloud | Terminal scope already exists |
+| ✅ | Tenants: terminal operator → terminals; operator admins | Section 35. Competitors: separate installations / cloud instances |
 | ⬜ | Country packs: plate formats (Saudi Arabic plates today), mobile number rules (+966 today), national holidays, currencies, ID types | Plate and mobile rules become per-country |
 | ⬜ | Languages as packs: portal and messages in more languages without code changes | Arabic, English, Urdu, Hindi today |
 | ⬜ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | |

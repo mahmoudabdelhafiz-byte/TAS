@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Tas.Application.Auth;
+using Tas.Domain.Parties;
 using Tas.Infrastructure.Persistence;
 
 namespace Tas.Infrastructure.Auth;
@@ -63,14 +65,36 @@ public static class AuthSetup
                         }
 
                         var db = context.HttpContext.RequestServices.GetRequiredService<TasDbContext>();
+                        var ct = context.HttpContext.RequestAborted;
                         var actual = await db.AppUsers.AsNoTracking()
                             .Where(u => u.UserId == claimed.UserId)
-                            .Select(u => new { u.IsActive, u.Role, u.CompanyId, u.TerminalId })
-                            .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                            .Select(u => new { u.IsActive, u.Role, u.CompanyId, u.TerminalId, u.OperatorId })
+                            .SingleOrDefaultAsync(ct);
 
                         if (actual is null || !actual.IsActive || actual.Role != claimed.Role
-                            || actual.CompanyId != claimed.CompanyId || actual.TerminalId != claimed.TerminalId)
+                            || actual.CompanyId != claimed.CompanyId || actual.TerminalId != claimed.TerminalId
+                            || actual.OperatorId != claimed.OperatorId)
+                        {
                             context.Fail("The account was changed or deactivated. Please sign in again.");
+                            return;
+                        }
+
+                        // An operator admin works at the operator's terminals as they are now; a stopped operator signs them out.
+                        var identity = (ClaimsIdentity)context.Principal!.Identity!;
+                        foreach (var stray in identity.FindAll(TasClaims.OperatorTerminals).ToList())
+                            identity.RemoveClaim(stray);
+                        if (actual.Role == UserRole.OperatorAdmin)
+                        {
+                            if (actual.OperatorId is not { } operatorId
+                                || !await db.TerminalOperators.AsNoTracking().AnyAsync(o => o.OperatorId == operatorId && o.IsActive, ct))
+                            {
+                                context.Fail("The operator was deactivated. Please sign in again.");
+                                return;
+                            }
+                            var terminals = await db.Terminals.AsNoTracking()
+                                .Where(t => t.OperatorId == operatorId).OrderBy(t => t.TerminalId).Select(t => t.TerminalId).ToListAsync(ct);
+                            identity.AddClaim(new Claim(TasClaims.OperatorTerminals, string.Join(',', terminals)));
+                        }
                     },
                 };
             });
