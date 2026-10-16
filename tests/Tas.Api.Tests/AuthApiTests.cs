@@ -285,5 +285,32 @@ public sealed class AuthApiTests(TasApiFactory factory) : ApiTestBase(factory)
         var dispatcher = await As(DemoDataSeeder.OtherDispatcherEmail);
         Assert.Equal(HttpStatusCode.NotFound, (await dispatcher.PostAsync($"/api/users/{userId}/password-link", null)).StatusCode);
     }
+
+    // ------------------------------------------------------------ operations
+
+    [Fact]
+    public async Task Health_checks_security_headers_and_the_status_for_admins()
+    {
+        if (!Enabled) return;
+
+        var anonymous = Factory.CreateClient();
+        var live = await anonymous.GetAsync("/health/live");
+        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
+        Assert.Equal("nosniff", live.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Contains("frame-ancestors 'none'", live.Headers.GetValues("Content-Security-Policy").Single());
+
+        var ready = await anonymous.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.OK, ready.StatusCode); // the test database was taken over by the migrator at start
+        using (var doc = JsonDocument.Parse(await ready.Content.ReadAsStringAsync()))
+            Assert.Equal("Healthy", doc.RootElement.GetProperty("status").GetString());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/ops/status")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await (await As(DemoDataSeeder.DispatcherEmail)).GetAsync("/api/ops/status")).StatusCode);
+        var status = await Read<Tas.Infrastructure.Ops.OpsStatus>(await (await As(DemoDataSeeder.TerminalAdminEmail)).GetAsync("/api/ops/status"));
+        Assert.True(status.Database.UpToDate);
+        Assert.Equal(DatabaseMigrator.Latest, status.Database.Latest);
+        Assert.Equal("FAKE_TOS", status.Tos);
+        Assert.False(string.IsNullOrEmpty(status.Version));
+    }
 }
 

@@ -1,0 +1,5 @@
+# CI smoke test only: publishes the app on localhost:8080 and leaves out the HTTPS proxy and backups.
+services:
+  app:
+    ports:
+      - "8080:8080"

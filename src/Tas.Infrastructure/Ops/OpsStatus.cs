@@ -1,0 +1,79 @@
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Tas.Application.Tos;
+using Tas.Domain;
+using Tas.Infrastructure.Persistence;
+
+namespace Tas.Infrastructure.Ops;
+
+public sealed record OutboxStatus(int Queued, int FailedLast24h, int SentLast24h, double? OldestQueuedMinutes);
+
+/// <summary>What an administrator or a monitoring system needs to see at a glance.</summary>
+public sealed record OpsStatus(
+    string Version, string Environment, DateTimeOffset StartedAt, DateTimeOffset Now, string Tos,
+    DatabaseStatus Database, OutboxStatus Notifications, OutboxStatus IntegrationEvents, int FollowedContainers, int LiveVisits);
+
+/// <summary>Version, database and background work (message and event outboxes) for the ops screen and monitoring.</summary>
+public sealed class OpsStatusService(TasDbContext db, DatabaseMigrator migrator, ITosAdapter tos, TimeProvider clock)
+{
+    private static readonly DateTimeOffset Started = DateTimeOffset.UtcNow;
+
+    public static string Version { get; } =
+        typeof(OpsStatusService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?.Split('+')[0]
+        ?? typeof(OpsStatusService).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+
+    public async Task<OpsStatus> StatusAsync(string environment, CancellationToken ct = default)
+    {
+        var now = clock.GetUtcNow();
+        var since = now.AddHours(-24);
+
+        var notifications = db.NotificationLogs.AsNoTracking();
+        var n = new
+        {
+            Queued = await notifications.CountAsync(x => x.Status == NotificationStatus.Queued, ct),
+            Failed = await notifications.CountAsync(x => x.Status == NotificationStatus.Failed && x.CreatedAt >= since, ct),
+            Sent = await notifications.CountAsync(x => x.Status == NotificationStatus.Sent && x.SentAt >= since, ct),
+            Oldest = await notifications.Where(x => x.Status == NotificationStatus.Queued).MinAsync(x => (DateTimeOffset?)x.CreatedAt, ct),
+        };
+        var events = db.IntegrationEvents.AsNoTracking();
+        var e = new
+        {
+            Queued = await events.CountAsync(x => x.Status == IntegrationEventStatus.Queued, ct),
+            Failed = await events.CountAsync(x => x.Status == IntegrationEventStatus.Failed && x.CreatedAt >= since, ct),
+            Sent = await events.CountAsync(x => x.Status == IntegrationEventStatus.Sent && x.SentAt >= since, ct),
+            Oldest = await events.Where(x => x.Status == IntegrationEventStatus.Queued).MinAsync(x => (DateTimeOffset?)x.CreatedAt, ct),
+        };
+
+        static double? Age(DateTimeOffset? oldest, DateTimeOffset now) => oldest is null ? null : Math.Round((now - oldest.Value).TotalMinutes, 1);
+
+        return new OpsStatus(
+            Version, environment, Started, now, tos.Source,
+            await migrator.StatusAsync(ct),
+            new OutboxStatus(n.Queued, n.Failed, n.Sent, Age(n.Oldest, now)),
+            new OutboxStatus(e.Queued, e.Failed, e.Sent, Age(e.Oldest, now)),
+            await db.ContainerWatches.CountAsync(w => w.EndedAt == null, ct),
+            await db.Appointments.CountAsync(a => a.Status == Tas.Domain.Booking.AppointmentStatus.EnRoute
+                                                  || a.Status == Tas.Domain.Booking.AppointmentStatus.Arrived
+                                                  || a.Status == Tas.Domain.Booking.AppointmentStatus.GateIn, ct));
+    }
+}
+
+/// <summary>Ready = the database answers and has every migration this build needs.</summary>
+public sealed class DatabaseHealthCheck(DatabaseMigrator migrator) : IHealthCheck
+{
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
+    {
+        try
+        {
+            var status = await migrator.StatusAsync(ct);
+            return status.UpToDate
+                ? HealthCheckResult.Healthy($"Database at version {status.Current}.")
+                : HealthCheckResult.Unhealthy($"Database at version {status.Current}; waiting for: {string.Join(", ", status.Pending)}.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return HealthCheckResult.Unhealthy("The database cannot be reached.", ex);
+        }
+    }
+}

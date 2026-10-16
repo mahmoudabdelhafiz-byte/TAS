@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Tas.Api;
@@ -8,9 +11,35 @@ using Tas.Infrastructure;
 using Tas.Infrastructure.Auth;
 using Tas.Infrastructure.Booking;
 using Tas.Infrastructure.Capacity;
+using Tas.Infrastructure.Ops;
 using Tas.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// One JSON object per log line (Logging:Json), for log collectors in containers and the cloud.
+if (builder.Configuration.GetValue("Logging:Json", false))
+{
+    builder.Logging.ClearProviders();
+    builder.Logging.AddJsonConsole(o =>
+    {
+        o.UseUtcTimestamp = true;
+        o.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ ";
+    });
+}
+
+// Behind a reverse proxy (Caddy, nginx, a cloud load balancer): take the client address and https from its headers,
+// so rate limits apply per client and links / HSTS see https. Only when the app is reachable through the proxy alone.
+if (builder.Configuration.GetValue("Proxy:TrustForwardedHeaders", false))
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+        o.KnownNetworks.Clear();
+        o.KnownProxies.Clear();
+    });
+}
+
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 
 builder.Services.AddTasInfrastructure(builder.Configuration);
 builder.Services.AddOpenApi();
@@ -32,7 +61,37 @@ builder.Services.AddRateLimiter(o =>
 
 var app = builder.Build();
 
+// `dotnet Tas.Api.dll migrate`: create or upgrade the database, then exit (for upgrades run by hand or a deploy job).
+if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
+{
+    foreach (var line in await app.Services.GetRequiredService<DatabaseMigrator>().MigrateAsync())
+        Console.WriteLine(line);
+    Console.WriteLine($"Database is at version {DatabaseMigrator.Latest}.");
+    return;
+}
+
+if (app.Configuration.GetValue("Proxy:TrustForwardedHeaders", false))
+    app.UseForwardedHeaders();
+
 app.UseExceptionHandler();
+
+if (!app.Environment.IsDevelopment())
+    app.UseHsts();
+
+// Browser hardening for the portal and the API.
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+    headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    // Map tiles come from the tile server set in index.html (any https host); styles include inline style attributes.
+    headers["Content-Security-Policy"] =
+        "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; " +
+        "font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+    await next();
+});
 
 // The web portal (web/, built into wwwroot by `npm run build`) is served from the same address as the API.
 // It uses hash routes (/#/appointments), so only "/" needs index.html — no fallback route that could shadow /api.
@@ -46,10 +105,46 @@ app.UseAuthorization();
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
+// Create or upgrade the database on start (Database:MigrateOnStartup, default on); instances wait for each other.
+if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
+    await app.Services.GetRequiredService<DatabaseMigrator>().MigrateAsync();
+
 using (var scope = app.Services.CreateScope())
     await scope.ServiceProvider.GetRequiredService<AdminBootstrapper>().EnsureAsync();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+// Health: "live" = the process answers (restart it if not); "ready" = the database answers and is up to date
+// (send traffic only then). For load balancers, container platforms and monitoring.
+app.MapGet("/health", () => Results.Ok(new { status = "ok", version = OpsStatusService.Version }));
+app.MapGet("/health/live", () => Results.Ok(new { status = "ok", version = OpsStatusService.Version }));
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = c => c.Tags.Contains("ready"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            status = report.Status.ToString(),
+            version = OpsStatusService.Version,
+            checks = report.Entries.Select(e => new { name = e.Key, status = e.Value.Status.ToString(), detail = e.Value.Description }),
+        });
+    },
+    ResultStatusCodes =
+    {
+        [HealthStatus.Healthy] = StatusCodes.Status200OK,
+        [HealthStatus.Degraded] = StatusCodes.Status200OK,
+        [HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable,
+    },
+});
+
+// For administrators and monitoring: version, database, message and event backlogs.
+app.MapGet("/api/ops/status", async (HttpContext http, OpsStatusService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    return user.IsSysAdmin || user.Role == Tas.Domain.Parties.UserRole.TerminalAdmin
+        ? Results.Ok(await service.StatusAsync(app.Environment.EnvironmentName, ct))
+        : TasApi.Forbidden("Only administrators can see the system status.");
+}).RequireAuthorization();
 
 // ================================================================ auth
 

@@ -14,6 +14,12 @@
     <ProjectReference Include="..\Tas.Application\Tas.Application.csproj" />
   </ItemGroup>
 
+  <!-- The database schema and its migrations travel inside the assembly, so "migrate" works from the published app. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\db\schema.sql" LogicalName="db/schema.sql" />
+    <EmbeddedResource Include="..\..\db\migrations\*.sql" LogicalName="db/migrations/%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Tas.Infrastructure.Tests" />
   </ItemGroup>

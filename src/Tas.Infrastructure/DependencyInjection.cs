@@ -26,6 +26,8 @@ public static class DependencyInjection
             sp.GetRequiredService<IConfiguration>().GetConnectionString("Tas")
             ?? throw new InvalidOperationException("Connection string 'Tas' is not configured.")));
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<DatabaseMigrator>();
+        services.AddScoped<Tas.Infrastructure.Ops.OpsStatusService>();
         services.AddTasAuthentication(config);
 
         // Capacity
