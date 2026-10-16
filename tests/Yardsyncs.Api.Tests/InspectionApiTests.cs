@@ -73,17 +73,18 @@ public sealed class InspectionApiTests(YardsyncsApiFactory factory) : ApiTestBas
 
         // Out: a new hole on the left side.
         Assert.Equal(HttpStatusCode.OK, (await planner.PostAsJsonAsync($"{Gate}/out", new { laneCode = "OUT-1", appointmentNo = booked.AppointmentNo })).StatusCode);
-        var gateOut = (await Read<AdminResponse<InspectionView>>(await planner.PostAsJsonAsync($"{path}/inspections", new
+        var outSaved = await planner.PostAsJsonAsync($"{path}/inspections", new
         {
             stage = "Out", containerNo = "MSCU1234566", sealSeen = "ML449121",
             damage = new object[]
             {
                 new { side = "Door", kind = "Dent", severity = "Minor" },
-                new { side = "Left", kind = "Hole", severity = "Major", photoId },
+                new { side = "Left", kind = "Hole", severity = "Major" },
             },
-        }))).StatusCode == HttpStatusCode.OK
-            ? (await Read<AppointmentInspections>(await planner.GetAsync($"{path}/inspections"))).Inspections.Single(i => i.Stage == InspectionStage.Out)
-            : throw new Xunit.Sdk.XunitException("gate-out inspection not saved");
+        });
+        Assert.Equal(HttpStatusCode.OK, outSaved.StatusCode);
+        var gateOut = (await Read<AdminResponse<InspectionView>>(outSaved)).Data;
+        Assert.Equal(2, gateOut.Damage.Count);
         Assert.Equal(DamageSide.Left, Assert.Single((await Read<AppointmentInspections>(await dispatcher.GetAsync($"{path}/inspections"))).NewAtGateOut).Side);
 
         // The company disputes the gate-out inspection; staff can't open one, nor twice.
