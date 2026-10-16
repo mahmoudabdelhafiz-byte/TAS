@@ -65,6 +65,20 @@ public static class GateEndpoints
             int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>
             NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.RemoveDeviceAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, ct)));
 
+        // Device adapters: gate staff send commands (open the barrier…) and see a lane's latest reads and commands;
+        // terminal admins issue device keys.
+        gate.MapPost("/lanes/{laneId:int}/commands", async (int terminalId, int laneId, LaneCommandInput body, HttpContext http, DeviceService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.SendAsync(YardsyncsApi.User(http)!, terminalId, laneId, body, ct)));
+
+        gate.MapGet("/lanes/{laneId:int}/activity", async (int terminalId, int laneId, int? limit, HttpContext http, DeviceService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? (await service.ActivityAsync(terminalId, laneId, limit ?? 20, ct) is { } activity
+                ? Results.Ok(activity)
+                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Lane {laneId} not found.")));
+
+        gate.MapPost("/lanes/{laneId:int}/devices/{deviceId:int}/key", async (
+            int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.IssueKeyAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, ct)));
+
         return app;
     }
 

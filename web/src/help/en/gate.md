@@ -30,6 +30,10 @@ To take a lane out of use, choose **Close lane**, pick **Closed** or **Out of or
 the gate sees it, and a truck checked at that lane is refused with that reason. **Open lane** puts it back. Only open
 lanes are offered for checking trucks in and out.
 
+A lane with connected equipment also shows its latest read (plate and containers; a container number underlined in
+amber may be misread) and any device that is **Not working**. **Open barrier** raises the lane's barrier from here,
+for a truck you have admitted.
+
 ## Trouble desk
 
 Every truck sent to the trouble desk waits in **Trouble desk** with its reason. Write a **Note** (required), then

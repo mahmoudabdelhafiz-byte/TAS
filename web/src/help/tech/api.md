@@ -59,6 +59,9 @@ POST /api/terminals/{id}/gate/arrivals   {"laneCode": "IN-1", "plateRead": "1234
 POST /api/terminals/{id}/gate/in    and    POST /api/terminals/{id}/gate/out
 ```
 
+Lane devices themselves (cameras, OCR, barriers, lights, kiosks…) use the device API with their own keys: see
+*Connecting lane devices*.
+
 ## Health
 
 `GET /health/live` (the process answers) and `GET /health/ready` (the database answers and is up to date: 200 or 503)

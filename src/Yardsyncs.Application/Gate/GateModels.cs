@@ -96,6 +96,7 @@ public sealed record TroubleView(
 
 /// <param name="Identifies">How trucks can be identified at this lane (its devices, way of working and the terminal's gate settings).</param>
 /// <param name="AutomaticProblems">What the lane still needs to work automatically; empty when it could.</param>
+/// <param name="LastRead">The lane's latest device read in the last few minutes, if any.</param>
 public sealed record LaneView(
     int LaneId,
     string GateCode,
@@ -108,15 +109,19 @@ public sealed record LaneView(
     DateTimeOffset? StateChangedAt,
     IReadOnlyList<LaneDeviceView> Devices,
     IReadOnlyList<LaneIdentification> Identifies,
-    IReadOnlyList<LaneProblem> AutomaticProblems)
+    IReadOnlyList<LaneProblem> AutomaticProblems,
+    DeviceReadView? LastRead = null)
 {
-    public static LaneView From(GateLane l, IReadOnlyList<GateLaneDevice> devices, TerminalSettings settings) => new(
+    public static LaneView From(GateLane l, IReadOnlyList<GateLaneDevice> devices, TerminalSettings settings, DateTimeOffset now, DeviceReadView? lastRead = null) => new(
         l.LaneId, l.GateCode, l.LaneCode, l.Direction, l.IsActive, l.State, l.Mode, l.StateNote, l.StateChangedAt,
-        devices.OrderBy(d => d.Kind).ThenBy(d => d.DeviceCode).Select(LaneDeviceView.From).ToList(),
+        devices.OrderBy(d => d.Kind).ThenBy(d => d.DeviceCode).Select(d => LaneDeviceView.From(d, now)).ToList(),
         LaneRules.Identifies(l.Mode, devices, settings),
-        LaneRules.AutomaticProblems(devices, settings));
+        LaneRules.AutomaticProblems(devices, settings),
+        lastRead);
 }
 
+/// <param name="HasKey">A device key has been issued (the device can sign in).</param>
+/// <param name="Connection">Whether the device is talking to Yardsyncs now.</param>
 public sealed record LaneDeviceView(
     int DeviceId,
     string DeviceCode,
@@ -126,10 +131,15 @@ public sealed record LaneDeviceView(
     string? Model,
     string? Address,
     bool IsActive,
-    string? Notes)
+    string? Notes,
+    bool HasKey = false,
+    DeviceConnection Connection = DeviceConnection.NotConnected,
+    DateTimeOffset? LastSeenAt = null,
+    string? StatusDetail = null)
 {
-    public static LaneDeviceView From(GateLaneDevice d) =>
-        new(d.DeviceId, d.DeviceCode, d.Kind, LaneRules.ParseReads(d.Reads), d.Vendor, d.Model, d.Address, d.IsActive, d.Notes);
+    public static LaneDeviceView From(GateLaneDevice d, DateTimeOffset now) =>
+        new(d.DeviceId, d.DeviceCode, d.Kind, LaneRules.ParseReads(d.Reads), d.Vendor, d.Model, d.Address, d.IsActive, d.Notes,
+            d.KeyHash is not null, DeviceRules.Connection(d, now), d.LastSeenAt, d.StatusDetail);
 }
 
 public sealed record GateBoardTruck(

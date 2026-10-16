@@ -823,6 +823,19 @@ export const en = {
   'lanes.read.Seal': 'seals',
   'lanes.read.Damage': 'damage photos',
   'lanes.read.Tag': 'tags',
+  'lanes.connection': "Connection",
+  'lanes.conn.NotConnected': "Not connected",
+  'lanes.conn.Online': "Online",
+  'lanes.conn.Fault': "Fault",
+  'lanes.conn.Offline': "Offline",
+  'lanes.lastSeen': "Last heard from {when}",
+  'lanes.key': "Device key",
+  'lanes.keyFor': "Key for {device}.",
+  'lanes.keyOnce': "Copy it into the device or its adapter now: it is shown only once. Any earlier key for this device has stopped working.",
+  'lanes.copy': "Copy key",
+  'lanes.keyDone': "Done",
+  'lanes.devicesDown': "Not working:",
+  'lanes.openBarrier': "Open barrier",
 } as const;
 
 export type TextKey = keyof typeof en;
@@ -1646,6 +1659,19 @@ export const ar: Record<TextKey, string> = {
   'lanes.read.Seal': 'الأختام',
   'lanes.read.Damage': 'صور الأضرار',
   'lanes.read.Tag': 'البطاقات',
+  'lanes.connection': "الاتصال",
+  'lanes.conn.NotConnected': "غير متصل",
+  'lanes.conn.Online': "متصل",
+  'lanes.conn.Fault': "عطل",
+  'lanes.conn.Offline': "منقطع",
+  'lanes.lastSeen': "آخر اتصال {when}",
+  'lanes.key': "مفتاح الجهاز",
+  'lanes.keyFor': "مفتاح {device}.",
+  'lanes.keyOnce': "انسخه الآن إلى الجهاز أو برنامج الربط الخاص به: لن يظهر مرة أخرى. أي مفتاح سابق لهذا الجهاز توقف عن العمل.",
+  'lanes.copy': "نسخ المفتاح",
+  'lanes.keyDone': "تم",
+  'lanes.devicesDown': "لا يعمل:",
+  'lanes.openBarrier': "فتح الحاجز",
 };
 
 const dictionaries: Record<Lang, Partial<Record<TextKey, string>>> = { en: { ...en }, ar: { ...ar } };

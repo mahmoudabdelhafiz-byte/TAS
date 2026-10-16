@@ -74,6 +74,7 @@ public static class DependencyInjection
         // Gate
         services.AddScoped<GateService>();
         services.AddScoped<LaneService>();
+        services.AddScoped<DeviceService>();
 
         // Notifications: outbox delivery; provider per channel from "Notifications" (default: Log = not sent).
         services.Configure<NotificationOptions>(config.GetSection("Notifications"));

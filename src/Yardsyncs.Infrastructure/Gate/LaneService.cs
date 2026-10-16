@@ -16,6 +16,9 @@ namespace Yardsyncs.Infrastructure.Gate;
 /// </summary>
 public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogger<LaneService> logger)
 {
+    /// <summary>How long a read counts as the lane's latest on the gate screen.</summary>
+    public static readonly TimeSpan LastReadWindow = TimeSpan.FromMinutes(10);
+
     public async Task<IReadOnlyList<LaneView>> ListAsync(int terminalId, CancellationToken ct = default)
     {
         var lanes = await db.GateLanes.AsNoTracking().Where(l => l.TerminalId == terminalId)
@@ -23,7 +26,18 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
         var devices = (await db.LaneDevices.AsNoTracking().Where(d => d.TerminalId == terminalId).ToListAsync(ct))
             .ToLookup(d => d.LaneId);
         var settings = await SettingsAsync(terminalId, ct);
-        return lanes.Select(l => LaneView.From(l, devices[l.LaneId].ToList(), settings)).ToList();
+        var now = clock.GetUtcNow();
+
+        // Each lane's latest read in the last few minutes, for the gate screen.
+        var since = now - LastReadWindow;
+        var recent = await db.LaneDeviceReads.AsNoTracking()
+            .Where(r => r.TerminalId == terminalId && r.ReceivedAt >= since)
+            .OrderByDescending(r => r.ReceivedAt).Take(500).ToListAsync(ct);
+        var codes = devices.SelectMany(g => g).ToDictionary(d => d.DeviceId, d => d.DeviceCode);
+        var lastRead = recent.GroupBy(r => r.LaneId)
+            .ToDictionary(g => g.Key, g => DeviceService.View(g.First(), codes.GetValueOrDefault(g.First().DeviceId, "?")));
+
+        return lanes.Select(l => LaneView.From(l, devices[l.LaneId].ToList(), settings, now, lastRead.GetValueOrDefault(l.LaneId))).ToList();
     }
 
     public async Task<AdminResult<LaneView>> CreateAsync(CurrentUser admin, int terminalId, LaneInput input, CancellationToken ct = default)
@@ -40,7 +54,7 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
         var lane = new GateLane { TerminalId = terminalId, GateCode = gate, LaneCode = code, Direction = input.Direction };
         db.GateLanes.Add(lane);
         await db.SaveChangesAsync(ct);
-        var view = LaneView.From(lane, [], await SettingsAsync(terminalId, ct));
+        var view = LaneView.From(lane, [], await SettingsAsync(terminalId, ct), clock.GetUtcNow());
         AuditWriter.Add(db, terminalId, "gate_lane", lane.LaneId, AuditAction.Insert, null, view, null, admin.UserId, clock.GetUtcNow());
         await db.SaveChangesAsync(ct);
         return AdminResult<LaneView>.Created(view);
@@ -54,7 +68,7 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
             return AdminResult<LaneView>.NotFound($"Lane {laneId} not found.");
         var devices = await DevicesAsync(laneId, ct);
         var settings = await SettingsAsync(terminalId, ct);
-        var before = LaneView.From(lane, devices, settings);
+        var before = LaneView.From(lane, devices, settings, clock.GetUtcNow());
 
         if (input.GateCode is not null)
         {
@@ -74,7 +88,7 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
         if (input.IsActive is { } active)
             lane.IsActive = active;
 
-        var after = LaneView.From(lane, devices, settings);
+        var after = LaneView.From(lane, devices, settings, clock.GetUtcNow());
         AuditWriter.Add(db, terminalId, "gate_lane", lane.LaneId, AuditAction.Update, before, after, null, admin.UserId, clock.GetUtcNow());
         await db.SaveChangesAsync(ct);
         return AdminResult<LaneView>.Ok(after);
@@ -99,13 +113,13 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
 
         var devices = await DevicesAsync(laneId, ct);
         var settings = await SettingsAsync(terminalId, ct);
-        var before = LaneView.From(lane, devices, settings);
+        var before = LaneView.From(lane, devices, settings, clock.GetUtcNow());
         var now = clock.GetUtcNow();
         lane.State = input.State;
         lane.StateNote = input.State == LaneState.Open ? null : note;
         lane.StateChangedAt = now;
         lane.StateChangedBy = user.UserId;
-        var after = LaneView.From(lane, devices, settings);
+        var after = LaneView.From(lane, devices, settings, clock.GetUtcNow());
         AuditWriter.Add(db, terminalId, "gate_lane", lane.LaneId, AuditAction.Update, before, after, note, user.UserId, now);
         await db.SaveChangesAsync(ct);
 
@@ -135,9 +149,9 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
             return AdminResult<LaneView>.Conflict(problem);
 
         db.LaneDevices.Remove(device);
-        AuditWriter.Add(db, terminalId, "gate_lane_device", device.DeviceId, AuditAction.Delete, LaneDeviceView.From(device), null, null, admin.UserId, clock.GetUtcNow());
+        AuditWriter.Add(db, terminalId, "gate_lane_device", device.DeviceId, AuditAction.Delete, LaneDeviceView.From(device, clock.GetUtcNow()), null, null, admin.UserId, clock.GetUtcNow());
         await db.SaveChangesAsync(ct);
-        return AdminResult<LaneView>.Ok(LaneView.From(lane, remaining, settings));
+        return AdminResult<LaneView>.Ok(LaneView.From(lane, remaining, settings, clock.GetUtcNow()));
     }
 
     private async Task<AdminResult<LaneView>> SaveDeviceAsync(
@@ -165,7 +179,7 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
             if (existing is null)
                 return AdminResult<LaneView>.NotFound($"Device {id} not found at lane {lane.LaneCode}.");
             device = existing;
-            before = LaneDeviceView.From(device);
+            before = LaneDeviceView.From(device, clock.GetUtcNow());
         }
         else
             device = new GateLaneDevice { TerminalId = terminalId, LaneId = laneId, CreatedAt = clock.GetUtcNow() };
@@ -189,11 +203,36 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
             db.LaneDevices.Add(device);
         await db.SaveChangesAsync(ct);
         AuditWriter.Add(db, terminalId, "gate_lane_device", device.DeviceId, deviceId is null ? AuditAction.Insert : AuditAction.Update,
-            before, LaneDeviceView.From(device), null, admin.UserId, clock.GetUtcNow());
+            before, LaneDeviceView.From(device, clock.GetUtcNow()), null, admin.UserId, clock.GetUtcNow());
         await db.SaveChangesAsync(ct);
         return deviceId is null
-            ? AdminResult<LaneView>.Created(LaneView.From(lane, devices, settings))
-            : AdminResult<LaneView>.Ok(LaneView.From(lane, devices, settings));
+            ? AdminResult<LaneView>.Created(LaneView.From(lane, devices, settings, clock.GetUtcNow()))
+            : AdminResult<LaneView>.Ok(LaneView.From(lane, devices, settings, clock.GetUtcNow()));
+    }
+
+    /// <summary>
+    /// Issue a new key for a device (any earlier key stops working). The key is returned once; only its fingerprint is
+    /// kept. The device or its vendor adapter sends it as X-Device-Key.
+    /// </summary>
+    public async Task<AdminResult<DeviceKeyView>> IssueKeyAsync(CurrentUser admin, int terminalId, int laneId, int deviceId, CancellationToken ct = default)
+    {
+        var device = await db.LaneDevices.SingleOrDefaultAsync(d => d.TerminalId == terminalId && d.LaneId == laneId && d.DeviceId == deviceId, ct);
+        if (device is null)
+            return AdminResult<DeviceKeyView>.NotFound($"Device {deviceId} not found at lane {laneId}.");
+        var key = DeviceKeys.New();
+        var now = clock.GetUtcNow();
+        var replaced = device.KeyHash is not null;
+        device.KeyHash = DeviceKeys.Hash(key);
+        device.KeySetAt = now;
+        device.LastSeenAt = null;
+        device.ReportedStatus = null;
+        device.StatusDetail = null;
+        AuditWriter.Add(db, terminalId, "gate_lane_device", device.DeviceId, AuditAction.Update, null,
+            new { device.DeviceCode, KeyIssued = now }, replaced ? "Device key replaced" : "Device key issued", admin.UserId, now);
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Device key {Action} for {DeviceCode} at terminal {TerminalId} by user {UserId}",
+            replaced ? "replaced" : "issued", device.DeviceCode, terminalId, admin.UserId);
+        return AdminResult<DeviceKeyView>.Created(new DeviceKeyView(device.DeviceCode, key));
     }
 
     /// <summary>For an automatic lane: why the device change would leave it unable to work, or null.</summary>

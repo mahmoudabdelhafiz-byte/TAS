@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AdminResponse, Lane, LaneDevice, LaneDeviceKind, LaneIdentification, LaneMode, LaneRead } from '../lib/types.ts';
 import { ApiError } from '../lib/api.ts';
+import { stamp } from '../lib/time.ts';
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, useLoad } from '../ui/kit.tsx';
 import { laneStateText } from './Gate.tsx';
@@ -73,6 +74,15 @@ function LaneCard({ lane, base, onChanged, onError }: {
 }) {
   const { api, t } = useApp();
   const [editing, setEditing] = useState<LaneDevice | 'new' | null>(null);
+  const [key, setKey] = useState<DeviceKey | null>(null);
+  async function issueKey(d: LaneDevice) {
+    try {
+      setKey((await api.post<AdminResponse<DeviceKey>>(`${base}/devices/${d.deviceId}/key`)).data);
+      onChanged();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : t('common.offline'));
+    }
+  }
   const needs = lane.automaticProblems.map(p => t(problemText[p])).join(t('lanes.and'));
   const setMode = (mode: LaneMode) => async () => {
     await api.put(base, { mode });
@@ -119,7 +129,7 @@ function LaneCard({ lane, base, onChanged, onError }: {
             <table className="grid compact">
               <thead><tr>
                 <th>{t('lanes.device')}</th><th>{t('lanes.kind')}</th><th>{t('lanes.reads')}</th>
-                <th>{t('lanes.vendor')}</th><th>{t('lanes.address')}</th><th />
+                <th>{t('lanes.vendor')}</th><th>{t('lanes.address')}</th><th>{t('lanes.connection')}</th><th />
               </tr></thead>
               <tbody>
                 {lane.devices.map(d => (
@@ -129,7 +139,9 @@ function LaneCard({ lane, base, onChanged, onError }: {
                     <td>{d.reads.map(r => t(readText[r])).join(t('lanes.listSep')) || '—'}</td>
                     <td dir="auto">{[d.vendor, d.model].filter(Boolean).join(' ') || '—'}</td>
                     <td className="nowrap"><bdi>{d.address ?? '—'}</bdi></td>
+                    <td><Connection device={d} /></td>
                     <td className="cell-action">
+                      <button type="button" className="link-btn" onClick={() => issueKey(d)}>{t('lanes.key')}</button>
                       <button type="button" className="link-btn" onClick={() => setEditing(d)}>{t('lanes.edit')}</button>
                       <RemoveDevice url={`${base}/devices/${d.deviceId}`} code={d.deviceCode} onChanged={onChanged} onError={onError} />
                     </td>
@@ -139,6 +151,17 @@ function LaneCard({ lane, base, onChanged, onError }: {
             </table>
           </div>
         )}
+
+      {key && (
+        <div className="device-key" role="status">
+          <p><strong>{t('lanes.keyFor', { device: key.deviceCode })}</strong> {t('lanes.keyOnce')}</p>
+          <code dir="ltr">{key.key}</code>
+          <div className="actions">
+            <button type="button" className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText(key.key)}>{t('lanes.copy')}</button>
+            <button type="button" className="link-btn" onClick={() => setKey(null)}>{t('lanes.keyDone')}</button>
+          </div>
+        </div>
+      )}
 
       {editing
         ? <DeviceForm device={editing === 'new' ? null : editing} base={base} onError={onError}
@@ -157,6 +180,25 @@ function LaneCard({ lane, base, onChanged, onError }: {
           </div>
         )}
     </article>
+  );
+}
+
+interface DeviceKey { deviceCode: string; key: string }
+
+const connectionText = {
+  NotConnected: 'lanes.conn.NotConnected', Online: 'lanes.conn.Online', Fault: 'lanes.conn.Fault', Offline: 'lanes.conn.Offline',
+} as const;
+
+/** Whether the device is talking to Yardsyncs, with when it was last heard from or what fault it reports. */
+function Connection({ device }: { device: LaneDevice }) {
+  const { t, lang, terminal } = useApp();
+  const when = device.lastSeenAt ? stamp(device.lastSeenAt, terminal.timeZone, lang) : null;
+  return (
+    <span className={`conn conn-${device.connection}`} title={when ? t('lanes.lastSeen', { when }) : undefined}>
+      {t(connectionText[device.connection])}
+      {device.connection === 'Fault' && device.statusDetail && <span className="muted" dir="auto"> · {device.statusDetail}</span>}
+      {device.connection === 'Offline' && when && <span className="muted"> · {when}</span>}
+    </span>
   );
 }
 

@@ -83,6 +83,86 @@ public sealed class GateLaneDevice
     public bool IsActive { get; set; } = true;
     public string? Notes { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>SHA-256 (hex) of the device's key; the key itself is shown once when issued.</summary>
+    public string? KeyHash { get; set; }
+
+    public DateTimeOffset? KeySetAt { get; set; }
+
+    /// <summary>The device's last contact with Yardsyncs (any call with its key).</summary>
+    public DateTimeOffset? LastSeenAt { get; set; }
+
+    public DeviceHealth? ReportedStatus { get; set; }
+    public string? StatusDetail { get; set; }
+}
+
+/// <summary>What a device says about itself.</summary>
+public enum DeviceHealth
+{
+    Ok,
+    Fault,
+}
+
+/// <summary>Commands for lane devices: barrier open / close, light red / green / off, display show / clear, ticket print.</summary>
+public enum LaneCommand
+{
+    Open,
+    Close,
+    Red,
+    Green,
+    Off,
+    Show,
+    Clear,
+    Print,
+}
+
+public enum CommandResult
+{
+    Done,
+    Failed,
+}
+
+/// <summary>One read from a lane device: plate, containers, seals, damage photos, RFID tag, kiosk entry or weight.</summary>
+public sealed class LaneDeviceRead
+{
+    public long ReadId { get; set; }
+    public int TerminalId { get; set; }
+    public int LaneId { get; set; }
+    public int DeviceId { get; set; }
+    public DateTimeOffset ReadAt { get; set; }
+    public DateTimeOffset ReceivedAt { get; set; }
+
+    /// <summary>Normalized plate.</summary>
+    public string? Plate { get; set; }
+
+    public short? PlateConfidence { get; set; }
+
+    /// <summary>The first container read, normalized.</summary>
+    public string? ContainerNo { get; set; }
+
+    /// <summary>The whole read as JSON, normalized.</summary>
+    public string Payload { get; set; } = "{}";
+}
+
+/// <summary>A command waiting for, delivered to or carried out by a lane device.</summary>
+public sealed class LaneDeviceCommand
+{
+    public long CommandId { get; set; }
+    public int TerminalId { get; set; }
+    public int LaneId { get; set; }
+    public int DeviceId { get; set; }
+    public LaneCommand Command { get; set; }
+    public string? Text { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>The user who sent it; null when the lane itself did.</summary>
+    public int? CreatedBy { get; set; }
+
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? DeliveredAt { get; set; }
+    public DateTimeOffset? DoneAt { get; set; }
+    public CommandResult? Result { get; set; }
+    public string? ResultDetail { get; set; }
 }
 
 public enum GateEventType

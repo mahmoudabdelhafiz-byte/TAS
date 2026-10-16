@@ -38,6 +38,8 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
     public DbSet<GateLane> GateLanes => Set<GateLane>();
     public DbSet<GateLaneDevice> LaneDevices => Set<GateLaneDevice>();
+    public DbSet<LaneDeviceRead> LaneDeviceReads => Set<LaneDeviceRead>();
+    public DbSet<LaneDeviceCommand> LaneDeviceCommands => Set<LaneDeviceCommand>();
     public DbSet<GateEvent> GateEvents => Set<GateEvent>();
     public DbSet<GateTrouble> GateTroubles => Set<GateTrouble>();
     public DbSet<Truck> Trucks => Set<Truck>();
@@ -144,6 +146,23 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
         {
             e.HasKey(x => x.DeviceId);
             e.Property(x => x.Kind).HasUpperCaseConversion();
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(x => x.KeyHash).HasColumnType("char(64)");
+            e.Property(x => x.ReportedStatus).HasConversion(new UpperSnakeEnumConverter<DeviceHealth>());
+        });
+
+        b.Entity<LaneDeviceRead>(e =>
+        {
+            e.HasKey(x => x.ReadId);
+            e.Property(x => x.Payload).HasColumnType("jsonb");
+            e.Property(x => x.ReceivedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<LaneDeviceCommand>(e =>
+        {
+            e.HasKey(x => x.CommandId);
+            e.Property(x => x.Command).HasUpperCaseConversion();
+            e.Property(x => x.Result).HasConversion(new UpperSnakeEnumConverter<CommandResult>());
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
 
