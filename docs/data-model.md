@@ -1,4 +1,4 @@
-# Truck Appointment System (TAS) — Data Model & Capacity Logic
+# Yardsyncs truck appointment system — Data Model & Capacity Logic
 
 Status: draft v0.2
 Target stack: ASP.NET Core API + React portal, PostgreSQL + PostGIS, multi-terminal (one deployment serves many terminals).

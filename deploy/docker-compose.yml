@@ -35,7 +35,7 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      ConnectionStrings__Tas: Host=db;Port=5432;Database=tas;Username=tas;Password=${DB_PASSWORD};Maximum Pool Size=${DB_POOL:-60}
+      ConnectionStrings__Yardsyncs: Host=db;Port=5432;Database=tas;Username=tas;Password=${DB_PASSWORD};Maximum Pool Size=${DB_POOL:-60}
       Proxy__TrustForwardedHeaders: "true"
       PasswordLinks__PortalUrl: https://${TAS_DOMAIN:?set TAS_DOMAIN in .env}
       Languages__Path: /app/languages

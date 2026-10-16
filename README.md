@@ -1,4 +1,4 @@
-# TAS — Truck Appointment System
+# Yardsyncs — truck appointment system
 
 Truck appointment and landside management for **container and multipurpose terminals** — the first module of **Yardsyncs**.
 A generic product: one deployment serves many terminals and operators, hosted by us or installed on-premise; each terminal's choices (TOS, gate identification, driver identity, fees…) are settings, not code.
@@ -28,13 +28,13 @@ Next module: **Yardsyncs Autogate**, built on the same gate API.
 ```
 docs/                         design documents (docs/data-model.md) and progress log (docs/progress.md)
 db/schema.sql                 PostgreSQL + PostGIS schema
-src/Tas.Domain                entities
-src/Tas.Application           capacity engine (pure logic: planning, availability, reconciliation)
-src/Tas.Infrastructure        EF Core + Npgsql, slot generation, availability queries, booking counters
-src/Tas.Api                   ASP.NET Core minimal API
-tests/Tas.Application.Tests   unit tests for the capacity rules
-tests/Tas.Infrastructure.Tests integration tests against PostgreSQL (run when TAS_TEST_DB is set)
-tests/Tas.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)
+src/Yardsyncs.Domain                entities
+src/Yardsyncs.Application           capacity engine (pure logic: planning, availability, reconciliation)
+src/Yardsyncs.Infrastructure        EF Core + Npgsql, slot generation, availability queries, booking counters
+src/Yardsyncs.Api                   ASP.NET Core minimal API
+tests/Yardsyncs.Application.Tests   unit tests for the capacity rules
+tests/Yardsyncs.Infrastructure.Tests integration tests against PostgreSQL (run when TAS_TEST_DB is set)
+tests/Yardsyncs.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)
 db/migrations/                scripts to upgrade an existing database
 integrations/n4/              Navis N4: Groovy code extension (TasLookup) and setup guide
 web/                          web portal (React + TypeScript, Vite) for trucking companies and terminal staff
@@ -48,7 +48,7 @@ or a cloud VM) with PostgreSQL + PostGIS, HTTPS (Caddy) and nightly backups; the
 platforms with a managed database. Step by step, upgrades, restore and monitoring: [`deploy/README.md`](deploy/README.md).
 
 - The database is created and upgraded by the application itself from `db/` (see [`db/README.md`](db/README.md));
-  `dotnet Tas.Api.dll migrate` does it on demand.
+  `dotnet Yardsyncs.Api.dll migrate` does it on demand.
 - Health: `GET /health/live`, `GET /health/ready` (database reachable and up to date); `GET /api/ops/status` for
   admins (version, database, message and event backlogs).
 - Production settings: `Logging__Json=true` (one JSON object per line), `Proxy__TrustForwardedHeaders=true` behind a
@@ -67,7 +67,7 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   `GET /api/terminals/{id}/charges?from=&to=[&format=csv]`, `POST …/charges/{id}/waive`.
 - New terminals: **Terminal set-up** in the portal (`POST /api/terminals`, `GET /api/terminals/{id}/setup`): the usual
   move types, lanes and rules, then a checklist until trucks can book.
-- Another TOS: the TOS adapter kit (`TosContract`, conformance tests in `tests/Tas.Infrastructure.Tests/TosKit/`,
+- Another TOS: the TOS adapter kit (`TosContract`, conformance tests in `tests/Yardsyncs.Infrastructure.Tests/TosKit/`,
   docs page "Connecting another TOS"); every live answer is held to the contract.
 - Branding: name, main colour, logo and (for operators) own web address for the installation and each operator
   (`/api/branding`, `/api/operators/{id}/branding`); shown at sign-in, in the portal, the drivers' app and messages.
@@ -93,15 +93,15 @@ Requires the .NET 10 SDK and PostgreSQL 15+ with PostGIS.
 createdb tas
 psql -d tas -f db/schema.sql
 
-# set ConnectionStrings:Tas in src/Tas.Api/appsettings.json (or an environment variable)
-dotnet run --project src/Tas.Api
+# set ConnectionStrings:Yardsyncs in src/Yardsyncs.Api/appsettings.json (or an environment variable)
+dotnet run --project src/Yardsyncs.Api
 ```
 
 Production settings (environment variables):
 
 | Setting | Purpose |
 |---|---|
-| `ConnectionStrings__Tas` | PostgreSQL connection string |
+| `ConnectionStrings__Yardsyncs` | PostgreSQL connection string (`ConnectionStrings__Tas` from before the rename still works) |
 | `Jwt__SigningKey` | **Required.** Random secret, at least 32 characters. The API refuses to start without it |
 | `Bootstrap__AdminEmail`, `Bootstrap__AdminPassword` | Creates the first SysAdmin on start if none exists; remove afterwards |
 | `DriverLogin__SessionDays`, `DriverLogin__CodeMinutes` | Driver app session length (default 30 days, ends earlier when the driver signs in on another phone) and sign-in code lifetime (5 min) |
@@ -111,13 +111,13 @@ Upgrading an existing database: run the scripts in `db/migrations/` in order.
 Tests:
 
 ```bash
-dotnet test tests/Tas.Application.Tests
+dotnet test tests/Yardsyncs.Application.Tests
 
 # integration and API tests each need their own database created from db/schema.sql
 export TAS_TEST_DB="Host=localhost;Database=tas_test;Username=postgres;Password=postgres"
 export TAS_API_TEST_DB="Host=localhost;Database=tas_api_test;Username=postgres;Password=postgres"
-dotnet test tests/Tas.Infrastructure.Tests
-dotnet test tests/Tas.Api.Tests
+dotnet test tests/Yardsyncs.Infrastructure.Tests
+dotnet test tests/Yardsyncs.Api.Tests
 ```
 
 CI (GitHub Actions) builds the solution and runs both test projects against a PostGIS container on every push.
@@ -131,7 +131,7 @@ cd web
 npm install
 npm run dev        # http://localhost:5173, forwards /api to the API on http://localhost:5000 (TAS_API_URL to change)
 npm test           # unit tests
-npm run build      # type-check, then build into src/Tas.Api/wwwroot — the API then serves the portal at /
+npm run build      # type-check, then build into src/Yardsyncs.Api/wwwroot — the API then serves the portal at /
 ```
 
 Screens by role:
@@ -300,7 +300,7 @@ Security: passwords hashed with ASP.NET Core Identity (PBKDF2); 5 wrong password
 
 `Tos:Adapter` selects the TOS: `Fake` (development and demos, configured under `FakeTos`) or `N4`. The fake TOS takes yard positions from `FakeTos:YardPositions` (container → `block.row.bay.tier`), drop / return blocks from `ReceivalBlocks` (category → block) and otherwise picks one of `DefaultBlocks`.
 The N4 adapter is **read-only**: each check is one ArgoService `genericInvoke` call running the `TasLookup` Groovy
-code extension, which returns units, bookings / EDOs and bills of lading as JSON; TAS turns that into checks
+code extension, which returns units, bookings / EDOs and bills of lading as JSON; Yardsyncs turns that into checks
 (in the yard, holds, booking left, cut-off, VGM, BL release). Setup, hold mapping and rules:
 [`integrations/n4/README.md`](integrations/n4/README.md).
 

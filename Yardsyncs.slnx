@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Yardsyncs.Domain/Yardsyncs.Domain.csproj" />
+    <Project Path="src/Yardsyncs.Application/Yardsyncs.Application.csproj" />
+    <Project Path="src/Yardsyncs.Infrastructure/Yardsyncs.Infrastructure.csproj" />
+    <Project Path="src/Yardsyncs.Api/Yardsyncs.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Yardsyncs.Application.Tests/Yardsyncs.Application.Tests.csproj" />
+    <Project Path="tests/Yardsyncs.Infrastructure.Tests/Yardsyncs.Infrastructure.Tests.csproj" />
+    <Project Path="tests/Yardsyncs.Api.Tests/Yardsyncs.Api.Tests.csproj" />
+  </Folder>
+</Solution>

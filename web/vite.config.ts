@@ -10,7 +10,7 @@ export default defineConfig({
     proxy: { '/api': process.env.TAS_API_URL ?? 'http://localhost:5000' },
   },
   build: {
-    outDir: '../src/Tas.Api/wwwroot',
+    outDir: '../src/Yardsyncs.Api/wwwroot',
     emptyOutDir: true,
   },
 });

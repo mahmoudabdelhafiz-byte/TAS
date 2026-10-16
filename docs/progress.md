@@ -432,6 +432,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Companies see the fees before booking; **Charges** screen and `GET /api/terminals/{id}/charges` (JSON or CSV) with totals per company; companies see their own only |
 | ✅ | Terminal admins waive a charge with a reason (kept, audited); billing and payment stay in the terminal's own system |
 
+### 43. The name Yardsyncs in the code (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Projects, namespaces and the solution: `Yardsyncs.Api`, `Yardsyncs.Application`, `Yardsyncs.Domain`, `Yardsyncs.Infrastructure`, `Yardsyncs.slnx`; the app runs as `Yardsyncs.Api.dll` |
+| ✅ | `ConnectionStrings__Yardsyncs` (`ConnectionStrings__Tas` from before still works); bulk booking templates named yardsyncs-… |
+| ✅ | Kept on purpose, so installed systems need no change: the database and its user (`tas`), backup file names, the N4 code extension `TasLookup`, the sign-in token issuer, and the `TAS_DOMAIN` setting |
+
 ---
 
 ## Remaining
@@ -511,7 +518,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | Section 38 |
 | ✅ | TOS adapter kit: documented interface + test suite any new TOS adapter must pass | Section 39 |
 | ✅ | Terminal onboarding wizard: terminal, move types, weekly plan, lanes, TOS connection, settings above | Section 40; TOS and message settings stay in `.env` |
-| ⬜ | Product name in the code and repository: "TAS" → Yardsyncs | |
+| 🟡 | Product name in the code and repository: "TAS" → Yardsyncs | Code done (section 43). The GitHub repository name is Mahmoud's to change (Settings → Repository name); GitHub redirects the old address |
 
 ### Phase H — Yardsyncs Autogate (next module)
 | | Item | Notes |

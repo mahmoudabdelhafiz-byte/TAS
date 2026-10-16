@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yardsyncs_mobile/gate_pass.dart';
 
 void main() {
-  // Same vectors as tests/Tas.Application.Tests/GatePassCodeTests.cs: the app and the gate must agree.
+  // Same vectors as tests/Yardsyncs.Application.Tests/GatePassCodeTests.cs: the app and the gate must agree.
   final secret = List<int>.generate(32, (i) => i);
 
   test('codes match the shared vectors', () {

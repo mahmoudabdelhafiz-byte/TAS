@@ -55,24 +55,24 @@ jobs:
         run: bash db/check-migrations.sh "origin/${{ github.base_ref }}"
 
       - name: Restore
-        run: dotnet restore TAS.slnx
+        run: dotnet restore Yardsyncs.slnx
 
       - name: Build
-        run: dotnet build TAS.slnx --no-restore -c Release
+        run: dotnet build Yardsyncs.slnx --no-restore -c Release
 
       - name: Unit tests
         run: >-
-          dotnet test tests/Tas.Application.Tests --no-build -c Release
+          dotnet test tests/Yardsyncs.Application.Tests --no-build -c Release
           --logger "console;verbosity=normal" --logger "trx;LogFileName=unit.trx" --results-directory TestResults
 
       - name: Database integration tests
         run: >-
-          dotnet test tests/Tas.Infrastructure.Tests --no-build -c Release
+          dotnet test tests/Yardsyncs.Infrastructure.Tests --no-build -c Release
           --logger "console;verbosity=normal" --logger "trx;LogFileName=integration.trx" --results-directory TestResults
 
       - name: API tests
         run: >-
-          dotnet test tests/Tas.Api.Tests --no-build -c Release
+          dotnet test tests/Yardsyncs.Api.Tests --no-build -c Release
           --logger "console;verbosity=normal" --logger "trx;LogFileName=api.trx" --results-directory TestResults
 
       - name: Publish test results
@@ -96,7 +96,7 @@ jobs:
                   print(f"::error title={r.get('testName')}::{text}")
       - name: Known vulnerabilities in packages
         run: |
-          dotnet list TAS.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          dotnet list Yardsyncs.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
           grep -E "^\s+>\s" vulnerable.txt | sed -E 's/\s+/ /g' | sort -u | head -30 | while read -r line; do
             echo "::warning title=vulnerable package::$line"
           done || true
@@ -104,7 +104,7 @@ jobs:
       - name: Publish build errors
         if: failure()
         run: |
-          dotnet build TAS.slnx --no-restore -c Release 2>&1 | grep -E "error [A-Z]+[0-9]+" | sort -u | head -30 | while read -r line; do
+          dotnet build Yardsyncs.slnx --no-restore -c Release 2>&1 | grep -E "error [A-Z]+[0-9]+" | sort -u | head -30 | while read -r line; do
             echo "::error title=Build::$line"
           done
 

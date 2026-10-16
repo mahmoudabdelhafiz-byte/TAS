@@ -2,7 +2,7 @@
 **/obj/
 **/node_modules/
 web/dist/
-src/Tas.Api/wwwroot/
+src/Yardsyncs.Api/wwwroot/
 mobile/
 tests/
 TestResults/

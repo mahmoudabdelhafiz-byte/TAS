@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
-/// The rotating gate pass: same rule as the server (Tas.Application.Gate.GatePassCode).
+/// The rotating gate pass: same rule as the server (Yardsyncs.Application.Gate.GatePassCode).
 /// QR = "YS1:{passId}:{appointmentNo}:{code}", code = 8 digits from HMAC-SHA256 over the 30-second step.
 class GatePass {
   const GatePass({required this.passId, required this.secret, this.prefix = 'YS1', this.stepSeconds = 30, this.digits = 8});

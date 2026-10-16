@@ -6,7 +6,7 @@
   new migrations must give exactly the current `schema.sql` (tables, columns, constraints, indexes).
 
 The application ships both inside its build and creates or upgrades the database itself on start
-(`Database:MigrateOnStartup`, default on), or with `dotnet Tas.Api.dll migrate`. Applied versions are kept in the
+(`Database:MigrateOnStartup`, default on), or with `dotnet Yardsyncs.Api.dll migrate`. Applied versions are kept in the
 table `schema_migration`.
 
 ## Changing the schema

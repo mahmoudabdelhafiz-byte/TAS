@@ -8,7 +8,7 @@ service; what differs is where PostgreSQL lives and how HTTPS is provided.
 Needs: Linux with Docker (Compose v2), 4 CPU / 8 GB RAM / 100 GB disk for a mid-size terminal, ports 80 and 443.
 
 ```bash
-git clone … && cd TAS/deploy
+git clone … && cd <repository>/deploy
 cp .env.example .env        # fill in every value (secrets stay in this file only)
 docker compose up -d        # builds the image the first time; creates the database on first start
 docker compose ps           # app, db, proxy, backup all "running"
@@ -73,7 +73,7 @@ Test a restore every few months on a spare machine — an untested backup is a h
 
 The same image on a container platform (Azure Container Apps, AWS ECS / App Runner, Kubernetes) with a managed
 PostgreSQL 16 that has PostGIS (Azure Database for PostgreSQL flexible server, Amazon RDS): set
-`ConnectionStrings__Tas` and the settings of `.env.example` as the platform's secrets, `Proxy__TrustForwardedHeaders=true`
+`ConnectionStrings__Yardsyncs` and the settings of `.env.example` as the platform's secrets, `Proxy__TrustForwardedHeaders=true`
 behind its load balancer, and use the platform's managed certificate. Point the load balancer's health probe at
 `/health/ready`, the liveness probe at `/health/live`. Backups: the managed database's point-in-time restore.
 
