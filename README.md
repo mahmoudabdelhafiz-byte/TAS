@@ -109,6 +109,8 @@ All endpoints except `/health` and login/refresh/logout need `Authorization: Bea
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/auth/login` | Email + password → access token (30 min), refresh token (14 days), profile |
+| `POST` | `/api/auth/forgot-password` | `{email}` → a link to set a new password by email (60 min, works once); same answer for unknown emails; 3 per account per hour |
+| `GET` / `POST` | `/api/auth/password-link` | `?token=` who the link is for; `{token, newPassword}` sets the password, ends all sessions, lifts a lock-out |
 | `POST` | `/api/auth/refresh` | New token pair; the old refresh token stops working |
 | `POST` | `/api/auth/logout` | Revoke a refresh token |
 | `GET` | `/api/auth/me` | Signed-in user's profile |
@@ -196,6 +198,7 @@ How an arrival is handled:
 | `GET` / `POST` / `PUT` | `/api/terminals/{id}/categories[/{categoryId}]` | everyone at the terminal / TerminalAdmin | Transaction categories; new ones are bookable at once |
 | `GET` / `POST` / `PUT` | `/api/terminals/{id}/cargo[/{cargoId}]` | companies see own / Planner, TerminalAdmin | Multipurpose cargo releases (BL / DO) with trip and tonnage limits |
 | `GET` | `/api/users` | CompanyAdmin, TerminalAdmin, SysAdmin | Users within your scope |
+| `POST` | `/api/users/{id}/password-link` | as above | Email the user a link: invitation (no password yet, 7 days) or reset |
 | `PUT` | `/api/users/{id}` | as above | Name, mobile, language, role (not your own role) |
 | `POST` | `/api/users/{id}/active` | as above | Deactivate (reason required) / reactivate |
 | `POST` | `/api/users/{id}/reset-password` | as above | Set a new password; ends the user's sessions |

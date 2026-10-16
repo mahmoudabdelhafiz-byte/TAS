@@ -7,6 +7,7 @@ import type { Terminal, UserProfile } from './lib/types.ts';
 import { AppContext, type AppState } from './ui/context.tsx';
 import { Login } from './screens/Login.tsx';
 import { Shell } from './screens/Shell.tsx';
+import { SetPassword } from './screens/SetPassword.tsx';
 
 const api = new ApiClient(browserStore);
 
@@ -52,6 +53,13 @@ export function App() {
   }, []);
 
   const t = useCallback((key: TextKey, values?: Record<string, string | number>) => translate(lang, key, values), [lang]);
+
+  // The emailed link to set a password works whether or not someone is signed in on this browser.
+  if (window.location.hash.startsWith('#/password')) {
+    const token = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('token') ?? '';
+    return <SetPassword api={api} token={token} lang={lang} t={t} setLang={setLang}
+      onDone={async () => { if (user) { await api.logout(); setUser(null); } window.location.hash = '#/'; }} />;
+  }
 
   if (!user) {
     return (

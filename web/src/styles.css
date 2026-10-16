@@ -792,3 +792,8 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .attention .link-btn { font-weight: 600; }
 .kpi-yard { margin-top: 8px; }
 .table-wrap.flat { border: 0; }
+
+/* Set-password page: the sign-in layout without the yard picture. */
+.login.single { grid-template-columns: minmax(0, 1fr); }
+.login-brand.dark { color: var(--ink); margin-bottom: 8px; }
+.login-form .link-btn { align-self: center; }

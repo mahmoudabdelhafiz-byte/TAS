@@ -30,6 +30,7 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PasswordToken> PasswordTokens => Set<PasswordToken>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
     public DbSet<GateLane> GateLanes => Set<GateLane>();
@@ -166,6 +167,12 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
         {
             e.HasKey(x => x.UserId);
             e.Property(x => x.Role).HasUpperCaseConversion();
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<PasswordToken>(e =>
+        {
+            e.HasKey(x => x.TokenId);
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
 

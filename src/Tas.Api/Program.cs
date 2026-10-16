@@ -80,6 +80,24 @@ auth.MapPost("/logout", async (RefreshBody body, AuthService service, Cancellati
     return Results.NoContent();
 });
 
+// Forgot password: the same answer whether or not the email has an account.
+auth.MapPost("/forgot-password", async (ForgotPasswordBody body, PasswordLinkService service, HttpContext http, CancellationToken ct) =>
+{
+    var testToken = await service.RequestResetAsync(body.Email, TasApi.Origin(http), ct);
+    return Results.Accepted(value: new { sent = true, testToken });
+}).RequireRateLimiting("auth");
+
+// The "set your password" page: who the link is for (404 when it doesn't work any more).
+auth.MapGet("/password-link", async (string token, PasswordLinkService service, CancellationToken ct) =>
+    await service.InfoAsync(token, ct) is { } info
+        ? Results.Ok(info)
+        : TasApi.Problem(StatusCodes.Status404NotFound, PasswordLinkService.BadLink)).RequireRateLimiting("auth");
+
+auth.MapPost("/password-link", async (SetPasswordBody body, PasswordLinkService service, CancellationToken ct) =>
+    await service.CompleteAsync(body.Token, body.NewPassword, ct) is { } error
+        ? TasApi.Problem(StatusCodes.Status400BadRequest, error)
+        : Results.NoContent()).RequireRateLimiting("auth");
+
 auth.MapGet("/me", async (HttpContext http, AuthService service, CancellationToken ct) =>
 {
     var user = TasApi.User(http);
@@ -102,7 +120,9 @@ auth.MapPost("/change-password", async (ChangePasswordBody body, HttpContext htt
 
 app.MapPost("/api/users", async (CreateUserRequest body, HttpContext http, UserAdminService service, CancellationToken ct) =>
 {
-    var result = await service.CreateAsync(TasApi.User(http)!, body, ct);
+    var result = await service.CreateAsync(TasApi.User(http)!, body, ct, TasApi.Origin(http));
+    if (result.TestToken is not null)
+        http.Response.Headers["X-Yardsyncs-Test-Token"] = result.TestToken;
     return result.Status switch
     {
         UserAdminStatus.Created => Results.Created($"/api/users/{result.User!.UserId}", result.User),

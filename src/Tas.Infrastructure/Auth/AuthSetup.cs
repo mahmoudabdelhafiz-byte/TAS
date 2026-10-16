@@ -122,6 +122,8 @@ public static class AuthSetup
         services.AddSingleton<TokenService>();
         services.AddScoped<AuthService>();
         services.AddScoped<UserAdminService>();
+        services.Configure<PasswordLinkOptions>(config.GetSection("PasswordLinks"));
+        services.AddScoped<PasswordLinkService>();
         services.AddScoped<AdminBootstrapper>();
         return services;
     }

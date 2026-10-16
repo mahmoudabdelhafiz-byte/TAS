@@ -13,6 +13,10 @@ public sealed record RefreshBody(string RefreshToken);
 
 public sealed record ChangePasswordBody(string CurrentPassword, string NewPassword);
 
+public sealed record ForgotPasswordBody(string? Email);
+
+public sealed record SetPasswordBody(string? Token, string? NewPassword);
+
 /// <param name="CompanyId">Ignored for company users (taken from their account); required for terminal staff booking on behalf of a company.</param>
 public sealed record CreateAppointmentBody(
     long SlotId,
@@ -60,6 +64,9 @@ internal static class TasApi
         Results.Problem(detail, statusCode: status, extensions: extensions);
 
     public static IResult Forbidden(string detail) => Problem(StatusCodes.Status403Forbidden, detail);
+
+    /// <summary>The address the request came to, for links in emails when PasswordLinks:PortalUrl isn't set.</summary>
+    public static string Origin(HttpContext http) => $"{http.Request.Scheme}://{http.Request.Host}{http.Request.PathBase}";
 
     /// <summary>Maps a configuration change result: 200/201 with { data, regeneratedSlots }, or a problem response.</summary>
     public static IResult Admin<T>(AdminResult<T> result, Func<T, string>? location = null)

@@ -64,6 +64,19 @@ public sealed class AppUser
 }
 
 /// <summary>A rotating refresh token. Only the SHA-256 hash of the token is stored.</summary>
+/// <summary>A one-time link to set a password: RESET (forgot password) or INVITE (new user).</summary>
+public sealed class PasswordToken
+{
+    public long TokenId { get; set; }
+    public int UserId { get; set; }
+    public string Purpose { get; set; } = "RESET";
+    public byte[] TokenHash { get; set; } = [];
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? UsedAt { get; set; }
+    public int? CreatedBy { get; set; }
+}
+
 public sealed class RefreshToken
 {
     public long RefreshTokenId { get; set; }

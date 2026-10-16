@@ -204,4 +204,86 @@ public sealed class AuthApiTests(TasApiFactory factory) : ApiTestBase(factory)
         Assert.Equal(HttpStatusCode.Created, (await terminalAdmin.PostAsJsonAsync("/api/users", NewUser("gate1@demo-terminal.example", "GateClerk", terminalId: Demo.TerminalId))).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await terminalAdmin.PostAsJsonAsync("/api/users", NewUser("root@demo-terminal.example", "SysAdmin"))).StatusCode);
     }
+
+    // ------------------------------------------------------------ password links
+
+    private static async Task<string?> TestTokenAsync(HttpResponseMessage response)
+    {
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return doc.RootElement.TryGetProperty("testToken", out var t) && t.ValueKind == JsonValueKind.String ? t.GetString() : null;
+    }
+
+    [Fact]
+    public async Task Forgotten_password_by_email_link()
+    {
+        if (!Enabled) return;
+
+        var anonymous = Factory.CreateClient();
+        var unknown = await anonymous.PostAsJsonAsync("/api/auth/forgot-password", new { email = "nobody@nowhere.example" });
+        Assert.Equal(HttpStatusCode.Accepted, unknown.StatusCode); // same answer for unknown emails
+        Assert.Null(await TestTokenAsync(unknown));
+
+        var asked = await anonymous.PostAsJsonAsync("/api/auth/forgot-password", new { email = " Planner@Demo-Terminal.example " });
+        Assert.Equal(HttpStatusCode.Accepted, asked.StatusCode);
+        var token = await TestTokenAsync(asked);
+        Assert.NotNull(token);
+
+        var old = await Login(DemoDataSeeder.PlannerEmail); // signed in before the reset
+        var info = await Read<PasswordLinkInfo>(await anonymous.GetAsync($"/api/auth/password-link?token={token}"));
+        Assert.Equal("RESET", info.Purpose);
+        Assert.Equal(DemoDataSeeder.PlannerEmail, info.Email);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await anonymous.PostAsJsonAsync("/api/auth/password-link", new { token, newPassword = "short" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await anonymous.PostAsJsonAsync("/api/auth/password-link", new { token, newPassword = "Yard-Reset-2026!" })).StatusCode);
+
+        // The link works once; the old password and the old sessions are gone.
+        Assert.Equal(HttpStatusCode.BadRequest, (await anonymous.PostAsJsonAsync("/api/auth/password-link", new { token, newPassword = "Yard-Again-2026!" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/auth/password-link?token={token}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginRaw(DemoDataSeeder.PlannerEmail, Password)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await LoginRaw(DemoDataSeeder.PlannerEmail, "Yard-Reset-2026!")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await anonymous.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = old.RefreshToken })).StatusCode);
+
+        // At most 3 emails an hour per account; a newer link replaces the older one.
+        var second = await TestTokenAsync(await anonymous.PostAsJsonAsync("/api/auth/forgot-password", new { email = DemoDataSeeder.PlannerEmail }));
+        var third = await TestTokenAsync(await anonymous.PostAsJsonAsync("/api/auth/forgot-password", new { email = DemoDataSeeder.PlannerEmail }));
+        Assert.NotNull(third);
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/auth/password-link?token={second}")).StatusCode);
+        Assert.Null(await TestTokenAsync(await anonymous.PostAsJsonAsync("/api/auth/forgot-password", new { email = DemoDataSeeder.PlannerEmail })));
+    }
+
+    [Fact]
+    public async Task New_users_are_invited_to_set_their_own_password()
+    {
+        if (!Enabled) return;
+
+        var admin = await As(DemoDataSeeder.TerminalAdminEmail);
+        var created = await admin.PostAsJsonAsync("/api/users", new
+        {
+            email = "new.planner@demo-terminal.example", fullName = "Huda Saleh", role = "Planner", terminalId = Demo.TerminalId, preferredLanguage = "ar",
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var token = created.Headers.GetValues("X-Yardsyncs-Test-Token").Single();
+        var userId = (await Read<UserProfile>(created)).UserId;
+
+        // No password yet: nobody can sign in with any.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginRaw("new.planner@demo-terminal.example", "Whatever-2026!!")).StatusCode);
+
+        var anonymous = Factory.CreateClient();
+        var info = await Read<PasswordLinkInfo>(await anonymous.GetAsync($"/api/auth/password-link?token={token}"));
+        Assert.Equal(("INVITE", "Huda Saleh", "ar"), (info.Purpose, info.FullName, info.PreferredLanguage));
+
+        // The admin sends a fresh invitation: the first link stops working.
+        var resent = await admin.PostAsync($"/api/users/{userId}/password-link", null);
+        Assert.Equal(HttpStatusCode.Accepted, resent.StatusCode);
+        var fresh = resent.Headers.GetValues("X-Yardsyncs-Test-Token").Single();
+        Assert.Equal(HttpStatusCode.BadRequest, (await anonymous.PostAsJsonAsync("/api/auth/password-link", new { token, newPassword = "Huda-Planner-2026" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await anonymous.PostAsJsonAsync("/api/auth/password-link", new { token = fresh, newPassword = "Huda-Planner-2026" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await LoginRaw("new.planner@demo-terminal.example", "Huda-Planner-2026")).StatusCode);
+
+        // Only people who manage the user can send links.
+        var dispatcher = await As(DemoDataSeeder.OtherDispatcherEmail);
+        Assert.Equal(HttpStatusCode.NotFound, (await dispatcher.PostAsync($"/api/users/{userId}/password-link", null)).StatusCode);
+    }
 }
+
