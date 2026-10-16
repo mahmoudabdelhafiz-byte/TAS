@@ -36,6 +36,9 @@ public interface ITosAdapter
     /// <summary>Name stored with each check result, e.g. "N4" or "FAKE_TOS".</summary>
     string Source { get; }
 
+    /// <summary>The name for one terminal's checks, when the adapter serves terminals with different systems.</summary>
+    string SourceFor(int terminalId) => Source;
+
     /// <summary>Availability, holds, releases, payment, booking validity, VGM and cut-off for each item.</summary>
     Task<IReadOnlyList<TosCheck>> ValidateAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default);
 

@@ -114,8 +114,10 @@ public static partial class NotificationText
     public static bool IsKnown(string templateCode) => Templates.ContainsKey(templateCode);
 
     /// <summary>Fills the template; a missing value becomes "-" so a message is never sent with raw braces.</summary>
-    public static RenderedMessage Render(string templateCode, string? language, IReadOnlyDictionary<string, string> values)
+    /// <param name="brand">The name the message is signed with (the terminal's or the installation's); default Yardsyncs.</param>
+    public static RenderedMessage Render(string templateCode, string? language, IReadOnlyDictionary<string, string> values, string? brand = null)
     {
+        var name = string.IsNullOrWhiteSpace(brand) ? Brand : brand.Trim();
         if (!Templates.TryGetValue(templateCode, out var byLanguage))
             throw new ArgumentException($"Unknown notification template '{templateCode}'.", nameof(templateCode));
 
@@ -125,7 +127,7 @@ public static partial class NotificationText
         string Fill(string s) => Placeholder().Replace(s, m =>
             values.TryGetValue(m.Groups[1].Value, out var v) && !string.IsNullOrWhiteSpace(v) ? v.Trim() : "-");
 
-        return new RenderedMessage($"{Brand} — {Fill(subject)}", Fill(body));
+        return new RenderedMessage($"{name} — {Fill(subject)}", Fill(body.Replace(Brand, name, StringComparison.Ordinal)));
     }
 
     /// <summary>"Tue 20 Oct 10:00–11:00" in the terminal's time zone (invariant month/day names).</summary>

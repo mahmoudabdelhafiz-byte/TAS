@@ -45,11 +45,11 @@ public static class ItemChecks
         }
         catch (TosUnavailableException) when (onUnavailable == TosUnavailablePolicy.Warn)
         {
-            checks.AddRange(items.Select(i => new ItemCheck(i.Index, CheckType.TosUnavailable, CheckResult.Warn, TosUnavailableMessage, tos.Source, null)));
+            checks.AddRange(items.Select(i => new ItemCheck(i.Index, CheckType.TosUnavailable, CheckResult.Warn, TosUnavailableMessage, tos.SourceFor(terminalId), null)));
             return checks;
         }
 
-        checks.AddRange(tosChecks.Select(c => new ItemCheck(c.ItemIndex, c.Type, c.Result, c.Message, tos.Source, c.TosRef)));
+        checks.AddRange(tosChecks.Select(c => new ItemCheck(c.ItemIndex, c.Type, c.Result, c.Message, tos.SourceFor(terminalId), c.TosRef)));
         return checks;
     }
 }

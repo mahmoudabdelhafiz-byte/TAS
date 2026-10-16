@@ -24,7 +24,8 @@ public sealed class NotificationDispatcher(
     NotificationSenders senders,
     IOptionsMonitor<NotificationOptions> options,
     TimeProvider clock,
-    ILogger<NotificationDispatcher> logger)
+    ILogger<NotificationDispatcher> logger,
+    TerminalProfiles? profiles = null)
 {
     private static readonly TimeSpan[] Backoff =
         [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(60)];
@@ -99,7 +100,7 @@ public sealed class NotificationDispatcher(
         {
             result = Fail("Appointment no longer upcoming; reminder dropped.");
         }
-        else if (senders.For(n.Channel) is not { } sender)
+        else if (senders.For(n.Channel, await TerminalCodeAsync(n.TerminalId, ct)) is not { } sender)
         {
             result = Fail($"No provider configured for {n.Channel}.");
         }
@@ -116,7 +117,8 @@ public sealed class NotificationDispatcher(
             var values = Values(n.Params);
             try
             {
-                var message = NotificationText.Render(n.TemplateCode, n.Language, values) with
+                var brand = profiles?.BrandFor(await TerminalCodeAsync(n.TerminalId, ct));
+                var message = NotificationText.Render(n.TemplateCode, n.Language, values, brand) with
                 {
                     Data = new Dictionary<string, string>
                     {
@@ -172,6 +174,7 @@ public sealed class NotificationDispatcher(
             db.NotificationLogs.Add(new NotificationLog
             {
                 AppointmentId = n.AppointmentId,
+                TerminalId = n.TerminalId,
                 DriverId = n.DriverId,
                 Channel = o.DriverChannel,
                 TemplateCode = n.TemplateCode,
@@ -246,6 +249,9 @@ public sealed class NotificationDispatcher(
             && a.Slot.EndAt > clock.GetUtcNow(), ct);
 
     /// <summary>Drivers: mobile. Users: email for EMAIL, mobile for SMS / WhatsApp.</summary>
+    private async Task<string?> TerminalCodeAsync(int? terminalId, CancellationToken ct) =>
+        terminalId is { } id ? await TerminalProfiles.CodeAsync(db, id, ct) : null;
+
     private async Task<string?> RecipientAsync(NotificationLog n, CancellationToken ct)
     {
         if (n.DriverId is { } driverId)

@@ -13,7 +13,12 @@ public sealed record OutboxStatus(int Queued, int FailedLast24h, int SentLast24h
 public sealed record OpsStatus(
     string Version, string Environment, DateTimeOffset StartedAt, DateTimeOffset Now, string Tos,
     DatabaseStatus Database, OutboxStatus Notifications, OutboxStatus IntegrationEvents, int FollowedContainers, int LiveVisits,
-    IReadOnlyList<string> Warnings, RetentionRun? LastCleanUp, AssistantToday Assistant);
+    IReadOnlyList<string> Warnings, RetentionRun? LastCleanUp, AssistantToday Assistant, IReadOnlyList<TerminalSetup> Terminals);
+
+/// <summary>How one terminal is set up (no secrets): its TOS, message providers and sender names, and its webhook.</summary>
+public sealed record TerminalSetup(
+    string Code, string Name, string Tos, string Brand, string SmsProvider, string? SmsSender, string EmailProvider, string? EmailFrom,
+    string PushProvider, bool OwnMessageSettings, bool Webhook);
 
 /// <summary>The AI assistant today (UTC day): questions asked and tokens used, for cost.</summary>
 public sealed record AssistantToday(bool Enabled, bool LiveData, int Questions, long InputTokens, long OutputTokens);
@@ -22,7 +27,9 @@ public sealed record AssistantToday(bool Enabled, bool LiveData, int Questions, 
 public sealed class OpsStatusService(
     TasDbContext db, DatabaseMigrator migrator, ITosAdapter tos, TimeProvider clock,
     Microsoft.Extensions.Configuration.IConfiguration config, Microsoft.Extensions.Hosting.IHostEnvironment env,
-    Microsoft.Extensions.Options.IOptions<Assistant.AssistantOptions> assistant)
+    Microsoft.Extensions.Options.IOptions<Assistant.AssistantOptions> assistant,
+    TerminalProfiles profiles,
+    Microsoft.Extensions.Options.IOptionsMonitor<Integration.IntegrationOptions> integration)
 {
     private sealed class UsageRow
     {
@@ -61,8 +68,20 @@ public sealed class OpsStatusService(
 
         static double? Age(DateTimeOffset? oldest, DateTimeOffset now) => oldest is null ? null : Math.Round((now - oldest.Value).TotalMinutes, 1);
 
+        var terminals = await db.Terminals.AsNoTracking().OrderBy(t => t.Code).Select(t => new { t.Code, t.Name }).ToListAsync(ct);
+        var setups = terminals.Select(t =>
+        {
+            var m = profiles.NotificationsFor(t.Code);
+            var smsSender = m.SmsProvider.Equals("Twilio", StringComparison.OrdinalIgnoreCase) ? m.Twilio.SmsFrom : m.Unifonic.SenderId;
+            return new TerminalSetup(t.Code, t.Name, profiles.TosFor(t.Code), profiles.BrandFor(t.Code), m.SmsProvider,
+                string.IsNullOrWhiteSpace(smsSender) ? null : smsSender, m.EmailProvider, string.IsNullOrWhiteSpace(m.Smtp.From) ? null : m.Smtp.From,
+                m.PushProvider, profiles.HasOwnNotifications(t.Code),
+                integration.CurrentValue.Terminals.TryGetValue(t.Code, out var hook) && hook.Url.Length > 0);
+        }).ToList();
+
         return new OpsStatus(
-            Version, environment, Started, now, tos.Source,
+            Version, environment, Started, now,
+            tos is Tos.TosRouter router ? router.Summary(terminals.Select(t => t.Code)) : tos.Source,
             await migrator.StatusAsync(ct),
             new OutboxStatus(n.Queued, n.Failed, n.Sent, Age(n.Oldest, now)),
             new OutboxStatus(e.Queued, e.Failed, e.Sent, Age(e.Oldest, now)),
@@ -72,7 +91,8 @@ public sealed class OpsStatusService(
                                                   || a.Status == Tas.Domain.Booking.AppointmentStatus.GateIn, ct),
             SecurityChecks.Warnings(config, env),
             RetentionService.LastRun,
-            await AssistantTodayAsync(now, ct));
+            await AssistantTodayAsync(now, ct),
+            setups);
     }
 
     private async Task<AssistantToday> AssistantTodayAsync(DateTimeOffset now, CancellationToken ct)

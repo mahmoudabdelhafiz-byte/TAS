@@ -75,8 +75,14 @@ public static class DependencyInjection
         services.Configure<NotificationOptions>(config.GetSection("Notifications"));
         services.AddHttpClient("notifications", c => c.Timeout = TimeSpan.FromSeconds(20));
         foreach (var channel in new[] { NotificationChannel.Sms, NotificationChannel.Whatsapp, NotificationChannel.Email, NotificationChannel.Push })
-            services.AddSingleton<INotificationSender>(sp => CreateSender(sp, channel));
-        services.AddSingleton<NotificationSenders>();
+            services.AddSingleton<INotificationSender>(sp => CreateSender(sp, channel, sp.GetRequiredService<IOptions<NotificationOptions>>().Value));
+        services.AddSingleton(sp => new NotificationSenders(
+            sp.GetServices<INotificationSender>(),
+            (code, channel) =>
+            {
+                var profiles = sp.GetRequiredService<TerminalProfiles>();
+                return profiles.HasOwnNotifications(code) ? CreateSender(sp, channel, profiles.NotificationsFor(code)) : null;
+            }));
         services.AddScoped<NotificationDispatcher>();
         services.AddHostedService<NotificationWorker>();
 
@@ -92,31 +98,24 @@ public static class DependencyInjection
         services.AddScoped<Tas.Infrastructure.Assistant.AssistantTools>();
         services.AddScoped<Tas.Infrastructure.Assistant.AssistantService>();
 
-        // TOS: "Tos:Adapter" = Fake (development / demos) or N4; "Tos:OnUnavailable" = Warn (default) or Reject.
+        // TOS per terminal (Terminals:<code>:Tos, default Tos:Adapter): Fake (development / demos) or N4.
+        // "Tos:OnUnavailable" = Warn (default) or Reject.
         services.AddSingleton(new TosSettings(config.GetValue("Tos:OnUnavailable", TosUnavailablePolicy.Warn)));
-        var adapter = config.GetValue("Tos:Adapter", "Fake");
-        if (string.Equals(adapter, "Fake", StringComparison.OrdinalIgnoreCase))
-        {
-            services.Configure<FakeTosOptions>(config.GetSection("FakeTos"));
-            services.AddSingleton<ITosAdapter, FakeTosAdapter>();
-        }
-        else if (string.Equals(adapter, "N4", StringComparison.OrdinalIgnoreCase))
-        {
-            services.Configure<N4Options>(config.GetSection("N4"));
-            services.AddHttpClient<IN4Client, ArgoServiceClient>(c => c.Timeout = Timeout.InfiniteTimeSpan); // per-terminal timeout in the client
-            services.AddScoped<ITosAdapter, N4TosAdapter>();
-        }
-        else
-        {
-            throw new InvalidOperationException($"Unknown TOS adapter '{adapter}'. Use 'Fake' or 'N4'.");
-        }
+        services.AddSingleton<TerminalProfiles>();
+        new TerminalProfiles(config).Validate();
+        services.Configure<FakeTosOptions>(config.GetSection("FakeTos"));
+        services.AddSingleton<FakeTosAdapter>();
+        services.Configure<N4Options>(config.GetSection("N4"));
+        services.AddHttpClient<IN4Client, ArgoServiceClient>(c => c.Timeout = Timeout.InfiniteTimeSpan); // per-terminal timeout in the client
+        services.AddScoped<N4TosAdapter>();
+        services.AddScoped<TosRouter>();
+        services.AddScoped<ITosAdapter>(sp => sp.GetRequiredService<TosRouter>());
 
         return services;
     }
 
-    private static INotificationSender CreateSender(IServiceProvider sp, NotificationChannel channel)
+    private static INotificationSender CreateSender(IServiceProvider sp, NotificationChannel channel, NotificationOptions o)
     {
-        var o = sp.GetRequiredService<IOptions<NotificationOptions>>().Value;
         HttpClient Http() => sp.GetRequiredService<IHttpClientFactory>().CreateClient("notifications");
 
         var provider = (channel switch

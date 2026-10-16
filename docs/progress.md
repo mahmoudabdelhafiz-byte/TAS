@@ -358,6 +358,15 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Limits and cost: 60 questions per user per day, 10 per minute, at most 5 look-ups per question; no conversation text stored; today's questions and tokens in `/api/ops/status`; prompt caching for the guides |
 | ✅ | Tests with a scripted model: guides and context in the prompt, look-ups scoped to the user's company, limits, provider errors, the look-up cap; Anthropic client against a fake server |
 
+
+### 34. Settings per terminal, part 1 (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | TOS adapter per terminal (`Terminals:<code>:Tos`: N4 or Fake), default `Tos:Adapter`; checks record which TOS answered; unknown names stop the server from starting |
+| ✅ | Message providers and accounts per terminal (`Terminals:<code>:Notifications:…` over `Notifications:…`): SMS / WhatsApp / email / push provider, SMS sender name, email sender; each message remembers its terminal (migration 013) |
+| ✅ | The name messages are signed with per terminal (`Terminals:<code>:Brand`, default `Brand`, then Yardsyncs); password emails for terminal staff use their terminal's |
+| ✅ | `/api/ops/status` lists every terminal's set-up (TOS, name, providers, sender names, webhook) |
+
 ---
 
 ## Remaining
@@ -429,7 +438,7 @@ Details in [`releasing.md`](releasing.md).
 ### Phase G — Generic product (any terminal operator)
 | | Item | Notes |
 |---|---|---|
-| ⬜ | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Today `Tos:Adapter` and the providers are set once per installation |
+| 🟡 | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Done: TOS, message providers, sender names, brand (section 34). Still per installation: driver message channel (SMS / WhatsApp), gate identification, driver identity, fees |
 | ⬜ | Tenants: terminal operator → terminals; operator admins; data separated per operator in the cloud | Terminal scope already exists |
 | ⬜ | Country packs: plate formats (Saudi Arabic plates today), mobile number rules (+966 today), national holidays, currencies, ID types | Plate and mobile rules become per-country |
 | ⬜ | Languages as packs: portal and messages in more languages without code changes | Arabic, English, Urdu, Hindi today |

@@ -33,11 +33,24 @@ public interface INotificationSender
 }
 
 /// <summary>The sender per channel, as configured.</summary>
-public sealed class NotificationSenders(IEnumerable<INotificationSender> senders)
+/// <param name="forTerminal">
+/// The sender a terminal with message settings of its own uses for a channel (Terminals:&lt;code&gt;:Notifications);
+/// null when the terminal has none, and the installation's sender is used.
+/// </param>
+public sealed class NotificationSenders(
+    IEnumerable<INotificationSender> senders, Func<string, NotificationChannel, INotificationSender?>? forTerminal = null)
 {
     private readonly Dictionary<NotificationChannel, INotificationSender> _byChannel = senders.ToDictionary(s => s.Channel);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(string, NotificationChannel), INotificationSender?> _terminal = new();
 
+    /// <summary>The installation's sender for the channel.</summary>
     public INotificationSender? For(NotificationChannel channel) => _byChannel.GetValueOrDefault(channel);
+
+    /// <summary>The terminal's own sender for the channel when it has one, else the installation's.</summary>
+    public INotificationSender? For(NotificationChannel channel, string? terminalCode) =>
+        terminalCode is null || forTerminal is null
+            ? For(channel)
+            : _terminal.GetOrAdd((terminalCode.ToUpperInvariant(), channel), k => forTerminal(terminalCode, k.Item2)) ?? For(channel);
 }
 
 /// <summary>

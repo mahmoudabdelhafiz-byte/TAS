@@ -26,6 +26,10 @@ public sealed class NotificationLog
     public long? AppointmentId { get; set; }
     public int? DriverId { get; set; }
     public int? UserId { get; set; }
+
+    /// <summary>The terminal whose message providers and sender names are used; null = the installation's.</summary>
+    public int? TerminalId { get; set; }
+
     public NotificationChannel Channel { get; set; }
 
     /// <summary>e.g. STATUS_RED, STATUS_CLEARED, SLOT_REMINDER.</summary>
