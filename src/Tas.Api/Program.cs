@@ -61,6 +61,10 @@ builder.Services.AddRateLimiter(o =>
 
 var app = builder.Build();
 
+// Test-only switches must never reach a real server: refuse to start rather than run unsafely.
+if (SecurityChecks.Unsafe(app.Configuration, app.Environment) is { Count: > 0 } unsafeSettings)
+    throw new InvalidOperationException("Unsafe settings for " + app.Environment.EnvironmentName + ": " + string.Join(" ", unsafeSettings));
+
 // `dotnet Tas.Api.dll migrate`: create or upgrade the database, then exit (for upgrades run by hand or a deploy job).
 if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
 {
@@ -366,6 +370,10 @@ appointments.MapPost("/bulk", async (
         else
             return TasApi.Problem(StatusCodes.Status400BadRequest, "Upload a .csv or .xlsx file.");
     }
+    catch (InvalidDataException ex) when (ex.Message.StartsWith("The workbook is too large", StringComparison.Ordinal))
+    {
+        return TasApi.Problem(StatusCodes.Status413PayloadTooLarge, ex.Message);
+    }
     catch (Exception ex) when (ex is not OperationCanceledException)
     {
         return TasApi.Problem(StatusCodes.Status400BadRequest, "The file could not be read. Save it as .xlsx or CSV UTF-8 and try again.");
@@ -379,7 +387,7 @@ appointments.MapPost("/bulk", async (
     {
         return TasApi.Problem(StatusCodes.Status404NotFound, ex.Message);
     }
-}).DisableAntiforgery();
+}).DisableAntiforgery().WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(BulkFiles.MaxUploadBytes + 64 * 1024));
 
 appointments.MapGet("/bulk/template", (int terminalId, string? format, HttpContext http, TimeProvider clock) =>
 {

@@ -53,6 +53,13 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   admins (version, database, message and event backlogs).
 - Production settings: `Logging__Json=true` (one JSON object per line), `Proxy__TrustForwardedHeaders=true` behind a
   reverse proxy, HSTS and browser security headers (CSP, no framing) are on outside Development.
+- Security and personal data: [`docs/security.md`](docs/security.md) — review findings, what each customer decides
+  (data location, providers, privacy notice, breach reporting). Outside Development / Testing the app refuses to start
+  with test switches on, builds password links only from `PasswordLinks:PortalUrl`, and keeps codes and links out of
+  the logs; `/api/ops/status` lists `warnings` for settings to look at.
+- Personal data is cleaned up daily (`Privacy:LocationDays` 30, `Privacy:MessageDays` 180, `Privacy:EventDays` 90,
+  `Privacy:TokenDays` 30). Drivers: `GET /api/companies/{c}/drivers/{d}/personal-data` (copy) and
+  `POST …/erase` with a reason (company admin or terminal admin; refused while a visit is under way).
 
 ## Running locally
 

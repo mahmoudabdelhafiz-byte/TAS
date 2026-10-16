@@ -28,6 +28,15 @@ the gate tablets. To use the company's own certificate instead, mount it into th
 **The driver app** needs the server reachable from the phones (mobile data), so on-premise installations publish
 `TAS_DOMAIN` to the internet through the terminal's firewall — only ports 80/443 of the proxy.
 
+**Security settings.** Never publish the app's own port 8080: the app trusts the client address the proxy passes on.
+Remove `Bootstrap__AdminPassword` from `.env` after the first sign-in. On a real server the app refuses to start with
+the test switches (`*ExposeCodeForTesting`, `*ExposeTokenForTesting`) on, sends password links only to
+`https://$TAS_DOMAIN`, and keeps sign-in codes and links out of the logs. `/api/ops/status` lists `warnings` for
+settings still to look at (demo TOS, messages not sent, bootstrap password). See `docs/security.md`.
+
+**Personal data.** Positions, message addresses and old sessions are cleaned up daily; the periods are in `.env`
+(`Privacy__*`). Drivers' copy of data and erasure are in the portal (Fleet & users → Drivers).
+
 ## Upgrading
 
 ```bash
@@ -80,4 +89,5 @@ its own deployment and database.
 
 Alert when: `/health/ready` fails for 2 minutes; `notifications.queued` keeps growing or `oldestQueuedMinutes` > 15
 (SMS / email provider down); `integrationEvents.failedLast24h` > 0 (the terminal's system refuses events); no new
-file in `backups/` for 26 hours.
+file in `backups/` for 26 hours; `lastCleanUp` older than 2 days (personal data clean-up stopped); log lines
+"locked out" or "Revoked refresh token re-used" (someone guessing passwords or a stolen session).

@@ -22,6 +22,9 @@ public sealed class DriverLoginOptions
     /// <summary>Codes one mobile number may ask for within 15 minutes.</summary>
     public int MaxCodesPer15Minutes { get; set; } = 3;
 
+    /// <summary>Codes one mobile number may ask for in 24 hours, so guessing can't go on all day.</summary>
+    public int MaxCodesPerDay { get; set; } = 10;
+
     /// <summary>Wrong tries before a code stops working.</summary>
     public int MaxAttempts { get; set; } = 5;
 
@@ -78,6 +81,9 @@ public sealed partial class DriverLoginService(
         var recent = await db.DriverOtps.CountAsync(x => x.Mobile == mobile && x.CreatedAt > now.AddMinutes(-15), ct);
         if (recent >= o.MaxCodesPer15Minutes)
             return new DriverLoginStart(DriverLoginStatus.TooMany, "Too many codes asked for this number. Try again in 15 minutes.");
+        var today = await db.DriverOtps.CountAsync(x => x.Mobile == mobile && x.CreatedAt > now.AddHours(-24), ct);
+        if (today >= o.MaxCodesPerDay)
+            return new DriverLoginStart(DriverLoginStatus.TooMany, "Too many codes asked for this number today. Try again tomorrow or ask your company.");
 
         var driver = await db.Drivers.AsNoTracking()
             .Where(d => d.Mobile == mobile && !d.IsBlocked)
@@ -128,29 +134,34 @@ public sealed partial class DriverLoginService(
             return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
 
         var now = clock.GetUtcNow();
-        var otp = await db.DriverOtps
+        var otp = await db.DriverOtps.AsNoTracking()
             .Where(x => x.Mobile == mobile && x.InstallId == installId && x.ConsumedAt == null && x.ExpiresAt > now)
             .OrderByDescending(x => x.OtpId)
             .FirstOrDefaultAsync(ct);
-        if (otp is null || otp.Attempts >= o.MaxAttempts)
+        if (otp is null)
             return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
 
-        otp.Attempts++;
+        // Count the try in the database first, so tries sent at the same moment can't get past the limit.
+        var tried = await db.DriverOtps
+            .Where(x => x.OtpId == otp.OtpId && x.ConsumedAt == null && x.Attempts < o.MaxAttempts)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Attempts, x => x.Attempts + 1), ct);
+        if (tried == 0)
+            return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
+
         var match = CryptographicOperations.FixedTimeEquals(otp.CodeHash, Hash(mobile, installId, code.Trim()));
         if (!match)
-        {
-            await db.SaveChangesAsync(ct);
             return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
-        }
 
         var drivers = await db.Drivers.Where(d => d.Mobile == mobile && !d.IsBlocked).OrderBy(d => d.DriverId).ToListAsync(ct);
         if (drivers.Count == 0)
-        {
-            await db.SaveChangesAsync(ct);
             return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
-        }
 
-        otp.ConsumedAt = now;
+        // A code signs in once, also when the right code is sent twice at the same moment.
+        var consumed = await db.DriverOtps
+            .Where(x => x.OtpId == otp.OtpId && x.ConsumedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.ConsumedAt, now), ct);
+        if (consumed == 0)
+            return new DriverLoginResult(DriverLoginStatus.Invalid, Error: WrongCode);
         var driverIds = drivers.Select(d => d.DriverId).ToList();
         var driver = drivers[0];
 

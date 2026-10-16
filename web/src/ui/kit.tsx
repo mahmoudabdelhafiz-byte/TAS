@@ -132,17 +132,18 @@ export function Panel({ title, onClose, children }: { title: ReactNode; onClose:
 }
 
 /** A button that shows a busy state while its async action runs and reports failures to `onError`. */
-export function ActionButton({ onRun, children, kind = 'secondary', disabled, onError }: {
+export function ActionButton({ onRun, children, kind = 'secondary', disabled, onError, title }: {
   onRun: () => Promise<unknown>;
   children: ReactNode;
   kind?: 'primary' | 'secondary' | 'danger';
   disabled?: boolean;
   onError: (message: string) => void;
+  title?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const { t } = useApp();
   return (
-    <button type="button" className={`btn btn-${kind}`} disabled={disabled || busy} aria-busy={busy}
+    <button type="button" className={`btn btn-${kind}`} disabled={disabled || busy} aria-busy={busy} title={title}
       onClick={async () => {
         setBusy(true);
         try { await onRun(); } catch (e) { onError(messageOf(e, t('common.offline'))); } finally { setBusy(false); }

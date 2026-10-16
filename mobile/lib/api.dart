@@ -58,6 +58,7 @@ class DriverApi {
   static const _tokenKey = 'session.token';
   static const _installKey = 'install.id';
   static const _languageKey = 'language';
+  static const _locationNoticeKey = 'location.notice';
   static const _passKey = 'gate.pass';
   static const _voiceKey = 'voice';
 
@@ -76,6 +77,10 @@ class DriverApi {
   /// Spoken directions in the yard: on unless the driver turned them off.
   Future<bool> voiceOn() async => await _store.read(_voiceKey) != 'off';
   Future<void> saveVoiceOn(bool on) => _store.write(_voiceKey, on ? null : 'off');
+
+  /// Whether the driver has read and agreed to the location notice (asked once, before the first trip).
+  Future<bool> locationNoticeAccepted() async => await _store.read(_locationNoticeKey) == '1';
+  Future<void> acceptLocationNotice() => _store.write(_locationNoticeKey, '1');
 
   /// A random id for this install, made once (the server binds the session to it).
   Future<String> installId() async {

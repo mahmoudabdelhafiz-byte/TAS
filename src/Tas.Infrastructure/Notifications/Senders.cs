@@ -40,15 +40,22 @@ public sealed class NotificationSenders(IEnumerable<INotificationSender> senders
     public INotificationSender? For(NotificationChannel channel) => _byChannel.GetValueOrDefault(channel);
 }
 
-/// <summary>Writes messages to the log instead of sending them — the default until a provider is configured.</summary>
-public sealed class LogSender(NotificationChannel channel, ILogger<LogSender> logger) : INotificationSender
+/// <summary>
+/// Writes messages to the log instead of sending them — the default until a provider is configured.
+/// The text (which can hold sign-in codes and password links) is logged only on a developer's machine or in tests;
+/// on a real server anyone who can read the logs could otherwise sign in as someone else.
+/// </summary>
+public sealed class LogSender(NotificationChannel channel, ILogger<LogSender> logger, bool showBody) : INotificationSender
 {
     public NotificationChannel Channel => channel;
     public string Provider => "Log";
 
     public Task<string?> SendAsync(string recipient, RenderedMessage message, CancellationToken ct)
     {
-        logger.LogInformation("[{Channel} not configured — logged only] to {Recipient}: {Body}", channel, recipient, message.Body);
+        if (showBody)
+            logger.LogInformation("[{Channel} not configured — logged only] to {Recipient}: {Body}", channel, recipient, message.Body);
+        else
+            logger.LogWarning("[{Channel} not configured — not sent] to {Recipient}: {Subject}", channel, Ops.SecurityChecks.Mask(recipient), message.Subject);
         return Task.FromResult<string?>($"log-{Guid.NewGuid():N}");
     }
 }

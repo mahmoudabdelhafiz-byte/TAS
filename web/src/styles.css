@@ -602,6 +602,10 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 
 .inline-ask { display: inline-flex; gap: 6px; align-items: center; }
 .inline-ask input { min-height: 32px; padding: 4px 8px; width: 160px; }
+.erase-ask { display: grid; gap: 6px; max-width: 26rem; margin-block: 4px; text-align: start; white-space: normal; }
+.erase-ask .warn-text { margin: 0; font-size: 0.85rem; }
+.erase-ask .inline-ask { flex-wrap: wrap; }
+.erase-ask .inline-ask input { flex: 1 1 14rem; width: auto; }
 .grid tr.inactive td { color: var(--muted); }
 
 @media (max-width: 1100px) {

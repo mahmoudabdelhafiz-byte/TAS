@@ -152,6 +152,43 @@ function Trucks({ companyId, canEdit, canBlock }: { companyId: number; canEdit: 
 
 const languages = [['ar', 'العربية'], ['en', 'English'], ['ur', 'اردو'], ['hi', 'हिन्दी']] as const;
 
+/** A driver whose personal data was erased keeps this ID number. */
+const erased = (x: { idNumber: string }) => x.idNumber.startsWith('ERASED-');
+
+/** Saudi PDPL: a copy of the driver's data, and erasure (with a reason, after a warning). */
+function PersonalData({ url, erased, onError, onErased }: { url: string; erased: boolean; onError: (m: string) => void; onErased: () => void }) {
+  const { api, t } = useApp();
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState('');
+  const copy = (
+    <ActionButton onError={onError} title={t('fleet.personalDataHint')} onRun={async () => {
+      const { blob, fileName } = await api.download(`${url}/personal-data`);
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = fileName ?? `driver-${url.split('/').pop()}-personal-data.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+    }}>{t('fleet.personalData')}</ActionButton>
+  );
+  if (erased) return copy;
+  if (!asking) return <>{copy}<button type="button" className="btn btn-danger-quiet" onClick={() => setAsking(true)}>{t('fleet.erase')}</button></>;
+  return (
+    <div className="erase-ask" role="group" aria-label={t('fleet.erase')}>
+      <p className="warn-text">{t('fleet.eraseWarn')}</p>
+      <span className="inline-ask">
+        <input value={reason} placeholder={t('fleet.eraseReason')} onChange={e => setReason(e.target.value)} autoFocus />
+        <ActionButton kind="danger" disabled={!reason.trim()} onError={onError} onRun={async () => {
+          await api.post(`${url}/erase`, { reason: reason.trim() });
+          setAsking(false);
+          onErased();
+        }}>{t('fleet.erase')}</ActionButton>
+        <button type="button" className="btn btn-secondary" onClick={() => setAsking(false)}>{t('fleet.keepData')}</button>
+      </span>
+    </div>
+  );
+}
+
 function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit: boolean; canBlock: boolean }) {
   const { api, t } = useApp();
   const base = `/api/companies/${companyId}/drivers`;
@@ -174,10 +211,15 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
                     <td>{x.fullName}</td>
                     <td className="num"><bdi>{x.mobile}</bdi></td>
                     <td>{languages.find(l => l[0] === x.preferredLanguage)?.[1] ?? x.preferredLanguage}</td>
-                    <td>{x.isBlocked ? <span className="check-fail">{t('fleet.blocked')}</span> : <span className="ok-text">{t('fleet.active')}</span>}</td>
+                    <td>{erased(x) ? <span className="muted">{t('fleet.erased')}</span>
+                      : x.isBlocked ? <span className="check-fail">{t('fleet.blocked')}</span> : <span className="ok-text">{t('fleet.active')}</span>}</td>
                     <td className="cell-action">
-                      {canBlock && <BlockButton blocked={x.isBlocked} onError={m.setError}
+                      {canBlock && !erased(x) && <BlockButton blocked={x.isBlocked} onError={m.setError}
                         onSet={async (blocked, reason) => { await api.post(`${base}/${x.driverId}/block`, { blocked, reason }); list.reload(); }} />}
+                      {canEdit && (
+                        <PersonalData url={`${base}/${x.driverId}`} erased={erased(x)} onError={m.setError}
+                          onErased={() => { m.setDone(t('fleet.erasedNote')); list.reload(); }} />
+                      )}
                     </td>
                   </tr>
                 ))}

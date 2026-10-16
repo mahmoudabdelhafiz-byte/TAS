@@ -264,7 +264,28 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     });
   }
 
+  /// Before the first trip: what is shared, why, until when (Saudi PDPL notice). False if the driver doesn't agree.
+  Future<bool> _locationNotice() async {
+    if (await widget.api.locationNoticeAccepted()) return true;
+    if (!mounted) return false;
+    final agreed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t('locationNoticeTitle')),
+        content: SingleChildScrollView(child: Text(t('locationNoticeBody'), style: const TextStyle(fontSize: 16, height: 1.4))),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(t('notNow'))),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: Text(t('locationNoticeAgree'))),
+        ],
+      ),
+    );
+    if (agreed != true) return false;
+    await widget.api.acceptLocationNotice();
+    return true;
+  }
+
   Future<void> _startTrip() async {
+    if (!await _locationNotice()) return;
     setState(() {
       _busy = true;
       _error = null;

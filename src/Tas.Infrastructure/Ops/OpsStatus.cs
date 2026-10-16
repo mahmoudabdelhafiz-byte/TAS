@@ -12,10 +12,13 @@ public sealed record OutboxStatus(int Queued, int FailedLast24h, int SentLast24h
 /// <summary>What an administrator or a monitoring system needs to see at a glance.</summary>
 public sealed record OpsStatus(
     string Version, string Environment, DateTimeOffset StartedAt, DateTimeOffset Now, string Tos,
-    DatabaseStatus Database, OutboxStatus Notifications, OutboxStatus IntegrationEvents, int FollowedContainers, int LiveVisits);
+    DatabaseStatus Database, OutboxStatus Notifications, OutboxStatus IntegrationEvents, int FollowedContainers, int LiveVisits,
+    IReadOnlyList<string> Warnings, RetentionRun? LastCleanUp);
 
 /// <summary>Version, database and background work (message and event outboxes) for the ops screen and monitoring.</summary>
-public sealed class OpsStatusService(TasDbContext db, DatabaseMigrator migrator, ITosAdapter tos, TimeProvider clock)
+public sealed class OpsStatusService(
+    TasDbContext db, DatabaseMigrator migrator, ITosAdapter tos, TimeProvider clock,
+    Microsoft.Extensions.Configuration.IConfiguration config, Microsoft.Extensions.Hosting.IHostEnvironment env)
 {
     private static readonly DateTimeOffset Started = DateTimeOffset.UtcNow;
 
@@ -55,7 +58,9 @@ public sealed class OpsStatusService(TasDbContext db, DatabaseMigrator migrator,
             await db.ContainerWatches.CountAsync(w => w.EndedAt == null, ct),
             await db.Appointments.CountAsync(a => a.Status == Tas.Domain.Booking.AppointmentStatus.EnRoute
                                                   || a.Status == Tas.Domain.Booking.AppointmentStatus.Arrived
-                                                  || a.Status == Tas.Domain.Booking.AppointmentStatus.GateIn, ct));
+                                                  || a.Status == Tas.Domain.Booking.AppointmentStatus.GateIn, ct),
+            SecurityChecks.Warnings(config, env),
+            RetentionService.LastRun);
     }
 }
 

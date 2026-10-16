@@ -30,6 +30,7 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Revalidation:Enabled", "false");
         builder.UseSetting("Notifications:Enabled", "false");
         builder.UseSetting("Integration:Enabled", "false");
+        builder.UseSetting("Privacy:CleanUpEnabled", "false"); // run by the test
         builder.UseSetting("Tracking:Enabled", "false"); // followed containers are checked by the test // events stay QUEUED; delivery is tested in Tas.Infrastructure.Tests
         builder.UseSetting("Notifications:PushProvider", "Fcm"); // push first for drivers with the app (not sent: the worker is off)
         builder.UseSetting("DriverLogin:ExposeCodeForTesting", "true");
