@@ -28,7 +28,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Version
         id: version
@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Upgrade staging
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Upgrade production
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
