@@ -92,6 +92,16 @@ class DriverApi {
     return id;
   }
 
+  /// How mobile numbers are typed in the installation's country, e.g. "05XXXXXXXX" (public; null when unreachable).
+  Future<String?> mobileExample() async {
+    try {
+      final json = await _send('GET', '/api/country', auth: false) as Map<String, dynamic>;
+      return json['mobileExample'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> requestCode(String mobile) async {
     await _send('POST', '/api/driver/login/start', body: {'mobile': mobile, 'installId': await installId()}, auth: false);
   }

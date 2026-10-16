@@ -31,6 +31,7 @@ its own, by terminal code. Whatever a terminal doesn't set comes from the instal
 Terminals__JED1__Tos=N4                                     the TOS: N4 or Fake (demo data); default Tos__Adapter
 N4__Terminals__JED1__Url=...                                 that terminal's N4 connection
 Terminals__JED1__Brand=Harbor One Terminal                       the name messages are signed with; default Brand, then Yardsyncs
+Terminals__JED1__Country=AE                                  public holidays and currency; default Country
 Terminals__JED1__Notifications__SmsProvider=Unifonic         any message setting: provider, account,
 Terminals__JED1__Notifications__Unifonic__SenderId=HARBOR1      SMS sender name,
 Terminals__JED1__Notifications__Smtp__From=tas@harbor-one.example  email sender address and name
@@ -40,6 +41,15 @@ Integration__Terminals__JED1__Url=...                        events to that term
 `GET /api/ops/status` lists each terminal's set-up: TOS, name, message providers and sender names, webhook. Sign-in
 codes for drivers use the installation's settings, because a driver works at several terminals. An unknown TOS name
 stops the server from starting, so a typo can't turn into failed bookings.
+
+### Country
+
+`Country` (SA by default; AE, OM, BH, KW and QA are also included) decides how the installation reads mobile numbers
+typed without a country code (in Saudi Arabia 05…, 5…, 9665…), how Arabic letters on plates are read, and the name of
+the drivers' ID document. Numbers typed with `+` or `00` work from any country. These stay one per installation because
+companies and drivers are shared by its terminals. Each terminal can have its own country for its public holidays
+(shown on the slot board, never closing anything by themselves) and its currency. An unknown country stops the server
+from starting.
 
 ### Operators
 

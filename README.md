@@ -63,6 +63,9 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   are signed with (`Terminals__<code>__Brand`) and any message setting (`Terminals__<code>__Notifications__…`:
   providers, accounts, SMS sender name, email sender); the installation's settings fill the rest. `/api/ops/status`
   lists each terminal's set-up.
+- Country packs (`Country`, default SA; also AE, OM, BH, KW, QA): local mobile forms, plate letters, the drivers' ID
+  document, currency and public holidays; a terminal can have its own (`Terminals__<code>__Country`) for holidays and
+  currency. `GET /api/country`, `GET /api/terminals/{id}/holidays?year=`.
 - Operators: a system admin groups the terminals one company runs (`/api/operators`,
   `PUT /api/terminals/{id}/operator`); the operator's admins (role `OperatorAdmin`) manage all of them. Competing
   companies get separate installations.
@@ -239,7 +242,7 @@ How an arrival is handled:
 | `GET` / `POST` | `/api/companies/{id}/trucks` | own company or staff / CompanyAdmin, TerminalAdmin | Fleet; plates normalized (`أ ب ح ١٢٣٤` = `1234 ABJ` = `1234ABJ`) and unique |
 | `PUT` | `/api/companies/{id}/trucks/{truckId}` | CompanyAdmin, TerminalAdmin | Edit plate |
 | `POST` | `/api/companies/{id}/trucks/{truckId}/block` | TerminalAdmin | Block / unblock (reason required) |
-| `GET` / `POST` / `PUT` | `/api/companies/{id}/drivers[/{driverId}]` | as trucks | Drivers; mobiles normalized to `+966…` |
+| `GET` / `POST` / `PUT` | `/api/companies/{id}/drivers[/{driverId}]` | as trucks | Drivers; mobiles normalized to E.164 with the installation's country (`+966…` in Saudi Arabia) |
 | `POST` | `/api/companies/{id}/drivers/{driverId}/block` | TerminalAdmin | Block / unblock |
 | `GET` / `POST` / `PUT` | `/api/terminals/{id}/categories[/{categoryId}]` | everyone at the terminal / TerminalAdmin | Transaction categories; new ones are bookable at once |
 | `GET` / `POST` / `PUT` | `/api/terminals/{id}/cargo[/{cargoId}]` | companies see own / Planner, TerminalAdmin | Multipurpose cargo releases (BL / DO) with trip and tonnage limits |

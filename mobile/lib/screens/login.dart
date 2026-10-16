@@ -23,10 +23,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final _mobile = TextEditingController();
   final _code = TextEditingController();
   bool _codeSent = false;
+  String _mobileExample = '';
   bool _busy = false;
   String? _error;
 
   String t(String key, [Map<String, String> values = const {}]) => tr(widget.lang, key, values);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.api.mobileExample().then((example) {
+      if (mounted && example != null) setState(() => _mobileExample = example);
+    });
+  }
 
   @override
   void dispose() {
@@ -90,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 textDirection: TextDirection.ltr,
                 autofillHints: const [AutofillHints.telephoneNumber],
                 style: const TextStyle(fontSize: 22, letterSpacing: 1),
-                decoration: InputDecoration(labelText: t('mobile'), hintText: '05XXXXXXXX'),
+                decoration: InputDecoration(labelText: t('mobile'), hintText: _mobileExample),
               ),
               const SizedBox(height: 20),
               FilledButton(onPressed: _busy ? null : _sendCode, child: Text(t('sendCode'))),

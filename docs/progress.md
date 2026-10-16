@@ -376,6 +376,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Portal: **Operators** tab under Fleet & users; operator admins pick among the operator's terminals; `/api/ops/status` shows an admin only their own terminals' set-up |
 | ✅ | Competing operators stay on separate installations (or separate cloud instances); operators group one company's terminals |
 
+### 36. Country packs (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Country packs for Saudi Arabia, the UAE, Oman, Bahrain, Kuwait and Qatar: local mobile number forms, Arabic plate letters, the drivers' ID document, currency, time zone, public holidays |
+| ✅ | `Country` per installation (mobiles and plates: companies and drivers are shared) and `Terminals:<code>:Country` per terminal (holidays, currency); unknown codes stop the server from starting |
+| ✅ | Public holidays: fixed days and lunar ones from the Umm al-Qura calendar (expected dates); `GET /api/terminals/{id}/holidays?year=`; the slot board names the holiday and offers **Close the whole day** (nothing closes by itself) |
+| ✅ | `GET /api/country` (public): the portal's driver form shows the country's ID document and mobile example; the drivers' app shows the example before sign-in |
+
 ---
 
 ## Remaining
@@ -449,7 +457,7 @@ Details in [`releasing.md`](releasing.md).
 |---|---|---|
 | 🟡 | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Done: TOS, message providers, sender names, brand (section 34). Still per installation: driver message channel (SMS / WhatsApp), gate identification, driver identity, fees |
 | ✅ | Tenants: terminal operator → terminals; operator admins | Section 35. Competitors: separate installations / cloud instances |
-| ⬜ | Country packs: plate formats (Saudi Arabic plates today), mobile number rules (+966 today), national holidays, currencies, ID types | Plate and mobile rules become per-country |
+| ✅ | Country packs: plate formats, mobile number rules, national holidays, currencies, ID types | Section 36: SA, AE, OM, BH, KW, QA. More countries are new entries in `CountryPacks` with their tests |
 | ⬜ | Languages as packs: portal and messages in more languages without code changes | Arabic, English, Urdu, Hindi today |
 | ⬜ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | |
 | ⬜ | TOS adapter kit: documented interface + test suite any new TOS adapter must pass | `ITosAdapter` today |

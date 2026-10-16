@@ -33,6 +33,10 @@ plan, open an hour and **Close the hour**, **Set capacity to** or **Add or remov
 with a reason. Trucks already booked in a closed hour keep their booking and are told the hour is closed.
 **Changes on this day** lists them; **Remove change** returns to the plan.
 
+On a public holiday of the terminal's country the board says so. Slots stay open unless you choose **Close the whole
+day**; the dates of Eid and other lunar holidays are expected dates and follow the moon sighting, so check the official
+announcement.
+
 ## KPIs
 
 **KPIs** for the last 7 or 30 days, or the next 7:

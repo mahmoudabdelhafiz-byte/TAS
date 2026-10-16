@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { isAdminRole, isCompanyRole } from '../lib/routes.ts';
 import { stamp } from '../lib/time.ts';
-import type { Company, Driver, Terminal, Truck, UserRole } from '../lib/types.ts';
+import type { Company, Country, Driver, Terminal, Truck, UserRole } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, useLoad } from '../ui/kit.tsx';
 
@@ -201,9 +201,11 @@ function PersonalData({ url, erased, onError, onErased }: { url: string; erased:
 }
 
 function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit: boolean; canBlock: boolean }) {
-  const { api, t } = useApp();
+  const { api, t, lang } = useApp();
   const base = `/api/companies/${companyId}/drivers`;
   const list = useLoad(() => api.get<(Driver & { idNumber: string })[]>(base), [base]);
+  // The country's ID document and how its mobiles are typed (Saudi Arabia: ID / Iqama, 05…).
+  const country = useLoad(() => api.get<Country>('/api/country'), []).data;
   const [form, setForm] = useState({ fullName: '', idNumber: '', mobile: '', preferredLanguage: 'ar' });
   const m = useMessages();
   return (
@@ -244,10 +246,10 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
           <h2>{t('fleet.addDriver')}</h2>
           <label className="field"><span>{t('fleet.name')}</span>
             <input value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} /></label>
-          <label className="field"><span>{t('fleet.idNumber')}</span>
+          <label className="field"><span>{country ? (lang === 'ar' ? country.idNameAr : country.idNameEn) : t('fleet.idNumber')}</span>
             <input value={form.idNumber} dir="ltr" onChange={e => setForm({ ...form, idNumber: e.target.value })} /></label>
           <label className="field"><span>{t('fleet.mobile')}</span>
-            <input value={form.mobile} dir="ltr" inputMode="tel" placeholder="05XXXXXXXX" onChange={e => setForm({ ...form, mobile: e.target.value })} /></label>
+            <input value={form.mobile} dir="ltr" inputMode="tel" placeholder={country?.mobileExample ?? ''} onChange={e => setForm({ ...form, mobile: e.target.value })} /></label>
           <label className="field"><span>{t('fleet.messagesIn')}</span>
             <select value={form.preferredLanguage} onChange={e => setForm({ ...form, preferredLanguage: e.target.value })}>
               {languages.map(([code, name]) => <option key={code} value={code}>{name}</option>)}

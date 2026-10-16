@@ -18,7 +18,7 @@ public sealed record OpsStatus(
 /// <summary>How one terminal is set up (no secrets): its TOS, message providers and sender names, and its webhook.</summary>
 public sealed record TerminalSetup(
     string Code, string Name, string Tos, string Brand, string SmsProvider, string? SmsSender, string EmailProvider, string? EmailFrom,
-    string PushProvider, bool OwnMessageSettings, bool Webhook);
+    string PushProvider, bool OwnMessageSettings, bool Webhook, string Country = "SA");
 
 /// <summary>The AI assistant today (UTC day): questions asked and tokens used, for cost.</summary>
 public sealed record AssistantToday(bool Enabled, bool LiveData, int Questions, long InputTokens, long OutputTokens);
@@ -78,7 +78,8 @@ public sealed class OpsStatusService(
             return new TerminalSetup(t.Code, t.Name, profiles.TosFor(t.Code), profiles.BrandFor(t.Code), m.SmsProvider,
                 string.IsNullOrWhiteSpace(smsSender) ? null : smsSender, m.EmailProvider, string.IsNullOrWhiteSpace(m.Smtp.From) ? null : m.Smtp.From,
                 m.PushProvider, profiles.HasOwnNotifications(t.Code),
-                integration.CurrentValue.Terminals.TryGetValue(t.Code, out var hook) && hook.Url.Length > 0);
+                integration.CurrentValue.Terminals.TryGetValue(t.Code, out var hook) && hook.Url.Length > 0,
+                profiles.CountryFor(t.Code).Code);
         }).ToList();
 
         return new OpsStatus(

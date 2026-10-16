@@ -540,6 +540,10 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .cell-num { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); }
 .cell-num.light { color: #fff; }
 
+.holiday-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  margin: 0 0 18px; padding: 12px 16px; border: 1px solid var(--line); border-inline-start: 4px solid var(--amber);
+  border-radius: var(--radius); background: var(--amber-tint); }
+.holiday-note p { margin: 0; flex: 1 1 320px; }
 .operator-detail { margin-top: 28px; }
 .operator-detail h2 { margin: 24px 0 6px; }
 .operator-detail h2:first-child { margin-top: 0; }

@@ -33,6 +33,31 @@ export interface Terminal {
   slotMinutes: number;
   bookingHorizonDays: number;
   operatorId?: number | null;
+  /** ISO code of the terminal's country pack (holidays, currency). */
+  country?: string;
+  currency?: string;
+}
+
+/** The installation's country pack: how mobiles are typed and the drivers' ID document. */
+export interface Country {
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  dialCode: string;
+  mobileExample: string;
+  idNameEn: string;
+  idNameAr: string;
+  currency: string;
+  currencyDecimals: number;
+  timeZone: string;
+}
+
+/** A public holiday on one day; lunar ones are expected dates (they follow the moon sighting). */
+export interface Holiday {
+  date: string;
+  nameEn: string;
+  nameAr: string;
+  lunar: boolean;
 }
 
 export interface Category {
