@@ -88,7 +88,7 @@ public abstract class ApiTestBase(TasApiFactory factory) : IClassFixture<TasApiF
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
-        await db.Database.ExecuteSqlRawAsync("TRUNCATE terminal, company, app_user, driver_otp RESTART IDENTITY CASCADE");
+        await db.Database.ExecuteSqlRawAsync("TRUNCATE terminal_operator, terminal, company, app_user, driver_otp RESTART IDENTITY CASCADE");
         Demo = await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
 
         Tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Riyadh).DateTime).AddDays(1);

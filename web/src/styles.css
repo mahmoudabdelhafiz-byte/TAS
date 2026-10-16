@@ -540,6 +540,10 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .cell-num { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--ink); }
 .cell-num.light { color: #fff; }
 
+.operator-detail { margin-top: 28px; }
+.operator-detail h2 { margin: 24px 0 6px; }
+.operator-detail h2:first-child { margin-top: 0; }
+.operator-detail .table-wrap { margin-top: 10px; }
 .setup-two { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 28px; align-items: start; }
 
 /* ------------------------------------------------------------------ bulk upload */

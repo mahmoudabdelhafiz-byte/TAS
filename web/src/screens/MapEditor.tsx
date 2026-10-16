@@ -39,7 +39,7 @@ function meta(name: string): string {
 export function MapEditor() {
   const { api, t, tx, user, terminal } = useApp();
   const base = `/api/terminals/${terminal.terminalId}`;
-  const canEdit = user.role === 'SysAdmin' || (user.role === 'TerminalAdmin' && user.terminalId === terminal.terminalId);
+  const canEdit = user.role === 'SysAdmin' || user.role === 'OperatorAdmin' || (user.role === 'TerminalAdmin' && user.terminalId === terminal.terminalId);
 
   const [areas, setAreas] = useState<DraftArea[] | null>(null);
   const [removed, setRemoved] = useState<number[]>([]);

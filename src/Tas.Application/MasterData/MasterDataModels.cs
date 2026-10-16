@@ -78,9 +78,9 @@ public sealed record CargoView(
 
 public sealed record UserView(
     int UserId, string Email, string FullName, UserRole Role, int? CompanyId, int? TerminalId, string? Mobile,
-    string PreferredLanguage, bool IsActive, DateTimeOffset? LastLoginAt, DateTimeOffset? LockedUntil)
+    string PreferredLanguage, bool IsActive, DateTimeOffset? LastLoginAt, DateTimeOffset? LockedUntil, int? OperatorId = null)
 {
     public static UserView From(AppUser u) =>
         new(u.UserId, u.Email, u.FullName, u.Role, u.CompanyId, u.TerminalId, u.Mobile, u.PreferredLanguage.Trim(),
-            u.IsActive, u.LastLoginAt, u.LockedUntil);
+            u.IsActive, u.LastLoginAt, u.LockedUntil, u.OperatorId);
 }

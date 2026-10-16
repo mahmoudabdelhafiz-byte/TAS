@@ -153,8 +153,8 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapGet("/api/ops/status", async (HttpContext http, OpsStatusService service, CancellationToken ct) =>
 {
     var user = TasApi.User(http)!;
-    return user.IsSysAdmin || user.Role == Tas.Domain.Parties.UserRole.TerminalAdmin
-        ? Results.Ok(await service.StatusAsync(app.Environment.EnvironmentName, ct))
+    return user.IsSysAdmin || user.IsTerminalAdministrator
+        ? Results.Ok(await service.StatusAsync(app.Environment.EnvironmentName, ct, user.IsSysAdmin ? null : user.WorksAt))
         : TasApi.Forbidden("Only administrators can see the system status.");
 }).RequireAuthorization();
 

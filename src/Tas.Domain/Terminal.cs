@@ -6,6 +6,19 @@ public enum TerminalType
     Multipurpose,
 }
 
+/// <summary>
+/// A terminal operator: a group of terminals on one installation with its own administrators (OperatorAdmin), who
+/// manage all of its terminals. Competing operators are kept apart by separate installations, not by this grouping.
+/// </summary>
+public sealed class TerminalOperator
+{
+    public int OperatorId { get; set; }
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public bool IsActive { get; set; } = true;
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
 /// <summary>A terminal served by this deployment (the tenant).</summary>
 public sealed class Terminal
 {
@@ -24,5 +37,9 @@ public sealed class Terminal
     public int BookingHorizonDays { get; set; } = 14;
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>The operator the terminal belongs to; null when it isn't in a group.</summary>
+    public int? OperatorId { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 }

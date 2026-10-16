@@ -1,6 +1,6 @@
 // Shapes returned by the Yardsyncs API (enums arrive as their C# names, e.g. "EnRoute").
 
-export type UserRole = 'CompanyAdmin' | 'CompanyUser' | 'GateClerk' | 'Planner' | 'TerminalAdmin' | 'SysAdmin';
+export type UserRole = 'CompanyAdmin' | 'CompanyUser' | 'GateClerk' | 'Planner' | 'TerminalAdmin' | 'OperatorAdmin' | 'SysAdmin';
 
 export interface UserProfile {
   userId: number;
@@ -11,6 +11,9 @@ export interface UserProfile {
   companyName: string | null;
   terminalId: number | null;
   preferredLanguage: string;
+  /** For an operator admin: the operator whose terminals they run. */
+  operatorId?: number | null;
+  operatorName?: string | null;
 }
 
 export interface TokenResponse {
@@ -29,6 +32,7 @@ export interface Terminal {
   timeZone: string;
   slotMinutes: number;
   bookingHorizonDays: number;
+  operatorId?: number | null;
 }
 
 export interface Category {

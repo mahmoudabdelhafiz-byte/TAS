@@ -39,10 +39,13 @@ function workScreens(role: UserRole): Screen[] {
       return ['gate', 'control', 'appointments'];
     case 'Planner':
     case 'TerminalAdmin':
+    case 'OperatorAdmin':
     case 'SysAdmin':
       return ['slots', 'control', 'kpi', 'setup', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'fleet'];
   }
 }
 
 export const isCompanyRole = (role: UserRole) => role === 'CompanyAdmin' || role === 'CompanyUser';
-export const canChangeCapacity = (role: UserRole) => role === 'Planner' || role === 'TerminalAdmin' || role === 'SysAdmin';
+export const canChangeCapacity = (role: UserRole) => role === 'Planner' || isAdminRole(role);
+/** Terminal admins, operator admins (a terminal admin at each of the operator's terminals) and system admins. */
+export const isAdminRole = (role: UserRole) => role === 'TerminalAdmin' || role === 'OperatorAdmin' || role === 'SysAdmin';

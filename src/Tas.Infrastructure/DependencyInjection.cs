@@ -43,6 +43,7 @@ public static class DependencyInjection
         // Master data
         services.AddScoped<FleetService>();
         services.AddScoped<TerminalDataService>();
+        services.AddScoped<OperatorService>();
         services.AddHostedService<SlotGenerationWorker>();
 
         // Booking

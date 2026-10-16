@@ -36,15 +36,19 @@ public enum UserRole
     GateClerk,
     Planner,
     TerminalAdmin,
+
+    /// <summary>Administers every terminal of one operator (like a TerminalAdmin at each of them).</summary>
+    OperatorAdmin,
     SysAdmin,
 }
 
-/// <summary>A portal user: company staff (CompanyId set) or terminal staff (TerminalId set).</summary>
+/// <summary>A portal user: company staff (CompanyId set), terminal staff (TerminalId set) or an operator admin (OperatorId set).</summary>
 public sealed class AppUser
 {
     public int UserId { get; set; }
     public int? CompanyId { get; set; }
     public int? TerminalId { get; set; }
+    public int? OperatorId { get; set; }
     public string Email { get; set; } = "";
     public string? Mobile { get; set; }
     public string FullName { get; set; } = "";
@@ -60,7 +64,7 @@ public sealed class AppUser
     public DateTimeOffset? LastLoginAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 
-    public bool IsTerminalStaff => Role is UserRole.GateClerk or UserRole.Planner or UserRole.TerminalAdmin or UserRole.SysAdmin;
+    public bool IsTerminalStaff => Role is UserRole.GateClerk or UserRole.Planner or UserRole.TerminalAdmin or UserRole.OperatorAdmin or UserRole.SysAdmin;
 }
 
 /// <summary>A rotating refresh token. Only the SHA-256 hash of the token is stored.</summary>

@@ -111,6 +111,84 @@ public class AccessRulesTests
         Assert.False(AccessRules.CanCreateUser(SysAdmin, role, companyId, terminalId));
 }
 
+/// <summary>An operator admin runs every terminal of their operator, and nothing outside it.</summary>
+public class OperatorAccessTests
+{
+    // Operator 3 has terminals 5 and 7; terminal 9 belongs to another operator.
+    private static readonly CurrentUser OperatorAdmin = new(7, UserRole.OperatorAdmin, null, null, OperatorId: 3, OperatorTerminals: [5, 7]);
+    private static readonly CurrentUser TerminalAdmin = new(5, UserRole.TerminalAdmin, null, TerminalId: 5, OperatorId: null);
+    private static readonly CurrentUser SysAdmin = new(6, UserRole.SysAdmin, null, null);
+
+    [Fact]
+    public void An_operator_admin_works_at_every_terminal_of_the_operator_only()
+    {
+        foreach (var terminal in new[] { 5, 7 })
+        {
+            Assert.True(AccessRules.CanAccessTerminal(OperatorAdmin, terminal));
+            Assert.True(AccessRules.CanViewCapacity(OperatorAdmin, terminal));
+            Assert.True(AccessRules.CanManageCapacity(OperatorAdmin, terminal));
+            Assert.True(AccessRules.CanOperateGate(OperatorAdmin, terminal));
+            Assert.True(AccessRules.CanManageCategories(OperatorAdmin, terminal));
+        }
+        Assert.False(AccessRules.CanAccessTerminal(OperatorAdmin, 9));
+        Assert.False(AccessRules.CanManageCapacity(OperatorAdmin, 9));
+        Assert.False(AccessRules.CanOperateGate(OperatorAdmin, 9));
+        Assert.False(AccessRules.CanManageCategories(OperatorAdmin, 9));
+
+        Assert.True(AccessRules.CanManageCompanies(OperatorAdmin));
+        Assert.True(AccessRules.CanBlockFleet(OperatorAdmin));
+        Assert.False(AccessRules.CanManageOperators(OperatorAdmin));
+        Assert.True(AccessRules.CanManageOperators(SysAdmin));
+    }
+
+    [Fact]
+    public void Without_its_terminal_list_an_operator_admin_reaches_nothing()
+    {
+        var empty = OperatorAdmin with { OperatorTerminals = null };
+        Assert.False(AccessRules.CanAccessTerminal(empty, 5));
+        // A terminal admin's operator claim never widens their reach.
+        Assert.False(AccessRules.CanManageCapacity(TerminalAdmin with { OperatorTerminals = [7] }, 7));
+    }
+
+    [Theory]
+    // Operator admin: fellow admins of the operator, staff of its terminals, any company's users.
+    [InlineData(UserRole.OperatorAdmin, null, null, 3, true)]
+    [InlineData(UserRole.OperatorAdmin, null, null, 4, false)]
+    [InlineData(UserRole.TerminalAdmin, null, 7, null, true)]
+    [InlineData(UserRole.GateClerk, null, 5, null, true)]
+    [InlineData(UserRole.Planner, null, 9, null, false)]
+    [InlineData(UserRole.CompanyUser, 10, null, null, true)]
+    [InlineData(UserRole.SysAdmin, null, null, null, false)]
+    // Badly shaped: an operator admin tied to a terminal, staff tied to an operator.
+    [InlineData(UserRole.OperatorAdmin, null, 5, 3, false)]
+    [InlineData(UserRole.GateClerk, null, 5, 3, false)]
+    public void Operator_admins_create(UserRole role, int? companyId, int? terminalId, int? operatorId, bool allowed) =>
+        Assert.Equal(allowed, AccessRules.CanCreateUser(OperatorAdmin, role, companyId, terminalId, operatorId));
+
+    [Fact]
+    public void Terminal_admins_never_create_operator_admins()
+    {
+        Assert.False(AccessRules.CanCreateUser(TerminalAdmin, UserRole.OperatorAdmin, null, null, 3));
+        Assert.True(AccessRules.CanCreateUser(SysAdmin, UserRole.OperatorAdmin, null, null, 3));
+        Assert.False(AccessRules.CanCreateUser(SysAdmin, UserRole.OperatorAdmin, null, null, null));
+    }
+
+    [Fact]
+    public void The_operator_terminal_list_is_read_from_the_claims()
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(TasClaims.UserId, "7"), new Claim(TasClaims.Role, "OperatorAdmin"),
+            new Claim(TasClaims.OperatorId, "3"), new Claim(TasClaims.OperatorTerminals, "5,7"),
+        ], "test"));
+        var user = CurrentUser.FromClaims(principal)!;
+        Assert.Equal(3, user.OperatorId);
+        Assert.Equal(new[] { 5, 7 }, user.OperatorTerminals!);
+        Assert.True(user.WorksAt(7));
+        Assert.False(user.WorksAt(9));
+    }
+}
+
 public class PasswordPolicyTests
 {
     [Theory]

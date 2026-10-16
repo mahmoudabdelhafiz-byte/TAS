@@ -2,8 +2,8 @@
 
 ## Accounts and access
 
-- Every call needs a signed-in account; each role sees only its own terminal or its own company. Drivers' app tokens
-  open only the driver's own appointments.
+- Every call needs a signed-in account; each role sees only its own terminal (an operator admin: the terminals of its
+  operator) or its own company. Drivers' app tokens open only the driver's own appointments.
 - Passwords are stored hashed (PBKDF2); links to set a password work once and expire; five wrong passwords lock the
   account for a few minutes; sign-in is limited per client address. Deactivating a user ends their access at once.
 - Drivers sign in with a code by SMS: 6 digits, five tries, a few codes an hour and per day; one phone at a time.
