@@ -24,6 +24,7 @@ import integrationTech from './tech/integration.md?raw';
 import operationsTech from './tech/operations.md?raw';
 import overviewTech from './tech/overview.md?raw';
 import securityTech from './tech/security.md?raw';
+import tosAdapterTech from './tech/tos-adapter.md?raw';
 import type { Lang } from '../lib/time.ts';
 
 export const guideText: Record<Lang, Record<string, string>> = {
@@ -33,7 +34,7 @@ export const guideText: Record<Lang, Record<string, string>> = {
 
 /** Pages for IT teams and integrators (English). */
 export const techText: Record<string, string> = {
-  overview: overviewTech, api: apiTech, integration: integrationTech, operations: operationsTech, security: securityTech, assistant: assistantTech,
+  overview: overviewTech, api: apiTech, integration: integrationTech, 'tos-adapter': tosAdapterTech, operations: operationsTech, security: securityTech, assistant: assistantTech,
 };
 
 /** The guides in a language: English for languages without guides of their own. */

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Tas.Application.Tos;
 using Tas.Infrastructure.Persistence;
 using Tas.Infrastructure.Tos.N4;
@@ -7,9 +8,10 @@ namespace Tas.Infrastructure.Tos;
 
 /// <summary>
 /// The TOS adapter for each terminal (Terminals:&lt;code&gt;:Tos, default Tos:Adapter), so one installation can serve
-/// a terminal on Navis N4 next to one in a demo or on another system.
+/// a terminal on Navis N4 next to one in a demo or on another system. Every answer is held to <see cref="TosContract"/>:
+/// one that breaks it counts as "the TOS could not be reached" (a warning and a re-check, never a pass).
 /// </summary>
-public sealed class TosRouter(IServiceProvider services, TerminalProfiles profiles, TasDbContext db) : ITosAdapter
+public sealed class TosRouter(IServiceProvider services, TerminalProfiles profiles, TasDbContext db, ILogger<TosRouter> logger) : ITosAdapter
 {
     public string Source => Adapter(profiles.DefaultTos).Source;
 
@@ -32,7 +34,7 @@ public sealed class TosRouter(IServiceProvider services, TerminalProfiles profil
     }
 
     private async Task<ITosAdapter> ForAsync(int terminalId, CancellationToken ct) =>
-        Adapter(profiles.TosFor(await TerminalProfiles.CodeAsync(db, terminalId, ct)));
+        new TosContractGuard(Adapter(profiles.TosFor(await TerminalProfiles.CodeAsync(db, terminalId, ct))), logger);
 
     private ITosAdapter Adapter(string name) => name switch
     {

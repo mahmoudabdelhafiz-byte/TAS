@@ -25,4 +25,4 @@ export function guidesFor(screens: Screen[]): Guide[] {
 }
 
 /** The technical pages of the public documentation, in order (English only). */
-export const techPages = ['overview', 'api', 'integration', 'operations', 'security', 'assistant'] as const;
+export const techPages = ['overview', 'api', 'integration', 'tos-adapter', 'operations', 'security', 'assistant'] as const;
