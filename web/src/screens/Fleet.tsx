@@ -219,6 +219,7 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
   const list = useLoad(() => api.get<UserRow[]>(`/api/users?${query}`), [query]);
   const roles: UserRole[] = staff ? ['GateClerk', 'Planner', 'TerminalAdmin'] : ['CompanyUser', 'CompanyAdmin'];
   const [form, setForm] = useState({ email: '', fullName: '', role: roles[0], password: '', mobile: '' });
+  const [ownPassword, setOwnPassword] = useState(false);
   const m = useMessages();
 
   return (
@@ -238,6 +239,12 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
                     <td>{tx('role', x.role)}</td>
                     <td className="num">{x.lastLoginAt ? stamp(x.lastLoginAt, terminal.timeZone, lang) : '—'}</td>
                     <td className="cell-action">
+                      {canEdit && x.userId !== user.userId && x.isActive && (
+                        <ActionButton kind="secondary" onError={m.setError} onRun={async () => {
+                          await api.post(`/api/users/${x.userId}/password-link`);
+                          m.setDone(t('fleet.linkSent', { email: x.email }));
+                        }}>{t('fleet.sendLink')}</ActionButton>
+                      )}{' '}
                       {canEdit && x.userId !== user.userId && (
                         <ActionButton kind={x.isActive ? 'secondary' : 'primary'} onError={m.setError} onRun={async () => {
                           await api.post(`/api/users/${x.userId}/active`, { active: !x.isActive, reason: x.isActive ? 'Deactivated in the portal' : null });
@@ -262,18 +269,23 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
             <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as UserRole })}>
               {roles.map(r => <option key={r} value={r}>{tx('role', r)}</option>)}
             </select></label>
-          <label className="field"><span>{t('fleet.firstPassword')}</span>
-            <input type="text" dir="ltr" autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label>
-          <p className="hint">{t('fleet.passwordHint')}</p>
-          <ActionButton kind="primary" disabled={!form.email.trim() || !form.fullName.trim() || form.password.length < 10} onError={m.setError}
+          {ownPassword ? (
+            <>
+              <label className="field"><span>{t('fleet.firstPassword')}</span>
+                <input type="text" dir="ltr" autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label>
+              <p className="hint">{t('fleet.passwordHint')}</p>
+            </>
+          ) : <p className="hint">{t('fleet.inviteHint')}</p>}
+          <label className="radio"><input type="checkbox" checked={ownPassword} onChange={e => setOwnPassword(e.target.checked)} /> {t('fleet.ownPassword')}</label>
+          <ActionButton kind="primary" disabled={!form.email.trim() || !form.fullName.trim() || (ownPassword && form.password.length < 10)} onError={m.setError}
             onRun={async () => {
               await api.post('/api/users', {
-                email: form.email.trim(), fullName: form.fullName.trim(), role: form.role, password: form.password,
+                email: form.email.trim(), fullName: form.fullName.trim(), role: form.role, password: ownPassword ? form.password : null,
                 mobile: form.mobile.trim() || null, preferredLanguage: lang,
                 companyId: staff ? null : companyId, terminalId: staff ? terminal.terminalId : null,
               });
               setForm({ email: '', fullName: '', role: roles[0], password: '', mobile: '' });
-              m.setDone(t('fleet.userAdded'));
+              m.setDone(ownPassword ? t('fleet.userAdded') : t('fleet.userInvited', { email: form.email.trim() }));
               list.reload();
             }}>{t('fleet.addUser')}</ActionButton>
         </form>

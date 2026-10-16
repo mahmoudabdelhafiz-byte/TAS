@@ -275,6 +275,15 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Control room: a bar listing trucks that need attention (inside longer than the target, app gone quiet), each opening the truck |
 | ✅ | Tests: yard KPI calculation, report through the API |
 
+### 26. Password reset and invitations (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | "Forgot your password?" on the sign-in page: a link by email, works once for 60 minutes; the same answer for unknown emails; 3 per account per hour |
+| ✅ | New users are invited by email and choose their own password (link valid 7 days); administrators can still set a first password, and can send a fresh link to any user they manage |
+| ✅ | Setting a password from a link ends every session of the account and lifts a lock-out; only a hash of the link is stored (migration 010) |
+| ✅ | Emails in Arabic or English; link address from `PasswordLinks:PortalUrl` |
+| ✅ | Tests: reset flow, link reuse, limits, invitation and resend |
+
 ---
 
 ## Remaining
@@ -282,7 +291,6 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase A — Backend MVP (make it usable by real customers)
 | | Item | Notes |
 |---|---|---|
-| ⬜ | Password reset | Forgotten-password flow (email or SMS), invited users set their own password |
 | ⬜ | EF Core migrations | Replace `db/schema.sql` as the source of truth |
 
 ### Phase B — Gate
@@ -304,7 +312,7 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| ⬜ | Edit truck plates / driver details and change user roles in the portal (API exists); password reset by the user (Phase A) |
+| ⬜ | Edit truck plates / driver details and change user roles in the portal (API exists) |
 | ⬜ | Walk-in booking from the trouble desk; appointment search by container / plate across days |
 | ⬜ | Arabic texts for server messages (check results and errors are English today) |
 | ⬜ | Native review of the portal's Arabic wording |

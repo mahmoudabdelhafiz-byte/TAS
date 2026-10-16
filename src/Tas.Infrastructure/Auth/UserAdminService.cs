@@ -17,7 +17,7 @@ public sealed record CreateUserRequest(
     UserRole Role,
     int? CompanyId,
     int? TerminalId,
-    string Password,
+    string? Password = null,
     string? Mobile = null,
     string PreferredLanguage = "en");
 
@@ -29,14 +29,19 @@ public enum UserAdminStatus
     Conflict,
 }
 
-public sealed record UserAdminResult(UserAdminStatus Status, UserProfile? User = null, string? Error = null);
+/// <param name="TestToken">The invitation link's token, only when PasswordLinks:ExposeTokenForTesting is on.</param>
+public sealed record UserAdminResult(UserAdminStatus Status, UserProfile? User = null, string? Error = null, string? TestToken = null);
 
 /// <summary>Creates users within the rules of <see cref="AccessRules.CanCreateUser"/>.</summary>
-public sealed class UserAdminService(TasDbContext db, PasswordService passwords, AuthService auth, TimeProvider clock)
+public sealed class UserAdminService(TasDbContext db, PasswordService passwords, AuthService auth, TimeProvider clock, PasswordLinkService? links = null)
 {
     private static readonly HashSet<string> Languages = ["ar", "en", "ur", "hi"];
 
-    public async Task<UserAdminResult> CreateAsync(CurrentUser actor, CreateUserRequest request, CancellationToken ct = default)
+    /// <summary>
+    /// Creates a user. Without a password the user gets an invitation by email to set one
+    /// (<paramref name="linkBaseUrl"/>: the portal address for the link when PasswordLinks:PortalUrl isn't set).
+    /// </summary>
+    public async Task<UserAdminResult> CreateAsync(CurrentUser actor, CreateUserRequest request, CancellationToken ct = default, string linkBaseUrl = "")
     {
         if (!AccessRules.CanCreateUser(actor, request.Role, request.CompanyId, request.TerminalId))
             return new UserAdminResult(UserAdminStatus.Forbidden, Error: "You cannot create this kind of user here.");
@@ -51,7 +56,10 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
         if (!Languages.Contains(language))
             return new UserAdminResult(UserAdminStatus.Invalid, Error: "Language must be one of: ar, en, ur, hi.");
 
-        var problem = PasswordPolicy.Check(request.Password, email);
+        var invite = string.IsNullOrEmpty(request.Password);
+        if (invite && links is null)
+            return new UserAdminResult(UserAdminStatus.Invalid, Error: "A password is required.");
+        var problem = invite ? null : PasswordPolicy.Check(request.Password!, email);
         if (problem is not null)
             return new UserAdminResult(UserAdminStatus.Invalid, Error: problem);
 
@@ -73,7 +81,7 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             Mobile = string.IsNullOrWhiteSpace(request.Mobile) ? null : request.Mobile.Trim(),
             PreferredLanguage = language,
         };
-        user.PasswordHash = passwords.Hash(user, request.Password);
+        user.PasswordHash = invite ? null : passwords.Hash(user, request.Password!);
         db.AppUsers.Add(user);
 
         try
@@ -85,9 +93,10 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             return new UserAdminResult(UserAdminStatus.Conflict, Error: "A user with this email already exists.");
         }
 
-        Audit(user, AuditAction.Insert, null, UserView.From(user), null, actor);
+        Audit(user, AuditAction.Insert, null, UserView.From(user), invite ? "Invited by email" : null, actor);
         await db.SaveChangesAsync(ct);
-        return new UserAdminResult(UserAdminStatus.Created, await auth.ProfileAsync(user, ct));
+        var testToken = invite ? await links!.InviteAsync(user, actor.UserId, linkBaseUrl, ct) : null;
+        return new UserAdminResult(UserAdminStatus.Created, await auth.ProfileAsync(user, ct), TestToken: testToken);
     }
 
     /// <summary>
@@ -176,6 +185,22 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
                 await RevokeSessionsAsync(user.UserId, ct);
         }
         return AdminResult<UserView>.Ok(UserView.From(user));
+    }
+
+    /// <summary>
+    /// Emails the user a link to set their password: an invitation when they have none yet, else a reset link.
+    /// Returns the link's token only in tests.
+    /// </summary>
+    public async Task<AdminResult<string?>> SendPasswordLinkAsync(CurrentUser actor, int userId, string linkBaseUrl, CancellationToken ct = default)
+    {
+        var (user, denied) = await LoadManagedAsync(actor, userId, ct);
+        if (denied is not null)
+            return denied.Status == AdminStatus.NotFound ? AdminResult<string?>.NotFound(string.Join(" ", denied.Errors)) : AdminResult<string?>.Invalid(denied.Errors);
+        if (!user!.IsActive)
+            return AdminResult<string?>.Invalid("The user is deactivated; activate them first.");
+        if (links is null)
+            return AdminResult<string?>.Invalid("Email links are not available.");
+        return AdminResult<string?>.Ok(await links.InviteAsync(user, actor.UserId, linkBaseUrl, ct));
     }
 
     /// <summary>Sets a new password for someone else (use change-password for yourself) and ends their sessions.</summary>

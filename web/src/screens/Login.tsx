@@ -18,6 +18,22 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn }: {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(sessionEnded ? t('common.sessionEnded') : null);
+  const [forgot, setForgot] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  async function askForLink(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post('/api/auth/forgot-password', { email: email.trim() });
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('common.offline'));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -43,6 +59,25 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn }: {
           lang={lang === 'en' ? 'ar' : 'en'}>
           {t('lang.switch')}
         </button>
+        {forgot ? (
+          <form className="login-form" onSubmit={askForLink}>
+            <h1>{t('login.forgotTitle')}</h1>
+            <p className="lead">{t('login.forgotLead')}</p>
+            {error && <div className="notice notice-error" role="alert">{error}</div>}
+            {sent ? (
+              <div className="notice notice-ok" role="status">{t('login.forgotSent')}</div>
+            ) : (
+              <>
+                <label className="field">
+                  <span>{t('login.email')}</span>
+                  <input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} dir="ltr" />
+                </label>
+                <button type="submit" className="btn btn-primary btn-wide" disabled={busy}>{t('login.forgotSubmit')}</button>
+              </>
+            )}
+            <button type="button" className="link-btn" onClick={() => { setForgot(false); setSent(false); setError(null); }}>{t('login.backToSignIn')}</button>
+          </form>
+        ) : (
         <form className="login-form" onSubmit={submit}>
           <h1>{t('login.title')}</h1>
           <p className="lead">{t('login.lead')}</p>
@@ -58,7 +93,9 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn }: {
           <button type="submit" className="btn btn-primary btn-wide" disabled={busy}>
             {busy ? t('login.busy') : t('login.submit')}
           </button>
+          <button type="button" className="link-btn" onClick={() => { setForgot(true); setError(null); }}>{t('login.forgot')}</button>
         </form>
+        )}
       </section>
     </main>
   );

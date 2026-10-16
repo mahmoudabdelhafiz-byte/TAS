@@ -32,6 +32,7 @@ public sealed class TasApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Integration:Enabled", "false"); // events stay QUEUED; delivery is tested in Tas.Infrastructure.Tests
         builder.UseSetting("Notifications:PushProvider", "Fcm"); // push first for drivers with the app (not sent: the worker is off)
         builder.UseSetting("DriverLogin:ExposeCodeForTesting", "true");
+        builder.UseSetting("PasswordLinks:ExposeTokenForTesting", "true");
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
         builder.UseSetting("FakeTos:PaymentWarning:0", "CMAU5100028");
         builder.UseSetting("FakeTos:YardPositions:MSCU1234566", "B2.14.03.2");

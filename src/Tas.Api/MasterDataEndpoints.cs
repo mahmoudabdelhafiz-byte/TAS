@@ -163,6 +163,15 @@ public static class MasterDataEndpoints
         users.MapPost("/{userId:int}/active", async (int userId, ActiveBody body, HttpContext http, UserAdminService service, CancellationToken ct) =>
             TasApi.Admin(await service.SetActiveAsync(TasApi.User(http)!, userId, body.Active, body.Reason, ct)));
 
+        // Email the user a link to set their password (invitation, or reset when they have one).
+        users.MapPost("/{userId:int}/password-link", async (int userId, HttpContext http, UserAdminService service, CancellationToken ct) =>
+        {
+            var result = await service.SendPasswordLinkAsync(TasApi.User(http)!, userId, TasApi.Origin(http), ct);
+            if (result.Value is { } token)
+                http.Response.Headers["X-Yardsyncs-Test-Token"] = token;
+            return result.Status == AdminStatus.Ok ? Results.Accepted() : TasApi.Admin(result);
+        });
+
         users.MapPost("/{userId:int}/reset-password", async (
             int userId, ResetPasswordInput body, HttpContext http, UserAdminService service, CancellationToken ct) =>
             TasApi.Admin(await service.ResetPasswordAsync(TasApi.User(http)!, userId, body.NewPassword, ct)));
