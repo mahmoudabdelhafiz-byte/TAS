@@ -18,14 +18,15 @@ Color lightColor(String light) => switch (light) {
       _ => grey,
     };
 
-ThemeData yardsyncsTheme() => ThemeData(
+/// The app's look; [primary] is the brand's main colour (Yardsyncs teal by default).
+ThemeData yardsyncsTheme({Color primary = teal}) => ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: teal, primary: teal, surface: Colors.white),
+      colorScheme: ColorScheme.fromSeed(seedColor: primary, primary: primary, surface: Colors.white),
       scaffoldBackgroundColor: page,
       appBarTheme: const AppBarTheme(backgroundColor: ink, foregroundColor: Colors.white, elevation: 0),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: teal,
+          backgroundColor: primary,
           minimumSize: const Size.fromHeight(56),
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),

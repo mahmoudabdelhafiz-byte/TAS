@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import 'gate_pass.dart';
+import 'brand.dart';
 import 'models.dart';
 import 'strings.dart';
 import 'trip_tracker.dart';
@@ -91,6 +92,16 @@ class DriverApi {
     final id = List.generate(24, (_) => 'abcdefghijklmnopqrstuvwxyz0123456789'[random.nextInt(36)]).join();
     await _store.write(_installKey, id);
     return id;
+  }
+
+  /// The brand to show (public). Null when the server can't be reached.
+  Future<AppBrand?> branding() async {
+    try {
+      final json = await _send('GET', '/api/branding', auth: false) as Map<String, dynamic>;
+      return AppBrand.fromJson(json, _base);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Language packs on the server with texts for the app: more languages, or corrected texts. Best effort.

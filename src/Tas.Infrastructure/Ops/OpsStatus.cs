@@ -30,7 +30,8 @@ public sealed class OpsStatusService(
     Microsoft.Extensions.Configuration.IConfiguration config, Microsoft.Extensions.Hosting.IHostEnvironment env,
     Microsoft.Extensions.Options.IOptions<Assistant.AssistantOptions> assistant,
     TerminalProfiles profiles,
-    Microsoft.Extensions.Options.IOptionsMonitor<Integration.IntegrationOptions> integration)
+    Microsoft.Extensions.Options.IOptionsMonitor<Integration.IntegrationOptions> integration,
+    Brands.BrandingService? branding = null)
 {
     private sealed class UsageRow
     {
@@ -72,11 +73,14 @@ public sealed class OpsStatusService(
 
         var terminals = (await db.Terminals.AsNoTracking().OrderBy(t => t.Code).Select(t => new { t.TerminalId, t.Code, t.Name }).ToListAsync(ct))
             .Where(t => sees is null || sees(t.TerminalId)).ToList();
+        var brands = new Dictionary<int, string>();
+        foreach (var t in terminals)
+            brands[t.TerminalId] = branding is null ? profiles.BrandFor(t.Code) : await branding.MessageNameAsync(t.TerminalId, ct);
         var setups = terminals.Select(t =>
         {
             var m = profiles.NotificationsFor(t.Code);
             var smsSender = m.SmsProvider.Equals("Twilio", StringComparison.OrdinalIgnoreCase) ? m.Twilio.SmsFrom : m.Unifonic.SenderId;
-            return new TerminalSetup(t.Code, t.Name, profiles.TosFor(t.Code), profiles.BrandFor(t.Code), m.SmsProvider,
+            return new TerminalSetup(t.Code, t.Name, profiles.TosFor(t.Code), brands[t.TerminalId], m.SmsProvider,
                 string.IsNullOrWhiteSpace(smsSender) ? null : smsSender, m.EmailProvider, string.IsNullOrWhiteSpace(m.Smtp.From) ? null : m.Smtp.From,
                 m.PushProvider, profiles.HasOwnNotifications(t.Code),
                 integration.CurrentValue.Terminals.TryGetValue(t.Code, out var hook) && hook.Url.Length > 0,

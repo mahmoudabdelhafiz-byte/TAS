@@ -129,6 +129,10 @@ export class ApiClient {
     return (text ? JSON.parse(text) : undefined) as T;
   }
 
+  del<T>(path: string): Promise<T> {
+    return this.request<T>('DELETE', path);
+  }
+
   /** Multipart upload (a file in a form). */
   postForm<T>(path: string, form: FormData): Promise<T> {
     return this.request<T>('POST', path, form);

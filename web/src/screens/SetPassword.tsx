@@ -3,7 +3,8 @@ import type { ApiClient } from '../lib/api.ts';
 import { ApiError } from '../lib/api.ts';
 import type { TextKey } from '../lib/i18n.ts';
 import type { Lang } from '../lib/time.ts';
-import { Mark } from './Shell.tsx';
+import { BrandMark } from './Shell.tsx';
+import type { Brand } from '../lib/brand.ts';
 import { isPortalLanguage } from '../lib/languages.ts';
 import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
 
@@ -15,8 +16,9 @@ interface LinkInfo {
 }
 
 /** The page behind the emailed link: set the first password (invitation) or a new one (forgot password). */
-export function SetPassword({ api, token, lang, t, setLang, onDone }: {
+export function SetPassword({ api, token, lang, t, setLang, onDone, brand }: {
   api: ApiClient;
+  brand: Brand;
   token: string;
   lang: Lang;
   t: (key: TextKey, values?: Record<string, string | number>) => string;
@@ -68,7 +70,7 @@ export function SetPassword({ api, token, lang, t, setLang, onDone }: {
       <section className="login-form-side">
         <div className="login-lang"><LanguageSwitch lang={lang} setLang={setLang} label={t('lang.switch')} /></div>
         <div className="login-form">
-          <div className="login-brand dark"><Mark /> <span>Yardsyncs</span></div>
+          <div className="login-brand dark"><BrandMark brand={brand} /> <span>{brand.name}</span></div>
           {problem && (
             <>
               <h1>{t('password.titleReset')}</h1>

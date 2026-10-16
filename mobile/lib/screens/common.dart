@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../brand.dart';
 import '../strings.dart';
 import '../theme.dart';
 
-/// Three boxes, one placed — the Yardsyncs mark.
+/// The brand's logo, or three boxes, one placed — the Yardsyncs mark — in the brand's colour.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 28});
 
@@ -11,15 +12,24 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final logo = appBrand.logoUrl;
+    if (logo != null) {
+      return Image.network(logo, height: size, fit: BoxFit.contain, semanticLabel: appBrand.name,
+          errorBuilder: (context, error, stack) => _mark(appBrand.color));
+    }
+    return _mark(appBrand.color);
+  }
+
+  Widget _mark(Color main) {
     final box = size * 10 / 32;
     Widget square(Color color) => Container(width: box, height: box, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(1)));
     return SizedBox(
       width: size,
       height: size,
       child: Stack(children: [
-        Positioned(left: size * 5 / 32, top: size * 17 / 32, child: square(teal)),
+        Positioned(left: size * 5 / 32, top: size * 17 / 32, child: square(main)),
         Positioned(left: size * 17 / 32, top: size * 17 / 32, child: square(line)),
-        Positioned(left: size * 17 / 32, top: size * 5 / 32, child: square(teal)),
+        Positioned(left: size * 17 / 32, top: size * 5 / 32, child: square(main)),
       ]),
     );
   }

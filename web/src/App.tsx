@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiClient, browserStore } from './lib/api.ts';
 import { translate, translateDynamic, type TextKey } from './lib/i18n.ts';
 import { direction, isPortalLanguage, loadLanguages } from './lib/languages.ts';
+import { applyBrand, defaultBrand, type Brand } from './lib/brand.ts';
 import { buildHash, parseHash, screensFor, type Route, type Screen } from './lib/routes.ts';
 import { localDate, type Lang } from './lib/time.ts';
 import type { Terminal, UserProfile } from './lib/types.ts';
@@ -40,6 +41,18 @@ export function App() {
   const [lang, setLangState] = useState<Lang>(() => initialLang(api.user));
   const [ended, setEnded] = useState(false);
   const [, setLanguagesLoaded] = useState(false);
+  // The installation's brand, or an operator's at its own web address; after sign-in, the terminal's.
+  const [publicBrand, setPublicBrand] = useState<Brand>(defaultBrand);
+  const [brand, setBrand] = useState<Brand>(defaultBrand);
+
+  useEffect(() => {
+    fetch('/api/branding')
+      .then(r => (r.ok ? (r.json() as Promise<Brand>) : null))
+      .then(b => { if (b) { setPublicBrand(b); setBrand(b); } })
+      .catch(() => { /* the Yardsyncs look */ });
+  }, []);
+
+  useEffect(() => applyBrand(brand), [brand]);
   const route = useHashRoute();
 
   // Language packs on the server: more portal languages, or corrected texts.
@@ -64,7 +77,11 @@ export function App() {
     try { localStorage.setItem('yardsyncs.lang', next); } catch { /* ignore */ }
   }, []);
 
-  const t = useCallback((key: TextKey, values?: Record<string, string | number>) => translate(lang, key, values), [lang]);
+  // Texts name the brand (the product documentation and the app's store name stay Yardsyncs).
+  const t = useCallback((key: TextKey, values?: Record<string, string | number>) => {
+    const text = translate(lang, key, values);
+    return brand.name === defaultBrand.name || key.startsWith('docs.') ? text : text.replace(/Yardsyncs(?! mobile)/g, brand.name);
+  }, [lang, brand.name]);
 
   // The documentation is public: readable signed in or not.
   if (window.location.hash.startsWith('#/docs')) {
@@ -74,22 +91,24 @@ export function App() {
   // The emailed link to set a password works whether or not someone is signed in on this browser.
   if (window.location.hash.startsWith('#/password')) {
     const token = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('token') ?? '';
-    return <SetPassword api={api} token={token} lang={lang} t={t} setLang={setLang}
+    return <SetPassword api={api} token={token} lang={lang} t={t} setLang={setLang} brand={publicBrand}
       onDone={async () => { if (user) { await api.logout(); setUser(null); } window.location.hash = '#/'; }} />;
   }
 
   if (!user) {
     return (
-      <Login api={api} lang={lang} t={t} setLang={setLang} sessionEnded={ended}
+      <Login api={api} lang={lang} t={t} setLang={setLang} sessionEnded={ended} brand={publicBrand}
         onSignedIn={u => { setEnded(false); setUser(u); }} />
     );
   }
 
-  return <SignedIn user={user} lang={lang} setLang={setLang} t={t} route={route}
-    onSignOut={async () => { await api.logout(); setUser(null); }} />;
+  return <SignedIn user={user} lang={lang} setLang={setLang} t={t} route={route} brand={brand} setBrand={setBrand}
+    onSignOut={async () => { await api.logout(); setUser(null); setBrand(publicBrand); }} />;
 }
 
-function SignedIn({ user, lang, setLang, t, route, onSignOut }: {
+function SignedIn({ user, lang, setLang, t, route, onSignOut, brand, setBrand }: {
+  brand: Brand;
+  setBrand: (brand: Brand) => void;
   user: UserProfile;
   lang: Lang;
   setLang: (l: Lang) => void;
@@ -119,6 +138,15 @@ function SignedIn({ user, lang, setLang, t, route, onSignOut }: {
   }, []);
 
   const terminal = terminals?.find(x => x.terminalId === terminalId) ?? terminals?.[0] ?? null;
+
+  // The terminal's brand: its operator's look for its people and its companies' dispatchers alike.
+  const brandTerminal = terminal?.terminalId;
+  useEffect(() => {
+    if (brandTerminal == null) return;
+    let live = true;
+    api.get<Brand>(`/api/terminals/${brandTerminal}/branding`).then(b => { if (live) setBrand(b); }).catch(() => { /* keep */ });
+    return () => { live = false; };
+  }, [brandTerminal, setBrand]);
   const screens = useMemo(() => screensFor(user.role), [user.role]);
 
   const go = useCallback((screen: Screen, params?: Record<string, string | undefined>) => {
@@ -135,7 +163,8 @@ function SignedIn({ user, lang, setLang, t, route, onSignOut }: {
     route: route.screen && screens.includes(route.screen) ? route : { screen: screens[0], params: {} },
     go,
     today: localDate(new Date(), terminal.timeZone),
-  }, [terminal, user, lang, t, route, go, screens]);
+    brand,
+  }, [terminal, user, lang, t, route, go, screens, brand]);
 
   if (failed) {
     return <main className="boot"><p>{t('common.offline')}</p><button className="btn btn-primary" onClick={() => window.location.reload()}>{t('common.retry')}</button></main>;

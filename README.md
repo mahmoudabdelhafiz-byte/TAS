@@ -63,6 +63,8 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   are signed with (`Terminals__<code>__Brand`) and any message setting (`Terminals__<code>__Notifications__…`:
   providers, accounts, SMS sender name, email sender); the installation's settings fill the rest. `/api/ops/status`
   lists each terminal's set-up.
+- Branding: name, main colour, logo and (for operators) own web address for the installation and each operator
+  (`/api/branding`, `/api/operators/{id}/branding`); shown at sign-in, in the portal, the drivers' app and messages.
 - Language packs: a JSON file per language in `deploy/languages/` (from `template.json`) adds a portal, app or
   message language, or corrects a built-in one, without a new version; `GET /api/languages`. After changing portal or
   app texts run `npm run language-template` in `web/` (a test checks the template is current).

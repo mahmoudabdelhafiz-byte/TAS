@@ -1,7 +1,8 @@
 # HTTPS for Yardsyncs. TLS = an email address: public certificate from Let's Encrypt (TAS_DOMAIN must point at this
 # server and ports 80 / 443 be reachable); TLS = internal: Caddy's own certificate authority, for a terminal network
 # without internet access (install Caddy's root certificate on the terminal's PCs, see deploy/README.md).
-{$TAS_DOMAIN} {
+# TAS_EXTRA_DOMAINS: operators' own web addresses, separated by spaces (optional).
+{$TAS_DOMAIN} {$TAS_EXTRA_DOMAINS} {
 	tls {$TLS}
 	encode gzip
 	reverse_proxy app:8080 {

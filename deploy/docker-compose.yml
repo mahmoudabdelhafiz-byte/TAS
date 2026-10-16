@@ -56,6 +56,7 @@ services:
       - "443:443"
     environment:
       TAS_DOMAIN: ${TAS_DOMAIN}
+      TAS_EXTRA_DOMAINS: ${TAS_EXTRA_DOMAINS:-}
       TLS: ${TLS:?set TLS in .env (your email, or internal)}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro

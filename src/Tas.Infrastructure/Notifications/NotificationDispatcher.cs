@@ -25,7 +25,8 @@ public sealed class NotificationDispatcher(
     IOptionsMonitor<NotificationOptions> options,
     TimeProvider clock,
     ILogger<NotificationDispatcher> logger,
-    TerminalProfiles? profiles = null)
+    TerminalProfiles? profiles = null,
+    Brands.BrandingService? branding = null)
 {
     private static readonly TimeSpan[] Backoff =
         [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(60)];
@@ -117,7 +118,9 @@ public sealed class NotificationDispatcher(
             var values = Values(n.Params);
             try
             {
-                var brand = profiles?.BrandFor(await TerminalCodeAsync(n.TerminalId, ct));
+                var brand = branding is not null
+                    ? await branding.MessageNameAsync(n.TerminalId, ct)
+                    : profiles?.BrandFor(await TerminalCodeAsync(n.TerminalId, ct));
                 var message = NotificationText.Render(n.TemplateCode, n.Language, values, brand) with
                 {
                     Data = new Dictionary<string, string>

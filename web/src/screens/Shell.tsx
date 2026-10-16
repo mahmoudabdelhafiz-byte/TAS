@@ -18,6 +18,7 @@ import { GateScreen } from './Gate.tsx';
 import { SlotBoard } from './SlotBoard.tsx';
 import { Help } from './Help.tsx';
 import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
+import type { Brand } from '../lib/brand.ts';
 
 const navText: Record<Screen, TextKey> = {
   book: 'nav.book',
@@ -41,7 +42,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
   setLang: (l: Lang) => void;
   onSignOut: () => void;
 }) {
-  const { api, t, tx, lang, user, terminal, route } = useApp();
+  const { api, t, tx, lang, user, terminal, route, brand } = useApp();
   const screen = route.screen!;
   const [assistant, setAssistant] = useState<AssistantInfo | null>(null);
   useEffect(() => {
@@ -50,8 +51,8 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
 
   return (
     <div className="shell">
-      <nav className="rail" aria-label="Yardsyncs">
-        <div className="rail-mark"><Mark /></div>
+      <nav className="rail" aria-label={brand.name}>
+        <div className="rail-mark" title={brand.name}><BrandMark brand={brand} /></div>
         <ul>
           {screens.map(s => (
             <li key={s}>
@@ -106,6 +107,11 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
       {assistant?.enabled && <Assistant info={assistant} />}
     </div>
   );
+}
+
+/** The brand's logo, or the Yardsyncs mark when it has none. */
+export function BrandMark({ brand }: { brand: Brand }) {
+  return brand.logoUrl ? <img src={brand.logoUrl} alt="" className="brand-logo" /> : <Mark />;
 }
 
 /** The Yardsyncs mark: three boxes, one placed — a yard stack in sync. */
