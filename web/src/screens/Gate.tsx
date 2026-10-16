@@ -228,6 +228,10 @@ function TroubleCase({ trouble, onResolved, onError }: { trouble: Trouble; onRes
   );
 }
 
+const txText = {
+  Open: 'lanes.tx.Open', Admitted: 'lanes.tx.Admitted', Referred: 'lanes.tx.Referred', Passed: 'lanes.tx.Passed', Abandoned: 'lanes.tx.Abandoned',
+} as const;
+
 export const laneStateText = { Open: 'lanes.state.Open', Closed: 'lanes.state.Closed', OutOfOrder: 'lanes.state.OutOfOrder' } as const;
 
 /** Every lane at a glance; the gate staff close a lane (with a reason everyone then sees) and open it again. */
@@ -263,6 +267,13 @@ function LaneTile({ lane, onChanged, onError }: { lane: Lane; onChanged: () => v
       <p className="lane-state">{t(laneStateText[lane.state])}</p>
       {lane.stateNote && <p className="lane-note" dir="auto">{lane.stateNote}</p>}
       {trouble.length > 0 && <p className="lane-alert">{t('lanes.devicesDown')} {trouble.map(d => <bdi key={d.deviceId} className="lane-dev">{d.deviceCode}</bdi>)}</p>}
+      {lane.transaction && lane.mode === 'Automatic' && (
+        <p className={`lane-tx lane-tx-${lane.transaction.status}`} role="status">
+          <strong>{t(txText[lane.transaction.status])}</strong>
+          {lane.transaction.appointmentNo && <> <bdi>{lane.transaction.appointmentNo}</bdi></>}
+          {lane.transaction.status === 'Referred' && lane.transaction.message && <span className="lane-tx-why" dir="auto">{lane.transaction.message}</span>}
+        </p>
+      )}
       {lane.lastRead && (
         <p className="lane-read" title={lane.lastRead.deviceCode}>
           <span className="muted">{clock(lane.lastRead.receivedAt, terminal.timeZone)}</span>{' '}

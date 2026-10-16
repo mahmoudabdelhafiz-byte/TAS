@@ -17,7 +17,8 @@ namespace Yardsyncs.Infrastructure.Gate;
 /// <summary>
 /// The gate: trucks arriving at entry lanes (matched by QR, appointment number, plate or container read),
 /// re-checked against the TOS and admitted or referred to the trouble desk; gate-in; gate-out with turn time.
-/// Endpoints check AccessRules.CanOperateGate.
+/// Endpoints check AccessRules.CanOperateGate. The lane controller calls arrival, gate-in and gate-out without a user
+/// (the history then shows no user: the lane itself).
 /// </summary>
 public sealed class GateService(
     YardsyncsDbContext db,
@@ -32,7 +33,7 @@ public sealed class GateService(
 {
     // ================================================================ arrival
 
-    public async Task<AdminResult<ArrivalResult>> ArriveAsync(CurrentUser clerk, int terminalId, ArrivalInput input, CancellationToken ct = default)
+    public async Task<AdminResult<ArrivalResult>> ArriveAsync(CurrentUser? clerk, int terminalId, ArrivalInput input, CancellationToken ct = default)
     {
         var lane = await LaneAsync(terminalId, input.LaneCode, LaneDirection.In, ct);
         if (lane is null)
@@ -155,7 +156,7 @@ public sealed class GateService(
                     .SetProperty(a => a.ArrivedAt, now)
                     .SetProperty(a => a.CheckInMethod, method), ct);
             if (arrived > 0)
-                AddHistory(appointmentId, match.Appointment.Status, AppointmentStatus.Arrived, clerk.UserId,
+                AddHistory(appointmentId, match.Appointment.Status, AppointmentStatus.Arrived, clerk?.UserId,
                     $"Arrived at lane {lane.LaneCode} (matched by {match.Method})", now);
             AddEvent(terminalId, lane.LaneId, appointmentId, GateEventType.Matched, input.PlateRead, containerReads,
                 string.Join(" ", match.Warnings), now);
@@ -200,7 +201,7 @@ public sealed class GateService(
     // ================================================================ gate in / out
 
     /// <summary>The barrier opened for an arrived truck.</summary>
-    public async Task<AdminResult<AppointmentDto>> GateInAsync(CurrentUser clerk, int terminalId, GateInInput input, CancellationToken ct = default)
+    public async Task<AdminResult<AppointmentDto>> GateInAsync(CurrentUser? clerk, int terminalId, GateInInput input, CancellationToken ct = default)
     {
         var number = input.AppointmentNo.Trim().ToUpperInvariant();
         var appointment = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.TerminalId == terminalId && a.AppointmentNo == number, ct);
@@ -222,7 +223,7 @@ public sealed class GateService(
         if (moved == 0)
             return AdminResult<AppointmentDto>.Conflict("The appointment changed in the meantime; reload and try again.");
 
-        AddHistory(appointment.AppointmentId, AppointmentStatus.Arrived, AppointmentStatus.GateIn, clerk.UserId, "Gate in", now);
+        AddHistory(appointment.AppointmentId, AppointmentStatus.Arrived, AppointmentStatus.GateIn, clerk?.UserId, "Gate in", now);
         AddEvent(terminalId, laneId, appointment.AppointmentId, GateEventType.GateIn, null, [], null, now);
         await db.SaveChangesAsync(ct);
         await AfterGateInAsync(appointment.AppointmentId, ct);
@@ -230,7 +231,7 @@ public sealed class GateService(
     }
 
     /// <summary>The truck leaves: the visit is completed and its turn time recorded.</summary>
-    public async Task<AdminResult<GateOutResult>> GateOutAsync(CurrentUser clerk, int terminalId, GateOutInput input, CancellationToken ct = default)
+    public async Task<AdminResult<GateOutResult>> GateOutAsync(CurrentUser? clerk, int terminalId, GateOutInput input, CancellationToken ct = default)
     {
         var lane = await LaneAsync(terminalId, input.LaneCode, LaneDirection.Out, ct);
         if (lane is null)
@@ -267,7 +268,7 @@ public sealed class GateService(
         if (done == 0)
             return AdminResult<GateOutResult>.Conflict("The appointment changed in the meantime; reload and try again.");
 
-        AddHistory(appointment.AppointmentId, AppointmentStatus.GateIn, AppointmentStatus.Completed, clerk.UserId, $"Gate out at lane {lane.LaneCode}", now);
+        AddHistory(appointment.AppointmentId, AppointmentStatus.GateIn, AppointmentStatus.Completed, clerk?.UserId, $"Gate out at lane {lane.LaneCode}", now);
         AddEvent(terminalId, lane.LaneId, appointment.AppointmentId, GateEventType.GateOut, input.PlateRead, [], null, now);
         await db.SaveChangesAsync(ct);
 
@@ -562,7 +563,7 @@ public sealed class GateService(
             OccurredAt = now,
         });
 
-    private void AddHistory(long appointmentId, AppointmentStatus from, AppointmentStatus to, int userId, string reason, DateTimeOffset now) =>
+    private void AddHistory(long appointmentId, AppointmentStatus from, AppointmentStatus to, int? userId, string reason, DateTimeOffset now) =>
         db.AppointmentStatusHistory.Add(new AppointmentStatusHistory
         {
             AppointmentId = appointmentId,

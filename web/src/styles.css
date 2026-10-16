@@ -1076,3 +1076,8 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .device-key code { display: block; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); font-size: 14px; word-break: break-all; user-select: all; }
 .device-key .actions { margin-top: 10px; }
 .lane-alert .lane-dev { display: inline-block; margin-inline-end: 6px; }
+.lane-tx { margin: 0 0 6px; padding: 6px 8px; border-radius: var(--radius); font-size: 14px; background: var(--page); }
+.lane-tx-Admitted, .lane-tx-Passed { background: var(--green-tint); color: #17672f; }
+.lane-tx-Referred { background: var(--amber-tint); color: #6b4804; }
+.lane-tx-why { display: block; margin-top: 2px; color: var(--text); }
+.lane-tx bdi { white-space: nowrap; }

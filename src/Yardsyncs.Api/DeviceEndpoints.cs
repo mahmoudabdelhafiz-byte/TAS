@@ -39,15 +39,28 @@ public static class DeviceEndpoints
         devices.MapPost("/status", async (DeviceStatusInput body, HttpContext http, DeviceService service, CancellationToken ct) =>
             YardsyncsApi.Admin(await service.StatusAsync(Device(http), body, ct)));
 
-        devices.MapPost("/reads", async (DeviceReadInput body, HttpContext http, DeviceService service, CancellationToken ct) =>
-            YardsyncsApi.Admin(await service.ReadAsync(Device(http), body, ct), r => $"/api/devices/reads/{r.ReadId}"));
+        // A read is filed under its truck's transaction; at an automatic lane the lane controller decides from there.
+        devices.MapPost("/reads", async (DeviceReadInput body, HttpContext http, DeviceService service, LaneControllerService controller, CancellationToken ct) =>
+        {
+            var result = await service.ReadAsync(Device(http), body, ct);
+            if (result.Value is { } read)
+                await controller.OnReadAsync(read.ReadId, ct);
+            return YardsyncsApi.Admin(result, r => $"/api/devices/reads/{r.ReadId}");
+        });
 
         // Commands to carry out now (each handed out until confirmed or expired).
         devices.MapGet("/commands", async (HttpContext http, DeviceService service, CancellationToken ct) =>
             Results.Ok(await service.PendingAsync(Device(http), ct)));
 
-        devices.MapPost("/commands/{commandId:long}/ack", async (long commandId, DeviceAckInput body, HttpContext http, DeviceService service, CancellationToken ct) =>
-            YardsyncsApi.Admin(await service.AckAsync(Device(http), commandId, body, ct)));
+        // A confirmed barrier opening gates the admitted truck in.
+        devices.MapPost("/commands/{commandId:long}/ack", async (
+            long commandId, DeviceAckInput body, HttpContext http, DeviceService service, LaneControllerService controller, CancellationToken ct) =>
+        {
+            var result = await service.AckAsync(Device(http), commandId, body, ct);
+            if (result.Value is not null)
+                await controller.OnCommandConfirmedAsync(commandId, ct);
+            return YardsyncsApi.Admin(result);
+        });
 
         return app;
     }

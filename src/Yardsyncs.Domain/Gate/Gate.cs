@@ -142,6 +142,9 @@ public sealed class LaneDeviceRead
 
     /// <summary>The whole read as JSON, normalized.</summary>
     public string Payload { get; set; } = "{}";
+
+    /// <summary>The truck transaction the lane controller filed this read under.</summary>
+    public long? TransactionId { get; set; }
 }
 
 /// <summary>A command waiting for, delivered to or carried out by a lane device.</summary>
@@ -163,6 +166,65 @@ public sealed class LaneDeviceCommand
     public DateTimeOffset? DoneAt { get; set; }
     public CommandResult? Result { get; set; }
     public string? ResultDetail { get; set; }
+
+    /// <summary>The truck transaction this command belongs to (barrier opened for that truck…).</summary>
+    public long? TransactionId { get; set; }
+}
+
+/// <summary>Where a truck's passage through a lane stands.</summary>
+public enum LaneTransactionStatus
+{
+    /// <summary>Gathering reads.</summary>
+    Open,
+
+    /// <summary>Let in (or out): barrier opening.</summary>
+    Admitted,
+
+    /// <summary>A clerk has to help.</summary>
+    Referred,
+
+    /// <summary>Through the barrier: gated in or out.</summary>
+    Passed,
+
+    /// <summary>Nothing to identify the truck by, or it left.</summary>
+    Abandoned,
+}
+
+/// <summary>One truck at a lane, as the lane controller handles it.</summary>
+public sealed class LaneTransaction
+{
+    public long TransactionId { get; set; }
+    public int TerminalId { get; set; }
+    public int LaneId { get; set; }
+    public LaneTransactionStatus Status { get; set; } = LaneTransactionStatus.Open;
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset LastReadAt { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+    public DateTimeOffset? ClosedAt { get; set; }
+    public int ReadCount { get; set; }
+    public string? Plate { get; set; }
+    public short? PlateConfidence { get; set; }
+
+    /// <summary>Comma-separated container numbers, normalized.</summary>
+    public string? Containers { get; set; }
+
+    public string? Tag { get; set; }
+
+    /// <summary>An appointment number typed at the kiosk.</summary>
+    public string? AppointmentRead { get; set; }
+
+    /// <summary>A scanned gate pass, kept until the decision.</summary>
+    public string? QrToken { get; set; }
+
+    public decimal? WeightKg { get; set; }
+    public long? AppointmentId { get; set; }
+    public string? AppointmentNo { get; set; }
+    public long? TroubleId { get; set; }
+
+    /// <summary>Why the truck was referred: a trouble reason (NO_APPOINTMENT…) or EXIT.</summary>
+    public string? Reason { get; set; }
+
+    public string? Message { get; set; }
 }
 
 public enum GateEventType

@@ -35,6 +35,8 @@ public sealed class YardsyncsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Notifications:Enabled", "false");
         builder.UseSetting("Integration:Enabled", "false");
         builder.UseSetting("Privacy:CleanUpEnabled", "false"); // run by the test
+        builder.UseSetting("LaneController:Enabled", "false"); // no background worker: decide on each read
+        builder.UseSetting("LaneController:SettleSeconds", "0");
         builder.UseSetting("Assistant:ApiKey", "test-key"); // the model is FakeAssistantModel below
         builder.UseSetting("Assistant:PerMinute", "1000");
         builder.ConfigureTestServices(services => services.AddSingleton<Yardsyncs.Infrastructure.Assistant.IAssistantModel>(Assistant));

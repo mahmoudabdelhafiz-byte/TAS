@@ -89,6 +89,31 @@ without it, the command goes to every device at the lane that carries it out. Th
 automatically, sends its commands the same way. `GET …/lanes/{laneId}/activity` shows the lane's latest reads and
 commands, and how far each command got: waiting, delivered, done, failed or expired.
 
+## The lane controller
+
+At a lane set to **Automatic**, Yardsyncs runs the lane itself, one transaction per truck:
+
+1. **Gather.** Reads at the lane within 30 seconds of each other belong to the same truck, unless the plate is
+   different. The most confident plate wins, and the containers from all cameras add up.
+2. **Decide.** The controller decides once the lane has been quiet for 3 seconds, so the front and rear cameras have
+   both reported; a kiosk entry or a scanned gate pass is decided at once. The decision is the same as the gate's for a
+   clerk: match the appointment, re-check with the TOS, check the arrival window, the holds and any blocks.
+3. **Act.**
+   - Let in: `Green`, `Open`, a welcome on the display, and at an entry lane the gate ticket on the printer. When the
+     barrier confirms `Open`, the truck is gated in.
+   - Referred: `Red`, and the reason on the display. The case goes to the trouble desk, and when a clerk lets the truck
+     in there, the lane's barrier opens.
+   - Exit lanes gate the truck out (by plate or appointment number) and open, or call a clerk.
+
+A transaction with nothing to identify the truck by is given up after 2 minutes. Manual lanes and lanes that aren't
+open are left to the clerk; their reads are still stored and shown. The timings are settings: `LaneController__SettleSeconds`
+(3), `LaneController__WindowSeconds` (30), `LaneController__AbandonSeconds` (120), and `LaneController__Enabled`.
+`GET /api/terminals/{id}/gate/transactions?laneId=` lists the trucks a lane handled.
+
+The controller runs inside Yardsyncs. When Yardsyncs is installed at the terminal, it sits next to the lanes and
+doesn't depend on any outside link (only on the TOS, as a clerk does). If the TOS can't be reached, no truck is let in
+automatically: it is referred for a clerk to check.
+
 ## A reference adapter
 
 `deploy/device-adapter/simulator.mjs` acts as a camera and a barrier with no other software needed. It reads a plate,

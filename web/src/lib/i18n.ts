@@ -836,6 +836,11 @@ export const en = {
   'lanes.keyDone': "Done",
   'lanes.devicesDown': "Not working:",
   'lanes.openBarrier': "Open barrier",
+  'lanes.tx.Open': "Reading the truck…",
+  'lanes.tx.Admitted': "Let in:",
+  'lanes.tx.Referred': "Waiting for a clerk",
+  'lanes.tx.Passed': "Through:",
+  'lanes.tx.Abandoned': "Truck not identified",
 } as const;
 
 export type TextKey = keyof typeof en;
@@ -1672,6 +1677,11 @@ export const ar: Record<TextKey, string> = {
   'lanes.keyDone': "تم",
   'lanes.devicesDown': "لا يعمل:",
   'lanes.openBarrier': "فتح الحاجز",
+  'lanes.tx.Open': "جارٍ قراءة الشاحنة…",
+  'lanes.tx.Admitted': "سُمح بالدخول:",
+  'lanes.tx.Referred': "بانتظار موظف",
+  'lanes.tx.Passed': "عبرت:",
+  'lanes.tx.Abandoned': "لم يُتعرّف على الشاحنة",
 };
 
 const dictionaries: Record<Lang, Partial<Record<TextKey, string>>> = { en: { ...en }, ar: { ...ar } };

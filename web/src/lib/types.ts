@@ -292,6 +292,29 @@ export interface Lane {
   automaticProblems: LaneProblem[];
   /** The lane's latest device read in the last few minutes. */
   lastRead: DeviceRead | null;
+  /** The truck the lane controller is handling or handled last, in the last few minutes. */
+  transaction: LaneTransaction | null;
+}
+
+export type LaneTransactionStatus = 'Open' | 'Admitted' | 'Referred' | 'Passed' | 'Abandoned';
+
+export interface LaneTransaction {
+  transactionId: number;
+  laneCode: string;
+  status: LaneTransactionStatus;
+  startedAt: string;
+  lastReadAt: string;
+  decidedAt: string | null;
+  closedAt: string | null;
+  readCount: number;
+  plate: string | null;
+  containers: string[];
+  appointmentNo: string | null;
+  gatePassScanned: boolean;
+  weightKg: number | null;
+  troubleId: number | null;
+  reason: string | null;
+  message: string | null;
 }
 
 export interface ArrivalResult {

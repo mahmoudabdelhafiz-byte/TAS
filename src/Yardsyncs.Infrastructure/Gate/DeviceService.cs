@@ -168,6 +168,35 @@ public sealed class DeviceService(YardsyncsDbContext db, TimeProvider clock, ILo
         return AdminResult<IReadOnlyList<LaneCommandView>>.Created(rows.Select(r => View(r, codes[r.DeviceId], now)).ToList());
     }
 
+    /// <summary>
+    /// The lane controller's commands for a truck: each goes to the lane's devices in use that carry it out; commands for
+    /// devices the lane doesn't have are skipped.
+    /// </summary>
+    public async Task<int> QueueAsync(int terminalId, int laneId, long transactionId, IReadOnlyList<PlannedCommand> commands, CancellationToken ct = default)
+    {
+        var devices = await db.LaneDevices.AsNoTracking().Where(d => d.LaneId == laneId && d.IsActive).ToListAsync(ct);
+        var now = clock.GetUtcNow();
+        var rows = new List<LaneDeviceCommand>();
+        foreach (var (command, i) in commands.Select((c, i) => (c, i)))
+        {
+            var kinds = DeviceRules.TakenBy(command.Command);
+            rows.AddRange(devices.Where(d => kinds.Contains(d.Kind)).Select(d => new LaneDeviceCommand
+            {
+                TerminalId = terminalId,
+                LaneId = laneId,
+                DeviceId = d.DeviceId,
+                Command = command.Command,
+                Text = command.Text,
+                CreatedAt = now.AddTicks(i * 10), // keeps the order (to the microsecond): green before open
+                ExpiresAt = now + DeviceRules.Lifetime(command.Command),
+                TransactionId = transactionId,
+            }));
+        }
+        db.LaneDeviceCommands.AddRange(rows);
+        await db.SaveChangesAsync(ct);
+        return rows.Count;
+    }
+
     /// <summary>The lane's latest reads and commands, newest first.</summary>
     public async Task<LaneActivity?> ActivityAsync(int terminalId, int laneId, int limit = 20, CancellationToken ct = default)
     {
@@ -202,6 +231,24 @@ public sealed class DeviceService(YardsyncsDbContext db, TimeProvider clock, ILo
             r.ReadId, deviceCode, r.ReadAt, r.ReceivedAt, r.Plate, r.PlateConfidence,
             p?.Containers ?? (r.ContainerNo is null ? [] : [new ContainerReadView(r.ContainerNo, true, null, null, null)]),
             p?.Seals ?? [], p?.Damage ?? [], p?.Photos ?? [], p?.Tag, p?.AppointmentNo, p?.QrToken is not null, p?.WeightKg, p?.Warnings ?? []);
+    }
+
+    /// <summary>A stored read as the lane controller works with it, gate pass included.</summary>
+    public static NormalizedRead Normalized(LaneDeviceRead r)
+    {
+        Payload? p = null;
+        try
+        {
+            p = JsonSerializer.Deserialize<Payload>(r.Payload, Json);
+        }
+        catch (JsonException)
+        {
+            // Plate and first container only.
+        }
+        return new NormalizedRead(
+            r.ReadAt, r.Plate, r.PlateConfidence,
+            p?.Containers ?? (r.ContainerNo is null ? [] : [new ContainerReadView(r.ContainerNo, true, null, null, null)]),
+            p?.Seals ?? [], p?.Damage ?? [], p?.Photos ?? [], p?.Tag, p?.AppointmentNo, p?.QrToken, p?.WeightKg, p?.Warnings ?? []);
     }
 
     private static LaneCommandView View(LaneDeviceCommand c, string deviceCode, DateTimeOffset now) =>
