@@ -12,11 +12,13 @@ import { Fleet } from './Fleet.tsx';
 import { Kpi } from './Kpi.tsx';
 import { MapEditor } from './MapEditor.tsx';
 import { ControlRoom } from './ControlRoom.tsx';
+import { TrackContainers } from './TrackContainers.tsx';
 import { GateScreen } from './Gate.tsx';
 import { SlotBoard } from './SlotBoard.tsx';
 
 const navText: Record<Screen, TextKey> = {
   book: 'nav.book',
+  track: 'nav.track',
   bulk: 'nav.bulk',
   appointments: 'nav.appointments',
   slots: 'nav.slots',
@@ -82,6 +84,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
 
         <main className="page" key={`${terminal.terminalId}-${screen}`}>
           {screen === 'book' && <Book />}
+          {screen === 'track' && <TrackContainers />}
           {screen === 'appointments' && <Appointments />}
           {screen === 'slots' && <SlotBoard />}
           {screen === 'gate' && <GateScreen />}
@@ -111,6 +114,7 @@ export function Mark() {
 function NavIcon({ screen }: { screen: Screen }) {
   const paths: Record<Screen, ReactNode> = {
     book: <><rect x="3" y="5" width="18" height="15" rx="1.5" /><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5" /></>,
+    track: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.5L21 21" /><rect x="7.5" y="8" width="6" height="5" rx="0.5" /></>,
     appointments: <><path d="M4 6h16M4 12h16M4 18h10" /><circle cx="19" cy="18" r="2" /></>,
     slots: <><rect x="3" y="12" width="4" height="9" /><rect x="10" y="6" width="4" height="15" /><rect x="17" y="9" width="4" height="12" /></>,
     gate: <><path d="M3 21V8l9-5 9 5v13" /><path d="M7 21v-8h10v8M7 17h10" /></>,

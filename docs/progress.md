@@ -284,6 +284,15 @@ Status key: ✅ done · 🔜 next · ⬜ planned · ❓ needs a decision
 | ✅ | Emails in Arabic or English; link address from `PasswordLinks:PortalUrl` |
 | ✅ | Tests: reset flow, link reuse, limits, invitation and resend |
 
+### 27. Track containers (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Portal screen "Track containers" for trucking companies and terminal staff: by bill of lading or container numbers, without booking |
+| ✅ | Each container: ready to collect, not in the yard yet, on hold (with the reason), booked (own appointment; another company's only "booked"), collected; and each check — in yard, customs, line release, terminal hold, charges |
+| ✅ | Book the ready ones in one click (the booking screen opens with them filled in) |
+| ✅ | Follow containers: re-checked every 15 minutes, an email the moment one becomes ready to collect (Arabic, English, Urdu, Hindi); 30 days or until collected (migration 011) |
+| ✅ | Tests: states from a bill of lading, visibility of other companies' bookings, following and the ready email |
+
 ---
 
 ## Remaining

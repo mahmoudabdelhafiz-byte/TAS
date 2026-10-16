@@ -30,6 +30,8 @@ public static partial class NotificationText
 
         /// <summary>Where to go inside the terminal, e.g. "B2 (14.03.2) → E1".</summary>
         public const string Stops = "stops";
+        public const string Container = "container";
+        public const string Terminal = "terminal";
     }
 
     private static readonly Dictionary<string, Dictionary<string, (string Subject, string Body)>> Templates = new()
@@ -77,6 +79,17 @@ public static partial class NotificationText
                 "Yardsyncs: ٹرمینل نے آپ کا سلاٹ {slot} (اپوائنٹمنٹ {appointmentNo}) بند کر دیا ہے: {reason}۔ براہ کرم دوبارہ وقت لیں۔"),
             ["hi"] = ("स्लॉट बंद: अपॉइंटमेंट {appointmentNo}",
                 "Yardsyncs: टर्मिनल ने आपका स्लॉट {slot} (अपॉइंटमेंट {appointmentNo}) बंद कर दिया है: {reason}। कृपया दोबारा समय लें।"),
+        },
+        [NotificationTemplates.ContainerReady] = new()
+        {
+            ["en"] = ("Container {container} is ready",
+                "Yardsyncs: container {container} is ready to collect at {terminal}. Book a truck in the Yardsyncs portal."),
+            ["ar"] = ("الحاوية {container} جاهزة",
+                "Yardsyncs: الحاوية {container} جاهزة للاستلام في {terminal}. احجز شاحنة من بوابة Yardsyncs."),
+            ["ur"] = ("کنٹینر {container} تیار ہے",
+                "Yardsyncs: کنٹینر {container} {terminal} سے اٹھانے کے لیے تیار ہے۔ Yardsyncs پورٹل میں ٹرک بک کریں۔"),
+            ["hi"] = ("कंटेनर {container} तैयार है",
+                "Yardsyncs: कंटेनर {container} {terminal} से उठाने के लिए तैयार है। Yardsyncs पोर्टल में ट्रक बुक करें।"),
         },
         [NotificationTemplates.GateIn] = new()
         {

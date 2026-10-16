@@ -13,6 +13,8 @@ public class NotificationTextTests
         [NotificationText.Keys.GateOpens] = "09:30",
         [NotificationText.Keys.Items] = "MSCU1234566",
         [NotificationText.Keys.Stops] = "B2 (14.03.2) → E1",
+        [NotificationText.Keys.Container] = "MSCU1234566",
+        [NotificationText.Keys.Terminal] = "Demo Container Terminal",
     };
 
     public static TheoryData<string, string> AllTemplatesAndLanguages()
@@ -32,7 +34,8 @@ public class NotificationTextTests
 
         Assert.DoesNotContain("{", message.Body);
         Assert.DoesNotContain("{", message.Subject);
-        Assert.Contains("DEMO-261020-7KQ4M", message.Body);
+        // Messages about a visit name the appointment; messages about a container name the container.
+        Assert.Contains(template == NotificationTemplates.ContainerReady ? "MSCU1234566" : "DEMO-261020-7KQ4M", message.Body);
         Assert.StartsWith("Yardsyncs", message.Subject);
         Assert.Contains("Yardsyncs", message.Body);
         Assert.True(message.Body.Length <= 300, $"{template}/{language} is {message.Body.Length} characters");

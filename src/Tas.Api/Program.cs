@@ -192,6 +192,38 @@ terminal.MapPost("/containers/lookup", async (
         : TasApi.Admin(await service.LookupAsync(user, terminalId, body, ct));
 });
 
+// Track containers (no booking): status by BL or container numbers; follow containers to get an email when ready.
+terminal.MapPost("/containers/track", async (int terminalId, TrackInput body, HttpContext http, ContainerTrackingService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    return !AccessRules.CanAccessTerminal(user, terminalId)
+        ? TasApi.Forbidden("You have no access to this terminal.")
+        : TasApi.Admin(await service.TrackAsync(user, terminalId, body, ct));
+});
+terminal.MapGet("/containers/followed", async (int terminalId, HttpContext http, ContainerTrackingService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    return !AccessRules.CanAccessTerminal(user, terminalId)
+        ? TasApi.Forbidden("You have no access to this terminal.")
+        : Results.Ok(await service.FollowedAsync(user, terminalId, ct));
+});
+terminal.MapPost("/containers/followed", async (int terminalId, FollowBody body, HttpContext http, ContainerTrackingService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    return !AccessRules.CanAccessTerminal(user, terminalId)
+        ? TasApi.Forbidden("You have no access to this terminal.")
+        : TasApi.Admin(await service.FollowAsync(user, terminalId, body.Containers, ct));
+});
+terminal.MapDelete("/containers/followed/{containerNo}", async (int terminalId, string containerNo, HttpContext http, ContainerTrackingService service, CancellationToken ct) =>
+{
+    var user = TasApi.User(http)!;
+    if (!AccessRules.CanAccessTerminal(user, terminalId))
+        return TasApi.Forbidden("You have no access to this terminal.");
+    return await service.UnfollowAsync(user, terminalId, containerNo, ct) > 0
+        ? Results.NoContent()
+        : TasApi.Problem(StatusCodes.Status404NotFound, $"You don't follow {containerNo}.");
+});
+
 // ================================================================ terminal: appointments
 
 var appointments = terminal.MapGroup("/appointments");

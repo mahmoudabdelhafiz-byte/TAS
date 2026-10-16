@@ -18,17 +18,19 @@ interface Outcome {
 const selectable = (c: LookupContainer) => c.status === 'Ready' || c.status === 'Warning';
 
 /** Book by bill of lading or by a list of containers: one appointment per truck, spread over the chosen hours. */
-export function ManyTrucks({ category, hours, companyId, onBooked }: {
+export function ManyTrucks({ category, hours, companyId, onBooked, initialList }: {
   category: string;
   hours: SlotAvailability[];
   companyId: number | null;
   onBooked: () => void;
+  /** Container numbers to start with (one per line), e.g. from "Track containers". */
+  initialList?: string;
 }) {
   const { api, t, user, terminal, go } = useApp();
   const base = `/api/terminals/${terminal.terminalId}`;
-  const [source, setSource] = useState<Source>('bl');
+  const [source, setSource] = useState<Source>(initialList ? 'list' : 'bl');
   const [blNo, setBlNo] = useState('');
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initialList ?? '');
   const [bookingRef, setBookingRef] = useState('');
   const [finding, setFinding] = useState(false);
   const [error, setError] = useState<string | null>(null);

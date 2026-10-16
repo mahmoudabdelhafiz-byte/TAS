@@ -66,4 +66,7 @@ public static class NotificationTemplates
 
     /// <summary>The truck passed the gate: the in-gate ticket with the block(s) to drive to.</summary>
     public const string GateIn = "GATE_IN";
+
+    /// <summary>A followed container became ready to collect (to the portal user who follows it).</summary>
+    public const string ContainerReady = "CONTAINER_READY";
 }

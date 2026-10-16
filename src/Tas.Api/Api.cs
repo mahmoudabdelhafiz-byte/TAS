@@ -15,6 +15,8 @@ public sealed record ChangePasswordBody(string CurrentPassword, string NewPasswo
 
 public sealed record ForgotPasswordBody(string? Email);
 
+public sealed record FollowBody(IReadOnlyList<string>? Containers);
+
 public sealed record SetPasswordBody(string? Token, string? NewPassword);
 
 /// <param name="CompanyId">Ignored for company users (taken from their account); required for terminal staff booking on behalf of a company.</param>

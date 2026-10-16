@@ -23,8 +23,10 @@ export function categoryName(c: Category | undefined, code: string, lang: string
 }
 
 export function Book() {
-  const { api, t, lang, user, terminal, today, go } = useApp();
+  const { api, t, lang, user, terminal, today, go, route } = useApp();
   const base = `/api/terminals/${terminal.terminalId}`;
+  // From "Track containers": book these containers (import pickups), one truck each or paired.
+  const prefill = route.params.containers ?? '';
   const companyUser = isCompanyRole(user.role);
 
   const [companyId, setCompanyId] = useState<number | null>(user.companyId);
@@ -37,7 +39,7 @@ export function Book() {
   const [error, setError] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<ApiError | null>(null);
   const [booked, setBooked] = useState<Appointment | null>(null);
-  const [many, setMany] = useState(false);
+  const [many, setMany] = useState(prefill.length > 0);
   const [hourSet, setHourSet] = useState<number[]>([]);
 
   const categories = useLoad(() => api.get<Category[]>(`${base}/categories`), [base]);
@@ -57,7 +59,10 @@ export function Book() {
 
   // Start with the first category once the list arrives.
   useEffect(() => {
-    if (categories.data?.length && items.length === 0) setItems([emptyItem(categories.data[0].code)]);
+    if (categories.data?.length && items.length === 0) {
+      const first = prefill ? categories.data.find(c => c.code.startsWith('IMP')) ?? categories.data[0] : categories.data[0];
+      setItems([emptyItem(first.code)]);
+    }
   }, [categories.data, items.length]);
 
   useEffect(() => { setSlotId(null); setHourSet([]); }, [date, mainCategory]);
@@ -203,7 +208,8 @@ export function Book() {
         </div>
 
         {severalTrucks ? (
-          <ManyTrucks key={mainCategory} category={mainCategory} hours={pickedHours} companyId={companyId} onBooked={slots.reload} />
+          <ManyTrucks key={mainCategory} category={mainCategory} hours={pickedHours} companyId={companyId} onBooked={slots.reload}
+            initialList={prefill ? prefill.split(',').join('\n') : undefined} />
         ) : (
         <div className="book-side">
           <fieldset className="block">

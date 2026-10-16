@@ -64,6 +64,21 @@ public sealed class AppUser
 }
 
 /// <summary>A rotating refresh token. Only the SHA-256 hash of the token is stored.</summary>
+/// <summary>A container a portal user follows (email when it becomes ready to collect).</summary>
+public sealed class ContainerWatch
+{
+    public long WatchId { get; set; }
+    public int TerminalId { get; set; }
+    public int UserId { get; set; }
+    public string ContainerNo { get; set; } = "";
+    public string? LastState { get; set; }
+    public string? LastMessage { get; set; }
+    public DateTimeOffset? LastCheckedAt { get; set; }
+    public DateTimeOffset? ReadyNotifiedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? EndedAt { get; set; }
+}
+
 /// <summary>A one-time link to set a password: RESET (forgot password) or INVITE (new user).</summary>
 public sealed class PasswordToken
 {
