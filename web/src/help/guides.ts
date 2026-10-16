@@ -23,3 +23,6 @@ export const guides: Guide[] = [
 export function guidesFor(screens: Screen[]): Guide[] {
   return guides.filter(g => g.screens.length === 0 || g.screens.some(s => screens.includes(s)));
 }
+
+/** The technical pages of the public documentation, in order (English only). */
+export const techPages = ['overview', 'api', 'integration', 'operations', 'security', 'assistant'] as const;

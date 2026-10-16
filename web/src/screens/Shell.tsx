@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { TextKey } from '../lib/i18n.ts';
 import { buildHash, type Screen } from '../lib/routes.ts';
 import type { Lang } from '../lib/time.ts';
 import type { Terminal } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
+import { Assistant, type AssistantInfo } from '../ui/Assistant.tsx';
 import { Appointments } from './Appointments.tsx';
 import { Book } from './Book.tsx';
 import { BulkUpload } from './BulkUpload.tsx';
@@ -39,8 +40,12 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
   setLang: (l: Lang) => void;
   onSignOut: () => void;
 }) {
-  const { t, tx, lang, user, terminal, route } = useApp();
+  const { api, t, tx, lang, user, terminal, route } = useApp();
   const screen = route.screen!;
+  const [assistant, setAssistant] = useState<AssistantInfo | null>(null);
+  useEffect(() => {
+    api.get<AssistantInfo>('/api/assistant').then(setAssistant).catch(() => setAssistant(null));
+  }, [api]);
 
   return (
     <div className="shell">
@@ -99,6 +104,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
           {screen === 'help' && <Help />}
         </main>
       </div>
+      {assistant?.enabled && <Assistant info={assistant} />}
     </div>
   );
 }

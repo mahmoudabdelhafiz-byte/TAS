@@ -35,8 +35,8 @@ wait to be called to the gate.
 
 ## At the gate
 
-Open the appointment and show **Show this code at the gate** to the clerk or the scanner. The code changes every few
-seconds, so a photo or screenshot of it doesn't work: show the live screen. Without a smartphone, the printed gate
+Open the appointment and show **Show this code at the gate** to the clerk or the scanner. The code changes every 30
+seconds, so a photo or screenshot of it soon stops working: show the live screen. Without a smartphone, the printed gate
 code from your company works too.
 
 After the gate you get the **In-gate ticket**: appointment, lane, gate-in time and **Your stops**.

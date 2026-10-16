@@ -86,6 +86,12 @@ public static class DependencyInjection
         services.AddScoped<Tas.Infrastructure.Integration.IntegrationDispatcher>();
         services.AddHostedService<Tas.Infrastructure.Integration.IntegrationWorker>();
 
+        // AI assistant: off until Assistant:ApiKey is set; read-only look-ups with the user's own permissions.
+        services.Configure<Tas.Infrastructure.Assistant.AssistantOptions>(config.GetSection("Assistant"));
+        services.AddHttpClient<Tas.Infrastructure.Assistant.IAssistantModel, Tas.Infrastructure.Assistant.AnthropicModel>(c => c.Timeout = Timeout.InfiniteTimeSpan);
+        services.AddScoped<Tas.Infrastructure.Assistant.AssistantTools>();
+        services.AddScoped<Tas.Infrastructure.Assistant.AssistantService>();
+
         // TOS: "Tos:Adapter" = Fake (development / demos) or N4; "Tos:OnUnavailable" = Warn (default) or Reject.
         services.AddSingleton(new TosSettings(config.GetValue("Tos:OnUnavailable", TosUnavailablePolicy.Warn)));
         var adapter = config.GetValue("Tos:Adapter", "Fake");

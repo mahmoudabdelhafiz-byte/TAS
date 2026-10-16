@@ -1,5 +1,5 @@
 /* =====================================================================
-   Truck Appointment System (TAS) — PostgreSQL schema, draft v1.2
+   Truck Appointment System (TAS) — PostgreSQL schema, draft v1.3
    Requires PostgreSQL 15+ and PostGIS (for geofences).
    Multi-terminal. See docs/data-model.md for the design.
 
@@ -570,6 +570,17 @@ CREATE TABLE api_client (
     rate_limit_per_min   integer      NOT NULL DEFAULT 60,
     is_active            boolean      NOT NULL DEFAULT true,
     created_at           timestamptz  NOT NULL DEFAULT now()
+);
+
+/* ---------- AI assistant (see migration 012) ---------- */
+
+CREATE TABLE assistant_usage (   -- questions and tokens per user and day; no conversation text is stored
+    user_id        integer  NOT NULL REFERENCES app_user(user_id) ON DELETE CASCADE,
+    day            date     NOT NULL,
+    questions      integer  NOT NULL DEFAULT 0,
+    input_tokens   bigint   NOT NULL DEFAULT 0,
+    output_tokens  bigint   NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, day)
 );
 
 /* ---------- Audit ---------- */

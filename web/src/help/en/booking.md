@@ -52,8 +52,9 @@ to see everything about it.
 | **On hold** | Something blocks the move (customs, line, terminal hold, payment). Don't send the truck: it will be turned away. |
 | **Not checked** | The terminal's system couldn't be reached; it is checked again before arrival. |
 
-The terminal checks every booked container again on its own (every 15 minutes in the hours before the visit). When a
-container goes on hold or is cleared again, the driver gets a message; you see it under **Ready to go?**.
+The terminal checks every booked container again on its own (about every hour in the 24 hours before the visit, and
+when the trip starts). When a container goes on hold or is cleared again, the driver gets an SMS and whoever booked
+gets an email; **Ready to go?** changes with it.
 
 In an appointment you can:
 
