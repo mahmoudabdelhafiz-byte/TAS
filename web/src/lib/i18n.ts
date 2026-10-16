@@ -470,6 +470,24 @@ export const en = {
   'control.stage.TO_BLOCK': 'Driving to the block',
   'control.stage.AT_BLOCK': 'At the block',
   'control.stage.TO_EXIT': 'Leaving',
+
+  'kpi.yardTitle': 'Inside the terminal',
+  'kpi.toBlock': 'Gate to block',
+  'kpi.toBlockNote': 'Gate-in to reaching the first block',
+  'kpi.atBlock': 'At the block',
+  'kpi.atBlockNote': 'Reaching the block to "Done here"',
+  'kpi.toExit': 'Block to gate-out',
+  'kpi.toExitNote': 'Last stop done to leaving the terminal',
+  'kpi.appSeen': 'Seen by the app',
+  'kpi.appSeenNote': 'Of {n} visits, the app saw the truck reach its block',
+  'kpi.chartAtBlock': 'Time at the block by day',
+  'kpi.blocksTitle': 'By block, slowest first',
+  'kpi.block': 'Block',
+  'kpi.stops': 'Stops',
+  'kpi.drive': 'Drive there',
+  'control.attention': '{n} trucks need attention',
+  'control.overdueFor': 'inside {time} (target {m} min)',
+  'control.silentFor': 'no signal from the app',
 } as const;
 
 export type TextKey = keyof typeof en;
@@ -941,6 +959,24 @@ export const ar: Record<TextKey, string> = {
   'control.stage.TO_BLOCK': 'في الطريق إلى البلوك',
   'control.stage.AT_BLOCK': 'عند البلوك',
   'control.stage.TO_EXIT': 'يغادر',
+
+  'kpi.yardTitle': 'داخل المحطة',
+  'kpi.toBlock': 'من البوابة إلى البلوك',
+  'kpi.toBlockNote': 'من الدخول حتى الوصول إلى أول بلوك',
+  'kpi.atBlock': 'عند البلوك',
+  'kpi.atBlockNote': 'من الوصول إلى البلوك حتى "انتهيت هنا"',
+  'kpi.toExit': 'من البلوك إلى الخروج',
+  'kpi.toExitNote': 'من إنهاء آخر محطة حتى مغادرة المحطة',
+  'kpi.appSeen': 'رصدها التطبيق',
+  'kpi.appSeenNote': 'من {n} زيارات، رصد التطبيق وصول الشاحنة إلى البلوك',
+  'kpi.chartAtBlock': 'المدة عند البلوك حسب اليوم',
+  'kpi.blocksTitle': 'حسب البلوك، الأبطأ أولاً',
+  'kpi.block': 'البلوك',
+  'kpi.stops': 'المحطات',
+  'kpi.drive': 'مدة القيادة إليه',
+  'control.attention': '{n} شاحنات تحتاج إلى متابعة',
+  'control.overdueFor': 'داخل المحطة منذ {time} (المستهدف {m} دقيقة)',
+  'control.silentFor': 'لا إشارة من التطبيق',
 };
 
 const dictionaries: Record<Lang, Record<TextKey, string>> = { en, ar };

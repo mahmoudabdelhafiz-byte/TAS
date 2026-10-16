@@ -32,7 +32,8 @@ public sealed record KpiTotals(
     int Capacity, int Booked, double? Utilization, int Appointments, int Completed, int NoShows, int Cancelled, int WalkIns,
     double? NoShowRate, double? OnTimeRate, double? WalkInShare, double? AvgTurnMinutes, double? AvgWaitMinutes);
 
-public sealed record KpiReport(DateOnly From, DateOnly To, KpiTotals Totals, IReadOnlyList<KpiDay> Days, IReadOnlyList<KpiHour> Hours);
+/// <param name="Yard">Times inside the terminal (driver app), when the terminal has yard stops.</param>
+public sealed record KpiReport(DateOnly From, DateOnly To, KpiTotals Totals, IReadOnlyList<KpiDay> Days, IReadOnlyList<KpiHour> Hours, KpiYard? Yard = null);
 
 /// <summary>Terminal KPIs for a date range (local dates of the slots): slot use, no-shows, punctuality, walk-ins, turn time.</summary>
 public static class KpiCalculator

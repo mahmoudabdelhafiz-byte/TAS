@@ -783,3 +783,12 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
   .control-grid { grid-template-columns: minmax(0, 1fr); }
   .control-map { height: 52vh; }
 }
+
+.attention {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin: 0 0 16px; padding: 10px 14px;
+  background: var(--red-tint); border: 1px solid #eccac8; border-inline-start: 4px solid var(--red); border-radius: var(--radius);
+}
+.attention ul { display: flex; flex-wrap: wrap; gap: 4px 18px; list-style: none; margin: 0; padding: 0; }
+.attention .link-btn { font-weight: 600; }
+.kpi-yard { margin-top: 8px; }
+.table-wrap.flat { border: 0; }

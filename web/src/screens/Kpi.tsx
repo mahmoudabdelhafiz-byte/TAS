@@ -48,6 +48,19 @@ interface KpiReport {
   };
   days: KpiDay[];
   hours: KpiHour[];
+  yard: KpiYard | null;
+}
+
+/** Times inside the terminal from the driver app (null when the terminal has no yard stops in the range). */
+interface KpiYard {
+  visits: number;
+  stops: number;
+  appSeenShare: number | null;
+  avgToBlockMinutes: number | null;
+  avgAtBlockMinutes: number | null;
+  avgToExitMinutes: number | null;
+  days: { date: string; visits: number; avgToBlockMinutes: number | null; avgAtBlockMinutes: number | null }[];
+  blocks: { block: string; stops: number; avgDriveMinutes: number | null; avgAtBlockMinutes: number | null }[];
 }
 
 /** "16 Sep" — day and month, no weekday, for axis labels. */
@@ -144,6 +157,8 @@ export function Kpi() {
             </figure>
           </div>
 
+          {r.yard && <YardSection yard={r.yard} />}
+
           <button type="button" className="link-btn" onClick={() => setTable(x => !x)}>{table ? t('kpi.hideTable') : t('kpi.showTable')}</button>
           {table && (
             <div className="table-wrap kpi-table">
@@ -174,6 +189,60 @@ export function Kpi() {
           )}
         </>
       )}
+    </section>
+  );
+}
+
+/** Inside the terminal: gate to block, at the block, to the exit; by day and by block (slowest first). */
+function YardSection({ yard }: { yard: KpiYard }) {
+  const { t, lang } = useApp();
+  const min = t('unit.min');
+  const hour = t('unit.h');
+  const time = (m: number | null) => (m === null ? '—' : duration(m, min, hour));
+  return (
+    <section className="kpi-yard">
+      <h2 className="section-title">{t('kpi.yardTitle')}</h2>
+      <dl className="tiles">
+        <Tile label={t('kpi.toBlock')} value={time(yard.avgToBlockMinutes)} note={t('kpi.toBlockNote')} />
+        <Tile label={t('kpi.atBlock')} value={time(yard.avgAtBlockMinutes)} note={t('kpi.atBlockNote')} />
+        <Tile label={t('kpi.toExit')} value={time(yard.avgToExitMinutes)} note={t('kpi.toExitNote')} />
+        <Tile label={t('kpi.appSeen')} value={pct(yard.appSeenShare)} note={t('kpi.appSeenNote', { n: yard.visits })} />
+      </dl>
+      <div className="charts">
+        <figure className="chart-card">
+          <figcaption>{t('kpi.chartAtBlock')}</figcaption>
+          <Line
+            points={yard.days.map(d => ({
+              key: d.date,
+              label: shortDay(d.date, lang),
+              value: d.avgAtBlockMinutes,
+              tip: `${dayLabel(d.date, lang)}: ${time(d.avgAtBlockMinutes)}`,
+            }))}
+            format={v => `${Math.round(v)}`} unit={min} />
+        </figure>
+        <figure className="chart-card">
+          <figcaption>{t('kpi.blocksTitle')}</figcaption>
+          {yard.blocks.length === 0 ? <p className="muted">—</p> : (
+            <div className="table-wrap flat">
+              <table className="grid compact">
+                <thead>
+                  <tr><th>{t('kpi.block')}</th><th>{t('kpi.stops')}</th><th>{t('kpi.drive')}</th><th>{t('kpi.atBlock')}</th></tr>
+                </thead>
+                <tbody>
+                  {yard.blocks.slice(0, 12).map(b => (
+                    <tr key={b.block}>
+                      <td><bdi>{b.block}</bdi></td>
+                      <td className="num">{b.stops}</td>
+                      <td className="num">{time(b.avgDriveMinutes)}</td>
+                      <td className="num">{time(b.avgAtBlockMinutes)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </figure>
+      </div>
     </section>
   );
 }
