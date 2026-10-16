@@ -233,12 +233,40 @@ export interface Trouble {
   createdAt: string;
 }
 
+export type LaneState = 'Open' | 'Closed' | 'OutOfOrder';
+export type LaneMode = 'Manual' | 'Automatic';
+export type LaneDeviceKind = 'Camera' | 'Ocr' | 'RfidReader' | 'Kiosk' | 'Barrier' | 'TrafficLight' | 'Display' | 'Printer' | 'Intercom' | 'Weighbridge';
+export type LaneRead = 'Plate' | 'Container' | 'IsoCode' | 'Seal' | 'Damage' | 'Tag';
+export type LaneIdentification = 'AppointmentNo' | 'GatePass' | 'Plate' | 'Container' | 'RfidTag';
+export type LaneProblem = 'NoBarrier' | 'NoIdentification';
+
+export interface LaneDevice {
+  deviceId: number;
+  deviceCode: string;
+  kind: LaneDeviceKind;
+  reads: LaneRead[];
+  vendor: string | null;
+  model: string | null;
+  address: string | null;
+  isActive: boolean;
+  notes: string | null;
+}
+
 export interface Lane {
   laneId: number;
   gateCode: string;
   laneCode: string;
   direction: 'In' | 'Out';
+  /** False when the lane is retired; `state` is the day-to-day open / closed. */
   isActive: boolean;
+  state: LaneState;
+  mode: LaneMode;
+  stateNote: string | null;
+  stateChangedAt: string | null;
+  devices: LaneDevice[];
+  identifies: LaneIdentification[];
+  /** What the lane still needs to work automatically; empty when it could. */
+  automaticProblems: LaneProblem[];
 }
 
 export interface ArrivalResult {

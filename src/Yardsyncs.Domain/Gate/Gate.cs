@@ -6,6 +6,21 @@ public enum LaneDirection
     Out,
 }
 
+/// <summary>Whether trucks can use a lane right now; set by the gate staff.</summary>
+public enum LaneState
+{
+    Open,
+    Closed,
+    OutOfOrder,
+}
+
+/// <summary>How a lane works: a clerk decides at the lane, or the lane decides itself and refers exceptions.</summary>
+public enum LaneMode
+{
+    Manual,
+    Automatic,
+}
+
 public sealed class GateLane
 {
     public int LaneId { get; set; }
@@ -13,7 +28,61 @@ public sealed class GateLane
     public string GateCode { get; set; } = "";
     public string LaneCode { get; set; } = "";
     public LaneDirection Direction { get; set; }
+
+    /// <summary>False when the lane is retired (kept for the gate log); <see cref="State"/> is the day-to-day open / closed.</summary>
     public bool IsActive { get; set; } = true;
+
+    public LaneState State { get; set; } = LaneState.Open;
+    public LaneMode Mode { get; set; } = LaneMode.Manual;
+    public string? StateNote { get; set; }
+    public DateTimeOffset? StateChangedAt { get; set; }
+    public int? StateChangedBy { get; set; }
+}
+
+/// <summary>The kinds of equipment at a lane. Vendor-neutral: the vendor and model are recorded, the kind decides the role.</summary>
+public enum LaneDeviceKind
+{
+    Camera,
+    Ocr,
+    RfidReader,
+    Kiosk,
+    Barrier,
+    TrafficLight,
+    Display,
+    Printer,
+    Intercom,
+    Weighbridge,
+}
+
+/// <summary>What a camera, OCR engine or RFID reader reads.</summary>
+public enum LaneRead
+{
+    Plate,
+    Container,
+    IsoCode,
+    Seal,
+    Damage,
+    Tag,
+}
+
+/// <summary>A device at a gate lane.</summary>
+public sealed class GateLaneDevice
+{
+    public int DeviceId { get; set; }
+    public int TerminalId { get; set; }
+    public int LaneId { get; set; }
+    public string DeviceCode { get; set; } = "";
+    public LaneDeviceKind Kind { get; set; }
+
+    /// <summary>Comma-separated <see cref="LaneRead"/> values in upper snake case (PLATE,CONTAINER); null for devices that read nothing.</summary>
+    public string? Reads { get; set; }
+
+    public string? Vendor { get; set; }
+    public string? Model { get; set; }
+    public string? Address { get; set; }
+    public bool IsActive { get; set; } = true;
+    public string? Notes { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 public enum GateEventType

@@ -234,7 +234,10 @@ Example — a weekly template window (times are local; `24:00` = midnight):
 | `GET` | `/api/terminals/{id}/gate/troubles?openOnly=true` | Trouble desk queue with the reason already shown |
 | `POST` | `/api/terminals/{id}/gate/troubles/{troubleId}/resolve` | `Admit` (note) · `Reject` (note; capacity released) · `WalkIn` (book into the current slot) · `Dismiss` |
 | `GET` | `/api/terminals/{id}/gate/board` | Trucks at the gate / inside with minutes, open troubles, completed today, average turn time |
-| `GET` / `POST` | `/api/terminals/{id}/gate/lanes` | Lanes (create: TerminalAdmin) |
+| `GET` / `POST` | `/api/terminals/{id}/gate/lanes` | Lanes with their state, way of working, devices, how they identify trucks and what they need to run automatically (create: TerminalAdmin) |
+| `PUT` | `/api/terminals/{id}/gate/lanes/{laneId}` | `{ gateCode?, mode?: Manual\|Automatic, isActive? }` — Automatic only with a barrier and a way to identify trucks (TerminalAdmin) |
+| `POST` | `/api/terminals/{id}/gate/lanes/{laneId}/state` | `{ state: Open\|Closed\|OutOfOrder, note }` — gate staff; arrivals and gate-outs at a lane that isn't open get 409 with the note |
+| `POST` / `PUT` / `DELETE` | `/api/terminals/{id}/gate/lanes/{laneId}/devices[/{deviceId}]` | Devices at a lane: `{ deviceCode, kind, reads?, vendor?, model?, address?, isActive?, notes? }` (TerminalAdmin) |
 
 How an arrival is handled:
 1. **Match** — QR code from the driver app or a typed appointment number win; otherwise the plate read (Arabic or Latin) picks the truck's appointment nearest to now; otherwise a container read. Reads that don't fit the appointment are shown as warnings.

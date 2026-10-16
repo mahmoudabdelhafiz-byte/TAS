@@ -439,6 +439,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | `ConnectionStrings__Yardsyncs` (`ConnectionStrings__Tas` from before still works); bulk booking templates named yardsyncs-… |
 | ✅ | Kept on purpose, so installed systems need no change: the database and its user (`tas`), backup file names, the N4 code extension `TasLookup`, the sign-in token issuer, and the `TAS_DOMAIN` setting |
 
+### 44. Autogate lane model (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Lanes have a state — open, closed, out of order — set by the gate staff with a reason (migration 018); trucks checked at a lane that isn't open are refused with that reason; the gate screen shows every lane and opens / closes them |
+| ✅ | Devices per lane, vendor-neutral: camera, OCR, RFID reader, kiosk, barrier, traffic light, display, printer, intercom, weighbridge — with what each reads, vendor, model and address (`gate_lane_device`) |
+| ✅ | Way of working per lane: manual or automatic. Automatic needs a barrier and a way to identify trucks without a clerk; the lane shows how it identifies trucks (its devices + the terminal's gate rules) and what it is missing |
+| ✅ | **Lanes** screen for terminal admins; every change audited; the demo terminal's IN-1 and OUT-1 come equipped |
+
 ---
 
 ## Remaining
@@ -523,7 +531,7 @@ Details in [`releasing.md`](releasing.md).
 ### Phase H — Yardsyncs Autogate (next module)
 | | Item | Notes |
 |---|---|---|
-| ⬜ | Lane model: lanes, devices per lane (cameras, OCR, RFID reader, kiosk, barrier, traffic light, intercom, weighbridge), lane states | `gate_lane` today |
+| ✅ | Lane model: lanes, devices per lane (cameras, OCR, RFID reader, kiosk, barrier, traffic light, intercom, weighbridge), lane states | Section 44 |
 | ⬜ | Device adapters, vendor-neutral: OCR results in (plate, container numbers, ISO code, seal, damage photos), barrier / light / display commands out | The gate API already takes plate and container reads |
 | ⬜ | Lane controller service at the terminal: one transaction per truck — identify, match appointment, re-check, decide, open barrier or send to remote clerk | On-premise next to the lanes, keeps working if the cloud link drops |
 | ⬜ | Remote clerk station: live lane view, photos, OCR corrections, intercom, admit / refer / reject — grows out of today's trouble desk | |
@@ -552,7 +560,7 @@ Former open questions, now options each terminal chooses. Default in **bold**.
 | TOS | **Navis N4 (web services + TasLookup)** · fake TOS for demos · further adapters per customer (other TOS, EDI, database views) | N4 + fake done; adapter chosen per terminal → Phase G |
 | National appointment / port community platform | **none** · integration module per country / port when required | Phase C, per customer |
 | Driver identity | **mobile one-time code** · national e-ID where available (e.g. Nafath in Saudi Arabia) · ID + selfie check | Phase E |
-| Gate identification | **appointment number / QR** · plate OCR · container OCR · RFID tag · geofence check-in — any combination per lane | Gate API accepts all reads today; lane setup → Phase H |
+| Gate identification | **appointment number / QR** · plate OCR · container OCR · RFID tag · geofence check-in — any combination per lane | Gate API accepts all reads; lane devices and manual / automatic per lane done; RFID matching with the device adapters |
 | Fees | **free** · booking fee · no-show / late penalty · paid priority slots; payment gateway per country | Phase F (billing) |
 | Slot length | **60 min**, 15 / 30 / 120 per terminal; different lengths by time of day as an option | Per terminal done; by time of day ⬜ |
 | Yard position source | **TOS position at gate-in** · earlier when the TOS has a pre-advised truck visit (needs TOS write-back) | At gate-in done |

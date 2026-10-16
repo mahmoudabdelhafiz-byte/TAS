@@ -37,6 +37,8 @@ public sealed class GateService(
         var lane = await LaneAsync(terminalId, input.LaneCode, LaneDirection.In, ct);
         if (lane is null)
             return AdminResult<ArrivalResult>.Invalid($"'{input.LaneCode}' is not an active entry lane at this terminal.");
+        if (LaneRules.NotOpen(lane) is { } closed)
+            return AdminResult<ArrivalResult>.Conflict(closed);
 
         var (_, settings, timeZone) = await TerminalAsync(terminalId, ct);
         var now = clock.GetUtcNow();
@@ -233,6 +235,8 @@ public sealed class GateService(
         var lane = await LaneAsync(terminalId, input.LaneCode, LaneDirection.Out, ct);
         if (lane is null)
             return AdminResult<GateOutResult>.Invalid($"'{input.LaneCode}' is not an active exit lane at this terminal.");
+        if (LaneRules.NotOpen(lane) is { } closed)
+            return AdminResult<GateOutResult>.Conflict(closed);
 
         var query = db.Appointments.AsNoTracking().Where(a => a.TerminalId == terminalId && a.Status == AppointmentStatus.GateIn);
         if (!string.IsNullOrWhiteSpace(input.AppointmentNo))
@@ -403,30 +407,7 @@ public sealed class GateService(
         return AdminResult<TroubleView>.Ok((await ViewsAsync([trouble], ct)).Single());
     }
 
-    // ================================================================ lanes & board
-
-    public async Task<IReadOnlyList<LaneView>> ListLanesAsync(int terminalId, CancellationToken ct = default) =>
-        (await db.GateLanes.AsNoTracking().Where(l => l.TerminalId == terminalId).OrderBy(l => l.GateCode).ThenBy(l => l.LaneCode).ToListAsync(ct))
-        .Select(LaneView.From).ToList();
-
-    public async Task<AdminResult<LaneView>> CreateLaneAsync(CurrentUser admin, int terminalId, LaneInput input, CancellationToken ct = default)
-    {
-        var gate = input.GateCode?.Trim().ToUpperInvariant() ?? "";
-        var code = input.LaneCode?.Trim().ToUpperInvariant() ?? "";
-        if (gate.Length is 0 or > 20 || code.Length is 0 or > 20)
-            return AdminResult<LaneView>.Invalid("Gate and lane codes are required (max 20 characters).");
-        if (!Enum.IsDefined(input.Direction))
-            return AdminResult<LaneView>.Invalid("Direction must be In or Out.");
-        if (await db.GateLanes.AnyAsync(l => l.TerminalId == terminalId && l.LaneCode == code, ct))
-            return AdminResult<LaneView>.Conflict($"Lane {code} already exists.");
-
-        var lane = new GateLane { TerminalId = terminalId, GateCode = gate, LaneCode = code, Direction = input.Direction };
-        db.GateLanes.Add(lane);
-        await db.SaveChangesAsync(ct);
-        AuditWriter.Add(db, terminalId, "gate_lane", lane.LaneId, AuditAction.Insert, null, LaneView.From(lane), null, admin.UserId, clock.GetUtcNow());
-        await db.SaveChangesAsync(ct);
-        return AdminResult<LaneView>.Created(LaneView.From(lane));
-    }
+    // ================================================================ board (lanes: LaneService)
 
     public async Task<GateBoard> BoardAsync(int terminalId, CancellationToken ct = default)
     {
