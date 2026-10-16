@@ -44,10 +44,10 @@ public sealed class BrandingApiTests(TasApiFactory factory) : ApiTestBase(factor
             operatorId = op.OperatorId;
             (await db.Terminals.FindAsync(Demo.TerminalId))!.OperatorId = operatorId;
             var root = new AppUser { Email = RootEmail, FullName = "System admin", Role = UserRole.SysAdmin };
-            var ops = new AppUser { Email = OpsEmail, FullName = "Operations head", Role = UserRole.OperatorAdmin, OperatorId = operatorId };
+            var opsUser = new AppUser { Email = OpsEmail, FullName = "Operations head", Role = UserRole.OperatorAdmin, OperatorId = operatorId };
             root.PasswordHash = passwords.Hash(root, Password);
-            ops.PasswordHash = passwords.Hash(ops, Password);
-            db.AppUsers.AddRange(root, ops);
+            opsUser.PasswordHash = passwords.Hash(opsUser, Password);
+            db.AppUsers.AddRange(root, opsUser);
             await db.SaveChangesAsync();
         }
         BrandingService.Forget();
