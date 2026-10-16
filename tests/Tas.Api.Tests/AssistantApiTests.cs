@@ -147,7 +147,7 @@ public sealed class AssistantApiTests(TasApiFactory factory) : ApiTestBase(facto
             // Used up for today.
             var userId = await db.AppUsers.Where(u => u.Email == DemoDataSeeder.DispatcherEmail).Select(u => u.UserId).SingleAsync();
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            await db.Database.ExecuteSqlAsync($"INSERT INTO assistant_usage (user_id, day, questions) VALUES ({userId}, {today}, 60)");
+            await db.Database.ExecuteSqlAsync($"INSERT INTO assistant_usage (user_id, day, questions) VALUES ({userId}, {today}, 60) ON CONFLICT (user_id, day) DO UPDATE SET questions = 60");
         }
         var limited = await alNoor.PostAsJsonAsync(Chat, Ask("One more?"));
         Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
