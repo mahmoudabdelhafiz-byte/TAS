@@ -101,8 +101,6 @@ public sealed class GateService(
             .ToList();
         // A valid gate pass is the driver's own QR code: it always finds its appointment, whatever the number setting.
         var match = GateMatcher.Match(reads, candidates, now, passValid ? settings with { GateByNumber = true } : settings);
-        if (passValid && match.Method == MatchMethod.AppointmentNo)
-            match = match with { Method = MatchMethod.QrCode };
         if (passProblem is not null)
             match = match with { Warnings = match.Warnings.Append(passProblem).ToList() };
         var found = match.Appointment is null ? null : rows.Single(r => r.AppointmentId == match.Appointment.AppointmentId);

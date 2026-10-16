@@ -32,13 +32,13 @@ public sealed class GateSettingsApiTests(TasApiFactory factory) : ApiTestBase(fa
             slotId = SlotId, companyId = Demo.CompanyId, truckId = Demo.TruckIds[0],
             items = new[] { new { category = "IMP_PICKUP", containerNo = "MSCU1234566" } },
         }));
-        var arrival = await Read<ArrivalResult>(await admin.PostAsJsonAsync($"{Gate}/arrivals", new { laneCode = "IN-1", appointmentNo = booked.AppointmentNo }));
+        var arrival = (await Read<AdminResponse<ArrivalResult>>(await admin.PostAsJsonAsync($"{Gate}/arrivals", new { laneCode = "IN-1", appointmentNo = booked.AppointmentNo }))).Data;
         Assert.Equal(GateDecisionKind.Refer, arrival.Decision);
         Assert.Equal(TroubleReason.DriverUnknown, arrival.Reason);
         Assert.Contains("names no driver", arrival.Message);
 
         // The truck's plate would find it; this terminal turned that off.
-        var byPlate = await Read<ArrivalResult>(await admin.PostAsJsonAsync($"{Gate}/arrivals", new { laneCode = "IN-1", plateRead = "1234 ABJ" }));
+        var byPlate = (await Read<AdminResponse<ArrivalResult>>(await admin.PostAsJsonAsync($"{Gate}/arrivals", new { laneCode = "IN-1", plateRead = "1234 ABJ" }))).Data;
         Assert.Equal(MatchMethod.None, byPlate.MatchedBy);
         Assert.Equal(TroubleReason.NoAppointment, byPlate.Reason);
     }
