@@ -55,7 +55,8 @@ public sealed class PasswordLinkService(
     TimeProvider clock,
     Microsoft.Extensions.Hosting.IHostEnvironment env,
     ILogger<PasswordLinkService> logger,
-    TerminalProfiles? profiles = null)
+    TerminalProfiles? profiles = null,
+    Brands.BrandingService? branding = null)
 {
     public const string BadLink = "This link is not valid any more. Ask for a new one.";
 
@@ -195,7 +196,8 @@ public sealed class PasswordLinkService(
         {
             // Terminal staff get their terminal's name and sender; everyone else the installation's.
             var code = user.TerminalId is { } terminalId ? await TerminalProfiles.CodeAsync(db, terminalId, ct) : null;
-            var brand = profiles?.BrandFor(code) ?? TerminalProfiles.DefaultBrand;
+            var brand = branding is not null ? await branding.MessageNameAsync(user.TerminalId, ct)
+                : profiles?.BrandFor(code) ?? TerminalProfiles.DefaultBrand;
             var message = Message(purpose, user.PreferredLanguage.Trim(), user.FullName, link,
                 purpose == PasswordTokenPurpose.Invite ? options.Value.InviteDays : options.Value.ResetMinutes);
             if (brand != TerminalProfiles.DefaultBrand)

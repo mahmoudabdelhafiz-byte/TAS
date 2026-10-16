@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { contrastWithWhite, defaultBrand } from '../lib/brand.ts';
 import { languageName, messageLanguages } from '../lib/languages.ts';
 import { isAdminRole, isCompanyRole } from '../lib/routes.ts';
 import { stamp } from '../lib/time.ts';
@@ -531,6 +532,8 @@ function Operators() {
                 </table>
               </div>
             )}
+            <BrandingForm key={current.operatorId} path={`/api/operators/${current.operatorId}/branding`}
+              title={t('brand.operator')} hint={t('brand.operatorHint')} domain={sys ? 'edit' : 'show'} />
           </div>
         )}
       </div>
@@ -569,7 +572,98 @@ function Operators() {
             }}>{t('fleet.addOperator')}</ActionButton>
           </form>
         )}
+        {sys && <BrandingForm path="/api/branding/installation" title={t('brand.installation')} hint={t('brand.installationHint')} domain="none" />}
       </div>
     </div>
+  );
+}
+
+interface BrandSettingsRow {
+  operatorId: number | null;
+  name: string | null;
+  color: string | null;
+  domain: string | null;
+  logoUrl: string | null;
+}
+
+/** Name, main colour, logo and (for operators) web address of the installation or an operator. */
+function BrandingForm({ path, title, hint, domain }: { path: string; title: string; hint: string; domain: 'edit' | 'show' | 'none' }) {
+  const { api, t } = useApp();
+  const settings = useLoad(() => api.get<BrandSettingsRow>(path), [path]);
+  const [form, setForm] = useState<{ name: string; color: string; domain: string } | null>(null);
+  const m = useMessages();
+  const data = settings.data;
+  const values = form ?? (data ? { name: data.name ?? '', color: data.color ?? '', domain: data.domain ?? '' } : null);
+  const color = values?.color && /^#[0-9a-f]{6}$/i.test(values.color) ? values.color.toLowerCase() : '';
+  const ratio = color ? contrastWithWhite(color) : null;
+
+  return (
+    <form className="book-side form-stack brand-form" onSubmit={e => e.preventDefault()}>
+      <h2>{title}</h2>
+      <p className="hint">{hint}</p>
+      {m.view}
+      {settings.error && <LoadError error={settings.error} retry={settings.reload} />}
+      {values && (
+        <>
+          <label className="field"><span>{t('brand.name')}</span>
+            <input maxLength={80} value={values.name} placeholder={defaultBrand.name}
+              onChange={e => setForm({ ...values, name: e.target.value })} /></label>
+          <div className="field">
+            <span id={`${path}-color`}>{t('brand.color')}</span>
+            <div className="color-row">
+              <input type="color" aria-labelledby={`${path}-color`} value={color || defaultBrand.color}
+                onChange={e => setForm({ ...values, color: e.target.value })} />
+              <input dir="ltr" maxLength={7} value={values.color} placeholder={defaultBrand.color} aria-labelledby={`${path}-color`}
+                onChange={e => setForm({ ...values, color: e.target.value.trim() })} />
+              <span className="color-sample" style={{ background: color || defaultBrand.color }}>{values.name || defaultBrand.name}</span>
+            </div>
+          </div>
+          {ratio !== null && ratio < 4.5 && <p className="check-fail">{t('brand.tooLight', { ratio: ratio.toFixed(1) })}</p>}
+          {domain !== 'none' && (
+            <label className="field"><span>{t('brand.domain')}</span>
+              <input dir="ltr" value={values.domain} disabled={domain === 'show'} placeholder="tas.example.com"
+                onChange={e => setForm({ ...values, domain: e.target.value.trim() })} />
+              <small className="hint">{t('brand.domainHint')}</small></label>
+          )}
+          <ActionButton kind="primary" disabled={ratio !== null && ratio < 4.5} onError={m.setError} onRun={async () => {
+            await api.put(path, { name: values.name.trim() || null, color: values.color || null, domain: domain === 'none' ? null : values.domain || null });
+            setForm(null);
+            settings.reload();
+            m.setDone(t('brand.saved'));
+          }}>{t('brand.save')}</ActionButton>
+
+          <div className="field">
+            <span>{t('brand.logo')}</span>
+            {data?.logoUrl ? <img className="brand-preview" src={data.logoUrl} alt={t('brand.logo')} /> : <p className="muted">{t('brand.noLogo')}</p>}
+            <p className="hint">{t('brand.logoHint')}</p>
+            <div className="actions wrap">
+              <label className="btn btn-secondary file-btn">
+                {t('brand.uploadLogo')}
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="visually-hidden" onChange={async e => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  const body = new FormData();
+                  body.append('file', file);
+                  try {
+                    await api.postForm(`${path}/logo`, body);
+                    settings.reload();
+                    m.setDone(t('brand.saved'));
+                  } catch (err) {
+                    m.setError(err instanceof Error ? err.message : String(err));
+                  }
+                }} />
+              </label>
+              {data?.logoUrl && (
+                <ActionButton kind="secondary" onError={m.setError} onRun={async () => {
+                  await api.del(`${path}/logo`);
+                  settings.reload();
+                }}>{t('brand.removeLogo')}</ActionButton>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </form>
   );
 }

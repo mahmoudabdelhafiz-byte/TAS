@@ -59,6 +59,19 @@ file per language in the `languages` folder of the install kit, made from its `t
 `docker compose restart app`. The folder's README explains the steps. A pack with a mistake (an unknown placeholder,
 a code that doesn't match the file name) stops the start with the reason; `GET /api/ops/status` lists the packs in use.
 
+### Branding
+
+The installation and each operator have a name, a main colour and a logo (`/api/branding/installation`,
+`/api/operators/{id}/branding`, or **Fleet & users → Operators** in the portal). An operator's shows for its terminals in
+the portal, the drivers' app and messages; whatever it leaves out comes from the installation's, then Yardsyncs. The
+name messages are signed with follows the same order; a terminal's own `Terminals__<code>__Brand` setting still comes
+first.
+
+An operator can also have its own web address (for example `tas.harbor-one.example`): sign-in there shows its look.
+Point the name at the installation's server and list it in `TAS_EXTRA_DOMAINS` in `.env` (names separated by
+spaces), so the HTTPS proxy gets a certificate for it. Colours must carry white text (contrast 4.5:1). Logos are PNG, JPEG or WebP up to 256 KB; SVG is refused
+because it can carry scripts.
+
 ### Operators
 
 When one company runs several of the installation's terminals, a system admin groups them under an operator

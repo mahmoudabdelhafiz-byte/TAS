@@ -29,6 +29,18 @@ terminal at the top of the screen. They can add fellow operator admins and staff
 but see nothing of terminals outside it. Taking a terminal out (**Take out**) or deactivating the operator counts at
 once.
 
+## Look and name
+
+The name, main colour and logo show at sign-in, in the portal, in the drivers' app and in messages. A system admin
+sets **This installation's look and name** under **Fleet & users** → **Operators**. Each operator can have its own
+under **Look and name**, which shows for its terminals; operator admins can change their own. Empty fields take the
+installation's, then Yardsyncs.
+
+- **Main colour**: buttons show white text on it, so a colour that is too light is refused.
+- **Logo**: PNG, JPEG or WebP up to 256 KB.
+- **Own web address**: the operator's people sign in there and see its look from the first page. A system admin sets
+  it after the DNS name and certificate are in place.
+
 ## The terminal map
 
 **Terminal map** is what the drivers' app uses inside the terminal: the yard blocks, gate, exit, pre-gate and the

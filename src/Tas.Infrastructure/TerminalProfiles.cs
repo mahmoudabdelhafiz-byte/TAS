@@ -44,6 +44,9 @@ public sealed class TerminalProfiles(IConfiguration config)
 
     public string TosFor(string? code) => (code is null ? null : Normalize(config[$"Terminals:{code}:Tos"])) ?? DefaultTos;
 
+    /// <summary>The terminal's own Brand setting, or null when it has none.</summary>
+    public string? OwnBrand(string? code) => code is null ? null : Clean(config[$"Terminals:{code}:Brand"]);
+
     public string BrandFor(string? code) =>
         (code is null ? null : Clean(config[$"Terminals:{code}:Brand"])) ?? Clean(config["Brand"]) ?? DefaultBrand;
 

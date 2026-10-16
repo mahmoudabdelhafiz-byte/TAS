@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
+import 'brand.dart';
 import 'push.dart';
 import 'screens/appointments.dart';
 import 'screens/login.dart';
@@ -37,6 +38,8 @@ class _YardsyncsDriverAppState extends State<YardsyncsDriverApp> {
   Future<void> _load() async {
     // Language packs from the server; the built-in languages if it doesn't answer quickly.
     await widget.api.loadLanguagePacks().timeout(const Duration(seconds: 5), onTimeout: () {});
+    final brand = await widget.api.branding().timeout(const Duration(seconds: 5), onTimeout: () => null);
+    if (brand != null) appBrand = brand;
     final lang = await widget.api.savedLanguage();
     final signedIn = await widget.api.restore();
     if (!mounted) return;
@@ -57,7 +60,7 @@ class _YardsyncsDriverAppState extends State<YardsyncsDriverApp> {
     return MaterialApp(
       title: 'Yardsyncs mobile',
       debugShowCheckedModeBanner: false,
-      theme: yardsyncsTheme(),
+      theme: yardsyncsTheme(primary: appBrand.color),
       locale: Locale(_lang),
       supportedLocales: appLanguages.map(Locale.new),
       localizationsDelegates: const [

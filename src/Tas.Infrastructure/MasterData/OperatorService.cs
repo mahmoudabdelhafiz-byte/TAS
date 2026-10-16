@@ -125,6 +125,7 @@ public sealed partial class OperatorService(TasDbContext db, TimeProvider clock)
             AuditWriter.Add(db, terminal.TerminalId, "terminal", terminal.TerminalId, AuditAction.Update, before, new { terminal.OperatorId },
                 operatorId is null ? "Taken out of its operator" : "Put in an operator", user.UserId, clock.GetUtcNow());
             await db.SaveChangesAsync(ct);
+            Brands.BrandingService.Forget(); // the terminal now shows its new operator's brand
         }
 
         if (operatorId is null)

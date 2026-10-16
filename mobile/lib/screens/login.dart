@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../brand.dart';
 import '../models.dart';
 import '../strings.dart';
 import '../theme.dart';
@@ -81,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const BrandMark(),
                 const SizedBox(width: 10),
-                Text(t('appName'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: ink)),
+                Text(appBrand.isYardsyncs ? t('appName') : appBrand.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: ink)),
                 const Spacer(),
                 LanguageButton(lang: widget.lang, onLanguage: widget.onLanguage),
               ],

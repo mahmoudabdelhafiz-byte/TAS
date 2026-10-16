@@ -393,6 +393,15 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | `GET /api/languages` and `GET /api/languages/{code}` (public); the portal's language link becomes a list with a third language; the app adds pack languages to its menu; drivers' and users' languages are checked against the installation's |
 | ✅ | `template.json` for translators with every English text; `npm run language-template` keeps it current (checked by tests on both sides) |
 
+### 38. Branding (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Name, main colour and logo for the installation and each operator (migration 015); an operator's shows for its terminals, else the installation's, else Yardsyncs |
+| ✅ | An operator's own web address: sign-in there shows its look from the first page |
+| ✅ | Portal: colours, logo and name everywhere (texts that name Yardsyncs name the brand; the product documentation stays Yardsyncs); **Look and name** under Fleet & users → Operators |
+| ✅ | Drivers' app: colour, logo and name from the server; messages signed with the terminal's brand (a terminal's own Brand setting still first) |
+| ✅ | Colours must carry white text (4.5:1); logos PNG / JPEG / WebP up to 256 KB, checked by their bytes, served with nosniff and a long cache |
+
 ---
 
 ## Remaining
@@ -468,7 +477,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Tenants: terminal operator → terminals; operator admins | Section 35. Competitors: separate installations / cloud instances |
 | ✅ | Country packs: plate formats, mobile number rules, national holidays, currencies, ID types | Section 36: SA, AE, OM, BH, KW, QA. More countries are new entries in `CountryPacks` with their tests |
 | ✅ | Languages as packs: portal and messages in more languages without code changes | Section 37. Help guides stay English / Arabic |
-| ⬜ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | |
+| ✅ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | Section 38 |
 | ⬜ | TOS adapter kit: documented interface + test suite any new TOS adapter must pass | `ITosAdapter` today |
 | ⬜ | Terminal onboarding wizard: terminal, move types, weekly plan, lanes, TOS connection, settings above | |
 | ⬜ | Product name in the code and repository: "TAS" → Yardsyncs | |

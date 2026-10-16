@@ -4,11 +4,13 @@ import { ApiError } from '../lib/api.ts';
 import type { TextKey } from '../lib/i18n.ts';
 import type { Lang } from '../lib/time.ts';
 import type { UserProfile } from '../lib/types.ts';
-import { Mark } from './Shell.tsx';
+import { BrandMark } from './Shell.tsx';
+import type { Brand } from '../lib/brand.ts';
 import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
 
-export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn }: {
+export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn, brand }: {
   api: ApiClient;
+  brand: Brand;
   lang: Lang;
   t: (key: TextKey) => string;
   setLang: (l: Lang) => void;
@@ -52,7 +54,7 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn }: {
   return (
     <main className="login">
       <section className="login-yard" aria-hidden="true">
-        <div className="login-brand"><Mark /> <span>Yardsyncs</span></div>
+        <div className="login-brand"><BrandMark brand={brand} /> <span>{brand.name}</span></div>
         <YardPicture />
       </section>
       <section className="login-form-side">

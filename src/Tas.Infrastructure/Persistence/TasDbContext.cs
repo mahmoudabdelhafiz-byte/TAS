@@ -17,6 +17,7 @@ namespace Tas.Infrastructure.Persistence;
 public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbContext(options)
 {
     public DbSet<TerminalOperator> TerminalOperators => Set<TerminalOperator>();
+    public DbSet<Branding> Brandings => Set<Branding>();
     public DbSet<Terminal> Terminals => Set<Terminal>();
     public DbSet<TransactionCategory> TransactionCategories => Set<TransactionCategory>();
     public DbSet<CapacityTemplate> CapacityTemplates => Set<CapacityTemplate>();
@@ -67,6 +68,13 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
         {
             e.HasKey(x => x.OperatorId);
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<Branding>(e =>
+        {
+            e.HasKey(x => x.BrandingId);
+            e.Property(x => x.Color).HasColumnType("char(7)");
+            e.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<Terminal>(e =>

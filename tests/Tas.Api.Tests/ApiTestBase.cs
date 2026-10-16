@@ -91,6 +91,7 @@ public abstract class ApiTestBase(TasApiFactory factory) : IClassFixture<TasApiF
         var db = scope.ServiceProvider.GetRequiredService<TasDbContext>();
         await db.Database.ExecuteSqlRawAsync("TRUNCATE terminal_operator, terminal, company, app_user, driver_otp RESTART IDENTITY CASCADE");
         Demo = await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
+        Tas.Infrastructure.Brands.BrandingService.Forget(); // the data was just replaced
 
         Tomorrow = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Riyadh).DateTime).AddDays(1);
         var start = At(Tomorrow, 10).ToUniversalTime();

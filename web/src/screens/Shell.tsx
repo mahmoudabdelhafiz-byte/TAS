@@ -18,6 +18,7 @@ import { GateScreen } from './Gate.tsx';
 import { SlotBoard } from './SlotBoard.tsx';
 import { Help } from './Help.tsx';
 import { LanguageSwitch } from '../ui/LanguageSwitch.tsx';
+import type { Brand } from '../lib/brand.ts';
 
 const navText: Record<Screen, TextKey> = {
   book: 'nav.book',
@@ -41,7 +42,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
   setLang: (l: Lang) => void;
   onSignOut: () => void;
 }) {
-  const { api, t, tx, lang, user, terminal, route } = useApp();
+  const { api, t, tx, lang, user, terminal, route, brand } = useApp();
   const screen = route.screen!;
   const [assistant, setAssistant] = useState<AssistantInfo | null>(null);
   useEffect(() => {
@@ -50,8 +51,8 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
 
   return (
     <div className="shell">
-      <nav className="rail" aria-label="Yardsyncs">
-        <div className="rail-mark"><Mark /></div>
+      <nav className="rail" aria-label={brand.name}>
+        <div className="rail-mark" title={brand.name}><BrandMark brand={brand} /></div>
         <ul>
           {screens.map(s => (
             <li key={s}>
@@ -108,10 +109,15 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
   );
 }
 
+/** The brand's logo, or the Yardsyncs mark when it has none. */
+export function BrandMark({ brand }: { brand: Brand }) {
+  return brand.logoUrl ? <img src={brand.logoUrl} alt="" className="brand-logo" /> : <Mark />;
+}
+
 /** The Yardsyncs mark: three boxes, one placed — a yard stack in sync. */
 export function Mark() {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" className="mark">
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" className="brand-mark">
       <rect x="5" y="17" width="10" height="10" rx="1" className="mark-a" />
       <rect x="17" y="17" width="10" height="10" rx="1" className="mark-b" />
       <rect x="17" y="5" width="10" height="10" rx="1" className="mark-a" />

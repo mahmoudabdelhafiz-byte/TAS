@@ -19,6 +19,27 @@ public sealed class TerminalOperator
     public DateTimeOffset CreatedAt { get; set; }
 }
 
+/// <summary>
+/// How Yardsyncs looks and is named: the installation's own (OperatorId null) or an operator's, which shows for the
+/// operator's terminals and at its own web address. Anything not set comes from the installation, then Yardsyncs.
+/// </summary>
+public sealed class Branding
+{
+    public int BrandingId { get; set; }
+    public int? OperatorId { get; set; }
+    public string? Name { get; set; }
+
+    /// <summary>The main colour, "#0e7c86" (lower case).</summary>
+    public string? Color { get; set; }
+
+    /// <summary>The web address the operator's people use (e.g. tas.harbor-one.example); sign-in shows its brand.</summary>
+    public string? Domain { get; set; }
+
+    public byte[]? Logo { get; set; }
+    public string? LogoType { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
 /// <summary>A terminal served by this deployment (the tenant).</summary>
 public sealed class Terminal
 {
