@@ -1011,3 +1011,54 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
   .assistant { inset: 0; width: 100%; height: 100%; border-radius: 0; }
   .assistant-fab { inset-block-end: 84px; }
 }
+
+/* ---------- Lanes (Autogate lane model) ---------- */
+.lane-strip { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 22px; padding: 0; list-style: none; }
+.lane-tile {
+  flex: 0 1 190px; min-width: 150px; padding: 10px 12px 12px; background: var(--surface);
+  border: 1px solid var(--line-soft); border-inline-start: 4px solid var(--green); border-radius: var(--radius);
+}
+.lane-tile.lane-Closed { border-inline-start-color: var(--grey); background: #f7f9fa; }
+.lane-tile.lane-OutOfOrder { border-inline-start-color: var(--red); background: var(--red-tint); }
+.lane-tile-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.lane-tile-head strong { font-size: 18px; letter-spacing: 0.01em; }
+.lane-dir { font-size: 13px; color: var(--muted); }
+.lane-state { margin: 2px 0 4px; font-weight: 500; }
+.lane-OutOfOrder .lane-state { color: var(--red); }
+.lane-Closed .lane-state { color: var(--muted); }
+.lane-note { margin: 0 0 6px; font-size: 14px; }
+.lane-close { display: grid; gap: 6px; margin-top: 6px; }
+.lane-close input, .lane-close select { min-height: 32px; padding: 4px 8px; width: 100%; }
+
+.lane-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.lane-card { min-width: 0; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 16px 18px; }
+.lane-card.inactive { opacity: 0.7; }
+.lane-card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.lane-card-head h2 { margin: 0; font-size: 22px; }
+.lane-pill { margin-inline-start: auto; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 500; background: var(--green-tint); color: #17672f; }
+.lane-pill.lane-Closed, .lane-pill.lane-Retired { background: var(--line-soft); color: var(--muted); }
+.lane-pill.lane-OutOfOrder { background: var(--red-tint); color: var(--red); }
+.lane-facts { display: flex; flex-wrap: wrap; gap: 10px 32px; align-items: flex-start; margin: 12px 0 6px; }
+.lane-fact-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.lane-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.lane-mode .lane-fact-label { flex-basis: 100%; }
+.seg { display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: var(--radius); font-weight: 500; }
+.seg-on { background: var(--ink); color: #fff; }
+.chips.inline { margin: 0; }
+.lane-needs { font-size: 14px; margin: 6px 0 10px; color: #8a5d05; }
+.lane-card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.lane-card-foot .link-btn { color: var(--muted); font-size: 14px; }
+.lane-card .cell-action { white-space: nowrap; }
+.lane-card .cell-action > .link-btn { margin-inline-start: 14px; }
+.lane-card .cell-action .inline-ask { margin-inline-start: 14px; }
+.lane-card .table-wrap { margin: 10px 0 12px; }
+.device-form { margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--page); }
+.device-form h3 { margin: 0 0 4px; font-size: 16px; }
+.device-form .reads { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 12px 0 0; padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.device-form .reads legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+.device-form .actions { margin-top: 12px; }
+.add-lane { margin-top: 8px; }
+.add-lane .section-title { flex-basis: 100%; }
+.device-form .check { align-items: center; }
+.device-form .check input { width: auto; min-height: 0; margin: 0; padding: 0; }
+.device-form .inline-form > .check { align-self: center; padding-top: 18px; }

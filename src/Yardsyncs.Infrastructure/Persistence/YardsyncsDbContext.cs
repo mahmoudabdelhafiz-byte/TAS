@@ -37,6 +37,7 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
     public DbSet<GateLane> GateLanes => Set<GateLane>();
+    public DbSet<GateLaneDevice> LaneDevices => Set<GateLaneDevice>();
     public DbSet<GateEvent> GateEvents => Set<GateEvent>();
     public DbSet<GateTrouble> GateTroubles => Set<GateTrouble>();
     public DbSet<Truck> Trucks => Set<Truck>();
@@ -135,6 +136,15 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
         {
             e.HasKey(x => x.LaneId);
             e.Property(x => x.Direction).HasUpperCaseConversion();
+            e.Property(x => x.State).HasColumnName("lane_state").HasUpperCaseConversion();
+            e.Property(x => x.Mode).HasColumnName("operation_mode").HasUpperCaseConversion();
+        });
+
+        b.Entity<GateLaneDevice>(e =>
+        {
+            e.HasKey(x => x.DeviceId);
+            e.Property(x => x.Kind).HasUpperCaseConversion();
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<GateEvent>(e =>

@@ -18,6 +18,8 @@ test('each role gets its own menu', () => {
   assert.ok(screensFor('Planner').includes('control') && !screensFor('CompanyUser').includes('control'));
   assert.equal(screensFor('Planner')[0], 'slots');
   assert.ok(!screensFor('CompanyAdmin').includes('gate'));
+  assert.ok(screensFor('TerminalAdmin').includes('lanes') && !screensFor('GateClerk').includes('lanes'));
+  assert.equal(parseHash('#/lanes').screen, 'lanes');
   assert.ok(screensFor('TerminalAdmin').includes('map') && screensFor('Planner').includes('map'));
   assert.ok(!screensFor('CompanyAdmin').includes('map') && !screensFor('GateClerk').includes('map'));
   assert.deepEqual(screensFor('OperatorAdmin'), screensFor('TerminalAdmin'));

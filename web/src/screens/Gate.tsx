@@ -2,7 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { ApiError } from '../lib/api.ts';
 import { readLookup } from '../lib/gate.ts';
 import { duration, stamp } from '../lib/time.ts';
-import type { AdminResponse, ArrivalResult, GateBoard, GateBoardTruck, Lane, Trouble } from '../lib/types.ts';
+import type { AdminResponse, ArrivalResult, GateBoard, GateBoardTruck, Lane, LaneState, Trouble } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, TrafficLight, useLoad } from '../ui/kit.tsx';
 
@@ -11,13 +11,14 @@ export function GateScreen() {
   const base = `/api/terminals/${terminal.terminalId}/gate`;
   const board = useLoad(() => api.get<GateBoard>(`${base}/board`), [base], 15_000);
   const troubles = useLoad(() => api.get<Trouble[]>(`${base}/troubles`), [base], 15_000);
-  const lanes = useLoad(() => api.get<Lane[]>(`${base}/lanes`), [base]);
+  const lanes = useLoad(() => api.get<Lane[]>(`${base}/lanes`), [base], 30_000);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [exitLane, setExitLane] = useState('');
 
-  const inLanes = (lanes.data ?? []).filter(l => l.isActive && l.direction === 'In');
-  const outLanes = (lanes.data ?? []).filter(l => l.isActive && l.direction === 'Out');
+  const working = (lanes.data ?? []).filter(l => l.isActive);
+  const inLanes = working.filter(l => l.direction === 'In' && l.state === 'Open');
+  const outLanes = working.filter(l => l.direction === 'Out' && l.state === 'Open');
   const exit = exitLane || outLanes[0]?.laneCode || '';
   const min = t('unit.min');
   const hour = t('unit.h');
@@ -48,6 +49,8 @@ export function GateScreen() {
       {board.error && <LoadError error={board.error} retry={board.reload} />}
       {done && <Notice kind="ok" onClose={() => setDone(null)}>{done}</Notice>}
       {error && <Notice kind="error" onClose={() => setError(null)}>{error}</Notice>}
+
+      {working.length > 0 && <LaneStrip lanes={working} onChanged={lanes.reload} onError={setError} />}
 
       <div className="gate-grid">
         <div className="gate-col">
@@ -221,6 +224,59 @@ function TroubleCase({ trouble, onResolved, onError }: { trouble: Trouble; onRes
         <ActionButton kind="danger" onError={onError} onRun={resolve('Reject')}>{t('gate.turnAway')}</ActionButton>
         <ActionButton onError={onError} onRun={resolve('Dismiss')}>{t('gate.dismiss')}</ActionButton>
       </div>
+    </li>
+  );
+}
+
+export const laneStateText = { Open: 'lanes.state.Open', Closed: 'lanes.state.Closed', OutOfOrder: 'lanes.state.OutOfOrder' } as const;
+
+/** Every lane at a glance; the gate staff close a lane (with a reason everyone then sees) and open it again. */
+function LaneStrip({ lanes, onChanged, onError }: { lanes: Lane[]; onChanged: () => void; onError: (m: string) => void }) {
+  const { t } = useApp();
+  return (
+    <ul className="lane-strip" aria-label={t('lanes.strip')}>
+      {lanes.map(l => <LaneTile key={l.laneId} lane={l} onChanged={onChanged} onError={onError} />)}
+    </ul>
+  );
+}
+
+function LaneTile({ lane, onChanged, onError }: { lane: Lane; onChanged: () => void; onError: (m: string) => void }) {
+  const { api, t, terminal } = useApp();
+  const [closing, setClosing] = useState(false);
+  const [state, setState] = useState<LaneState>('Closed');
+  const [note, setNote] = useState('');
+  const url = `/api/terminals/${terminal.terminalId}/gate/lanes/${lane.laneId}/state`;
+  const set = (next: LaneState, why: string | null) => async () => {
+    await api.post(url, { state: next, note: why });
+    setClosing(false);
+    setNote('');
+    onChanged();
+  };
+  return (
+    <li className={`lane-tile lane-${lane.state}`}>
+      <div className="lane-tile-head">
+        <strong><bdi>{lane.laneCode}</bdi></strong>
+        <span className="lane-dir">{t(lane.direction === 'In' ? 'lanes.in' : 'lanes.out')}{lane.mode === 'Automatic' ? ` · ${t('lanes.mode.Automatic')}` : ''}</span>
+      </div>
+      <p className="lane-state">{t(laneStateText[lane.state])}</p>
+      {lane.stateNote && <p className="lane-note" dir="auto">{lane.stateNote}</p>}
+      {lane.state === 'Open' && !closing && (
+        <button type="button" className="link-btn" onClick={() => setClosing(true)}>{t('lanes.close')}</button>
+      )}
+      {lane.state === 'Open' && closing && (
+        <div className="lane-close">
+          <select value={state} onChange={e => setState(e.target.value as LaneState)} aria-label={t('lanes.stateLabel')}>
+            <option value="Closed">{t('lanes.state.Closed')}</option>
+            <option value="OutOfOrder">{t('lanes.state.OutOfOrder')}</option>
+          </select>
+          <input value={note} maxLength={200} placeholder={t('lanes.why')} aria-label={t('lanes.why')} autoFocus onChange={e => setNote(e.target.value)} />
+          <div className="actions">
+            <ActionButton kind="primary" disabled={!note.trim()} onError={onError} onRun={set(state, note.trim())}>{t(state === 'Closed' ? 'lanes.doClose' : 'lanes.doOutOfOrder')}</ActionButton>
+            <button type="button" className="link-btn" onClick={() => setClosing(false)}>{t('lanes.keepOpen')}</button>
+          </div>
+        </div>
+      )}
+      {lane.state !== 'Open' && <ActionButton onError={onError} onRun={set('Open', null)}>{t('lanes.open')}</ActionButton>}
     </li>
   );
 }

@@ -2,7 +2,7 @@
 
 import type { UserRole } from './types.ts';
 
-export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'gate' | 'kpi' | 'fleet' | 'help';
+export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'gate' | 'lanes' | 'kpi' | 'fleet' | 'help';
 
 export interface Route {
   screen: Screen | null;
@@ -14,7 +14,7 @@ export function parseHash(hash: string): Route {
   const [path, query = ''] = clean.split('?');
   const params: Record<string, string> = {};
   for (const [key, value] of new URLSearchParams(query)) params[key] = value;
-  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'gate', 'kpi', 'fleet', 'help'] as const).find(s => s === path) ?? null;
+  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'gate', 'lanes', 'kpi', 'fleet', 'help'] as const).find(s => s === path) ?? null;
   return { screen, params };
 }
 
@@ -43,7 +43,7 @@ function workScreens(role: UserRole): Screen[] {
     case 'TerminalAdmin':
     case 'OperatorAdmin':
     case 'SysAdmin':
-      return ['slots', 'control', 'kpi', 'setup', 'onboard', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'fleet', 'charges'];
+      return ['slots', 'control', 'kpi', 'setup', 'onboard', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'lanes', 'fleet', 'charges'];
   }
 }
 

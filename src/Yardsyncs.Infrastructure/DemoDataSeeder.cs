@@ -108,10 +108,12 @@ public sealed class DemoDataSeeder(YardsyncsDbContext db, SlotGenerationService 
 
         db.QuotaReleaseRules.Add(new QuotaReleaseRule { TerminalId = tid, CategoryId = ids["MTY_RETURN"], HoursBefore = 12 });
 
+        var laneIn1 = new GateLane { TerminalId = tid, GateCode = "MAIN", LaneCode = "IN-1", Direction = LaneDirection.In };
+        var laneOut1 = new GateLane { TerminalId = tid, GateCode = "MAIN", LaneCode = "OUT-1", Direction = LaneDirection.Out };
         db.GateLanes.AddRange(
-            new GateLane { TerminalId = tid, GateCode = "MAIN", LaneCode = "IN-1", Direction = LaneDirection.In },
+            laneIn1,
             new GateLane { TerminalId = tid, GateCode = "MAIN", LaneCode = "IN-2", Direction = LaneDirection.In },
-            new GateLane { TerminalId = tid, GateCode = "MAIN", LaneCode = "OUT-1", Direction = LaneDirection.Out });
+            laneOut1);
 
         var now = clock.GetUtcNow();
         db.CapacityReservations.Add(new CapacityReservation
@@ -122,6 +124,19 @@ public sealed class DemoDataSeeder(YardsyncsDbContext db, SlotGenerationService 
         var company = new Company { Name = "Al Noor Transport", CrNumber = "4030123456", CompanyType = CompanyType.Trucking };
         var otherCompany = new Company { Name = "Gulf Haulage", CrNumber = "4030654321", CompanyType = CompanyType.Trucking };
         db.Companies.AddRange(company, otherCompany);
+        await db.SaveChangesAsync(ct);
+
+        // The Autogate lane model: IN-1 and OUT-1 are equipped (still worked by a clerk), IN-2 is a plain booth lane.
+        GateLaneDevice Device(GateLane lane, string code, LaneDeviceKind kind, string? reads = null) =>
+            new() { TerminalId = tid, LaneId = lane.LaneId, DeviceCode = code, Kind = kind, Reads = reads, CreatedAt = clock.GetUtcNow() };
+        db.LaneDevices.AddRange(
+            Device(laneIn1, "IN1-CAM-FRONT", LaneDeviceKind.Camera, "PLATE"),
+            Device(laneIn1, "IN1-OCR", LaneDeviceKind.Ocr, "CONTAINER,ISO_CODE,DAMAGE"),
+            Device(laneIn1, "IN1-KIOSK", LaneDeviceKind.Kiosk),
+            Device(laneIn1, "IN1-BARRIER", LaneDeviceKind.Barrier),
+            Device(laneIn1, "IN1-LIGHT", LaneDeviceKind.TrafficLight),
+            Device(laneOut1, "OUT1-CAM", LaneDeviceKind.Camera, "PLATE,CONTAINER"),
+            Device(laneOut1, "OUT1-BARRIER", LaneDeviceKind.Barrier));
         await db.SaveChangesAsync(ct);
 
         // Demo terminal areas: approach, pre-gate (checks trucks in) and gate, around 21.470 N 39.170 E.

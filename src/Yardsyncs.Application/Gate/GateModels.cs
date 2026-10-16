@@ -1,4 +1,5 @@
 using Yardsyncs.Application.Booking;
+using Yardsyncs.Domain;
 using Yardsyncs.Domain.Booking;
 using Yardsyncs.Domain.Gate;
 
@@ -40,6 +41,23 @@ public sealed record ResolveTroubleInput(TroubleAction Action, string? Note, str
 
 public sealed record LaneInput(string GateCode, string LaneCode, LaneDirection Direction);
 
+/// <summary>Change a lane's gate, way of working or retire it (terminal admins). Leave a field null to keep it.</summary>
+public sealed record LaneUpdateInput(string? GateCode = null, LaneMode? Mode = null, bool? IsActive = null);
+
+/// <summary>Open, close or mark a lane out of order (gate staff). A note is required unless the lane is opened.</summary>
+public sealed record LaneStateInput(LaneState State, string? Note = null);
+
+/// <summary>A device at a lane. Reads apply to cameras / OCR (plate, container, ISO code, seal, damage) and RFID readers (tag).</summary>
+public sealed record LaneDeviceInput(
+    string DeviceCode,
+    LaneDeviceKind Kind,
+    IReadOnlyList<LaneRead>? Reads = null,
+    string? Vendor = null,
+    string? Model = null,
+    string? Address = null,
+    bool IsActive = true,
+    string? Notes = null);
+
 // ---------------------------------------------------------------- views
 
 public sealed record ArrivalResult(
@@ -76,9 +94,42 @@ public sealed record TroubleView(
     DateTimeOffset? ResolvedAt,
     int? ResolvedBy);
 
-public sealed record LaneView(int LaneId, string GateCode, string LaneCode, LaneDirection Direction, bool IsActive)
+/// <param name="Identifies">How trucks can be identified at this lane (its devices, way of working and the terminal's gate settings).</param>
+/// <param name="AutomaticProblems">What the lane still needs to work automatically; empty when it could.</param>
+public sealed record LaneView(
+    int LaneId,
+    string GateCode,
+    string LaneCode,
+    LaneDirection Direction,
+    bool IsActive,
+    LaneState State,
+    LaneMode Mode,
+    string? StateNote,
+    DateTimeOffset? StateChangedAt,
+    IReadOnlyList<LaneDeviceView> Devices,
+    IReadOnlyList<LaneIdentification> Identifies,
+    IReadOnlyList<LaneProblem> AutomaticProblems)
 {
-    public static LaneView From(GateLane l) => new(l.LaneId, l.GateCode, l.LaneCode, l.Direction, l.IsActive);
+    public static LaneView From(GateLane l, IReadOnlyList<GateLaneDevice> devices, TerminalSettings settings) => new(
+        l.LaneId, l.GateCode, l.LaneCode, l.Direction, l.IsActive, l.State, l.Mode, l.StateNote, l.StateChangedAt,
+        devices.OrderBy(d => d.Kind).ThenBy(d => d.DeviceCode).Select(LaneDeviceView.From).ToList(),
+        LaneRules.Identifies(l.Mode, devices, settings),
+        LaneRules.AutomaticProblems(devices, settings));
+}
+
+public sealed record LaneDeviceView(
+    int DeviceId,
+    string DeviceCode,
+    LaneDeviceKind Kind,
+    IReadOnlyList<LaneRead> Reads,
+    string? Vendor,
+    string? Model,
+    string? Address,
+    bool IsActive,
+    string? Notes)
+{
+    public static LaneDeviceView From(GateLaneDevice d) =>
+        new(d.DeviceId, d.DeviceCode, d.Kind, LaneRules.ParseReads(d.Reads), d.Vendor, d.Model, d.Address, d.IsActive, d.Notes);
 }
 
 public sealed record GateBoardTruck(

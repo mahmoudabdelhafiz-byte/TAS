@@ -23,6 +23,13 @@ truck and driver not blocked.
 | **Already inside** | The appointment was used already: check the plate |
 | **Appointment cancelled** | Turn away; the company can book again |
 
+## Lanes
+
+The row of lanes on top shows every lane: **Open**, **Closed** or **Out of order**, and whether it works automatically.
+To take a lane out of use, choose **Close lane**, pick **Closed** or **Out of order**, and write the reason: everyone at
+the gate sees it, and a truck checked at that lane is refused with that reason. **Open lane** puts it back. Only open
+lanes are offered for checking trucks in and out.
+
 ## Trouble desk
 
 Every truck sent to the trouble desk waits in **Trouble desk** with its reason. Write a **Note** (required), then

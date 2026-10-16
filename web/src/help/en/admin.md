@@ -69,6 +69,19 @@ roads between them.
 - **Ready for the driver app?** lists what is missing (a block that can't be reached from the gate, roads that don't
   meet…). **Save map** when it says every block can be reached.
 
+## Lanes and devices
+
+**Lanes** lists each gate lane with the equipment at it: cameras, OCR, RFID readers, driver kiosks, barriers, traffic
+lights, displays, ticket printers, intercoms and weighbridges. For each device record its code, what it reads (plates,
+container numbers, ISO codes, seals, damage photos, tags), the vendor and model, and the address the lane controller
+uses. Any make works: the kind of device decides its role.
+
+**Finds the appointment by** shows how the lane can identify trucks, from its devices and the terminal's gate rules.
+A lane works **Manual** (a clerk at the lane) or **Automatic**. Automatic needs a barrier and a way to identify trucks
+without a clerk — a kiosk, or a camera reading plates or container numbers; the screen says what is missing. While a
+lane is automatic, its barrier and its last way to identify trucks can't be removed. **Retire lane** takes a lane away
+for good; opening and closing for the day is on the gate screen.
+
 ## Personal data
 
 Drivers' **Copy of data** and **Erase personal data** are in **Fleet & users** → **Drivers** (see the guide Your

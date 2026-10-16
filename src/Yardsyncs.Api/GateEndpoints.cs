@@ -40,13 +40,30 @@ public static class GateEndpoints
         gate.MapGet("/board", async (int terminalId, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.BoardAsync(terminalId, ct)));
 
-        gate.MapGet("/lanes", async (int terminalId, HttpContext http, GateService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? Results.Ok(await service.ListLanesAsync(terminalId, ct)));
+        // Lanes (Autogate lane model): gate staff list them and open / close them; terminal admins add lanes and devices
+        // and switch a lane to automatic.
+        gate.MapGet("/lanes", async (int terminalId, HttpContext http, LaneService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, ct)));
 
-        gate.MapPost("/lanes", async (int terminalId, LaneInput body, HttpContext http, GateService service, CancellationToken ct) =>
-            !AccessRules.CanManageCategories(YardsyncsApi.User(http)!, terminalId)
-                ? YardsyncsApi.Forbidden("Only terminal admins of this terminal can add lanes.")
-                : YardsyncsApi.Admin(await service.CreateLaneAsync(YardsyncsApi.User(http)!, terminalId, body, ct), l => $"/api/terminals/{terminalId}/gate/lanes/{l.LaneId}"));
+        gate.MapPost("/lanes", async (int terminalId, LaneInput body, HttpContext http, LaneService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.CreateAsync(YardsyncsApi.User(http)!, terminalId, body, ct), l => $"/api/terminals/{terminalId}/gate/lanes/{l.LaneId}"));
+
+        gate.MapPut("/lanes/{laneId:int}", async (int terminalId, int laneId, LaneUpdateInput body, HttpContext http, LaneService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.UpdateAsync(YardsyncsApi.User(http)!, terminalId, laneId, body, ct)));
+
+        gate.MapPost("/lanes/{laneId:int}/state", async (int terminalId, int laneId, LaneStateInput body, HttpContext http, LaneService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.SetStateAsync(YardsyncsApi.User(http)!, terminalId, laneId, body, ct)));
+
+        gate.MapPost("/lanes/{laneId:int}/devices", async (int terminalId, int laneId, LaneDeviceInput body, HttpContext http, LaneService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.AddDeviceAsync(YardsyncsApi.User(http)!, terminalId, laneId, body, ct), l => $"/api/terminals/{terminalId}/gate/lanes/{l.LaneId}"));
+
+        gate.MapPut("/lanes/{laneId:int}/devices/{deviceId:int}", async (
+            int terminalId, int laneId, int deviceId, LaneDeviceInput body, HttpContext http, LaneService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.UpdateDeviceAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, body, ct)));
+
+        gate.MapDelete("/lanes/{laneId:int}/devices/{deviceId:int}", async (
+            int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.RemoveDeviceAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, ct)));
 
         return app;
     }
@@ -55,4 +72,9 @@ public static class GateEndpoints
         AccessRules.CanOperateGate(YardsyncsApi.User(http)!, terminalId)
             ? null
             : YardsyncsApi.Forbidden("Only terminal staff of this terminal can work the gate.");
+
+    private static IResult? NotAdmin(HttpContext http, int terminalId) =>
+        AccessRules.CanManageCategories(YardsyncsApi.User(http)!, terminalId)
+            ? null
+            : YardsyncsApi.Forbidden("Only terminal admins of this terminal can set up lanes and their devices.");
 }
