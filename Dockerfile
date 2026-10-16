@@ -23,6 +23,7 @@ RUN dotnet restore src/Tas.Api/Tas.Api.csproj
 COPY src/ src/
 COPY db/ db/
 COPY --from=web /src/src/Tas.Api/wwwroot src/Tas.Api/wwwroot
+# A version number like 1.4.0 or 1.4.0-rc.1 (shown by /health and /api/ops/status).
 ARG VERSION=0.0.0-dev
 RUN dotnet publish src/Tas.Api/Tas.Api.csproj -c Release -o /app --no-restore -p:InformationalVersion=$VERSION
 

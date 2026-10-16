@@ -218,7 +218,7 @@ jobs:
       - name: Build image
         run: |
           set -o pipefail
-          docker build --progress=plain -t yardsyncs:latest --build-arg VERSION=ci-${{ github.sha }} . 2>&1 | tee build.log || {
+          docker build --progress=plain -t yardsyncs:latest --build-arg VERSION=0.1.0-ci.${GITHUB_SHA::7} . 2>&1 | tee build.log || {
             grep -iE "error|failed|npm err|not found|cannot|denied" build.log | grep -v "^#[0-9]* DONE" | tail -30 | while read -r line; do echo "::error title=image build::$line"; done
             exit 1
           }
