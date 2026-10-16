@@ -16,10 +16,6 @@ public sealed class TerminalOperator
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public bool IsActive { get; set; } = true;
-
-    /// <summary>The operator the terminal belongs to; null when it isn't in a group.</summary>
-    public int? OperatorId { get; set; }
-
     public DateTimeOffset CreatedAt { get; set; }
 }
 
