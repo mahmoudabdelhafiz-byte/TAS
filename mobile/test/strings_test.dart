@@ -32,4 +32,19 @@ void main() {
       expect(texts['en']!.containsKey('light.$light'), isTrue, reason: light);
     }
   });
+
+  test('a language pack adds a language, or corrects a built-in one', () {
+    addLanguagePack('fr', 'Français', false, {'signOut': 'Se déconnecter'});
+    addLanguagePack('ps', 'پښتو', true, {'signOut': 'وتل'});
+    addLanguagePack('ur', 'اردو', true, {'signOut': 'لاگ آؤٹ کریں'});
+    expect(tr('fr', 'signOut'), 'Se déconnecter');
+    expect(tr('fr', 'language'), texts['en']!['language']); // not in the pack: English
+    expect(tr('ur', 'signOut'), 'لاگ آؤٹ کریں');
+    expect(tr('ur', 'language'), texts['ur']!['language']);
+    expect(appLanguages, ['ar', 'en', 'ur', 'hi', 'fr', 'ps']);
+    expect(languageName('fr'), 'Français');
+    expect(languageName('ur'), 'اردو');
+    expect(isRtl('ps'), isTrue);
+    expect(isRtl('fr'), isFalse);
+  });
 }

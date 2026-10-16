@@ -36,7 +36,6 @@ public sealed record UserAdminResult(UserAdminStatus Status, UserProfile? User =
 /// <summary>Creates users within the rules of <see cref="AccessRules.CanCreateUser"/>.</summary>
 public sealed class UserAdminService(TasDbContext db, PasswordService passwords, AuthService auth, TimeProvider clock, PasswordLinkService? links = null)
 {
-    private static readonly HashSet<string> Languages = ["ar", "en", "ur", "hi"];
 
     /// <summary>
     /// Creates a user. Without a password the user gets an invitation by email to set one
@@ -54,8 +53,8 @@ public sealed class UserAdminService(TasDbContext db, PasswordService passwords,
             return new UserAdminResult(UserAdminStatus.Invalid, Error: "Full name is required (max 150 characters).");
 
         var language = (request.PreferredLanguage ?? "en").Trim().ToLowerInvariant();
-        if (!Languages.Contains(language))
-            return new UserAdminResult(UserAdminStatus.Invalid, Error: "Language must be one of: ar, en, ur, hi.");
+        if (!MasterDataValidator.UserLanguages.Contains(language))
+            return new UserAdminResult(UserAdminStatus.Invalid, Error: $"Language must be one of: {string.Join(", ", MasterDataValidator.UserLanguages)}.");
 
         var invite = string.IsNullOrEmpty(request.Password);
         if (invite && links is null)

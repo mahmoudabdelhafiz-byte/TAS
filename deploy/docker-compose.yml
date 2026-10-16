@@ -38,6 +38,10 @@ services:
       ConnectionStrings__Tas: Host=db;Port=5432;Database=tas;Username=tas;Password=${DB_PASSWORD};Maximum Pool Size=${DB_POOL:-60}
       Proxy__TrustForwardedHeaders: "true"
       PasswordLinks__PortalUrl: https://${TAS_DOMAIN:?set TAS_DOMAIN in .env}
+      Languages__Path: /app/languages
+    volumes:
+      # Language packs (languages/README.md): read at start, so restart the app after adding one.
+      - ./languages:/app/languages:ro
     expose:
       - "8080"
 

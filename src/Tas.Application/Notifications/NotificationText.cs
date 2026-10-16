@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Tas.Application.Languages;
 using Tas.Domain;
 
 namespace Tas.Application.Notifications;
@@ -11,8 +12,9 @@ public sealed record RenderedMessage(string Subject, string Body)
 }
 
 /// <summary>
-/// Message texts in Arabic, English, Urdu and Hindi. Placeholders in {braces} are filled from the notification's
-/// params; unknown languages fall back to English. Texts are short enough for SMS.
+/// Message texts in Arabic, English, Urdu and Hindi, plus whatever language packs add or correct
+/// (<see cref="LanguageCatalog"/>). Placeholders in {braces} are filled from the notification's params; a language
+/// without the text falls back to English. Texts are short enough for SMS.
 /// Arabic / Urdu / Hindi wording should be reviewed by native speakers before go-live.
 /// </summary>
 public static partial class NotificationText
@@ -104,6 +106,32 @@ public static partial class NotificationText
         },
     };
 
+    /// <summary>The drivers' sign-in code and the password emails (not notifications, but texts in the same packs).</summary>
+    private static readonly Dictionary<string, Dictionary<string, (string Subject, string Body)>> OtherMessages = new()
+    {
+        [LanguageCatalog.Messages.SignInCode] = new()
+        {
+            ["en"] = ("Sign-in code", "Yardsyncs: sign-in code {code}. Valid for {minutes} minutes. Do not share it."),
+            ["ar"] = ("رمز الدخول", "Yardsyncs: رمز الدخول {code}. صالح لمدة {minutes} دقائق. لا تشاركه مع أحد."),
+            ["ur"] = ("لاگ اِن کوڈ", "Yardsyncs: لاگ اِن کوڈ {code}۔ {minutes} منٹ کے لیے درست۔ کسی کو نہ بتائیں۔"),
+            ["hi"] = ("लॉगिन कोड", "Yardsyncs: लॉगिन कोड {code}। {minutes} मिनट तक मान्य। किसी को न बताएं।"),
+        },
+        [LanguageCatalog.Messages.PasswordInvite] = new()
+        {
+            ["en"] = ("your account is ready",
+                "Hello {name},\n\nAn account was created for you on Yardsyncs. Set your password here (the link works once, for {days} days):\n\n{link}\n\nIf you did not expect this, ignore this email."),
+            ["ar"] = ("حسابك جاهز",
+                "مرحباً {name}،\n\nتم إنشاء حساب لك على Yardsyncs. عيّن كلمة المرور من هنا (يعمل الرابط مرة واحدة لمدة {days} أيام):\n\n{link}\n\nإذا لم تكن تتوقع هذه الرسالة فتجاهلها."),
+        },
+        [LanguageCatalog.Messages.PasswordReset] = new()
+        {
+            ["en"] = ("set a new password",
+                "Hello {name},\n\nSomeone asked to reset the password of your Yardsyncs account. Set a new password here (the link works once, for {minutes} minutes):\n\n{link}\n\nIf it wasn't you, ignore this email: your password stays as it is."),
+            ["ar"] = ("تعيين كلمة مرور جديدة",
+                "مرحباً {name}،\n\nطُلب تغيير كلمة مرور حسابك على Yardsyncs. عيّن كلمة مرور جديدة من هنا (يعمل الرابط مرة واحدة لمدة {minutes} دقيقة):\n\n{link}\n\nإذا لم تكن أنت صاحب الطلب فتجاهل الرسالة: تبقى كلمة المرور كما هي."),
+        },
+    };
+
     [GeneratedRegex(@"\{([a-zA-Z]+)\}")]
     private static partial Regex Placeholder();
 
@@ -113,16 +141,34 @@ public static partial class NotificationText
 
     public static bool IsKnown(string templateCode) => Templates.ContainsKey(templateCode);
 
+    /// <summary>Every message a language pack can translate: the notifications, the sign-in code, the password emails.</summary>
+    public static IReadOnlyCollection<string> MessageCodes => [.. Templates.Keys, .. OtherMessages.Keys];
+
+    /// <summary>The built-in English text of a message (for the translators' template).</summary>
+    public static (string Subject, string Body) English(string message) =>
+        (Templates.GetValueOrDefault(message) ?? OtherMessages[message])["en"];
+
+    /// <summary>The {placeholders} each message may use: those of its English text.</summary>
+    public static IReadOnlyDictionary<string, IReadOnlySet<string>> Placeholders =>
+        Templates.Concat(OtherMessages).ToDictionary(
+            t => t.Key,
+            t => (IReadOnlySet<string>)Placeholder().Matches(t.Value["en"].Subject + " " + t.Value["en"].Body)
+                .Select(m => m.Groups[1].Value).ToHashSet());
+
     /// <summary>Fills the template; a missing value becomes "-" so a message is never sent with raw braces.</summary>
     /// <param name="brand">The name the message is signed with (the terminal's or the installation's); default Yardsyncs.</param>
     public static RenderedMessage Render(string templateCode, string? language, IReadOnlyDictionary<string, string> values, string? brand = null)
     {
         var name = string.IsNullOrWhiteSpace(brand) ? Brand : brand.Trim();
-        if (!Templates.TryGetValue(templateCode, out var byLanguage))
+        if (!Templates.TryGetValue(templateCode, out var byLanguage) && !OtherMessages.TryGetValue(templateCode, out byLanguage))
             throw new ArgumentException($"Unknown notification template '{templateCode}'.", nameof(templateCode));
 
+        // The language's pack, its built-in text, then English (an English pack can reword English too).
         var lang = (language ?? "en").Trim().ToLowerInvariant();
-        var (subject, body) = byLanguage.TryGetValue(lang, out var text) ? text : byLanguage["en"];
+        var builtIn = byLanguage.TryGetValue(lang, out var own) ? own : byLanguage["en"];
+        var packed = LanguageCatalog.Message(lang, templateCode)
+                     ?? (byLanguage.ContainsKey(lang) ? null : LanguageCatalog.Message("en", templateCode));
+        var (subject, body) = packed is null ? builtIn : (packed.Subject ?? builtIn.Subject, packed.Body);
 
         string Fill(string s) => Placeholder().Replace(s, m =>
             values.TryGetValue(m.Groups[1].Value, out var v) && !string.IsNullOrWhiteSpace(v) ? v.Trim() : "-");

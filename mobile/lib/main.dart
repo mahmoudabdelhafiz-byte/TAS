@@ -35,11 +35,13 @@ class _YardsyncsDriverAppState extends State<YardsyncsDriverApp> {
   }
 
   Future<void> _load() async {
+    // Language packs from the server; the built-in languages if it doesn't answer quickly.
+    await widget.api.loadLanguagePacks().timeout(const Duration(seconds: 5), onTimeout: () {});
     final lang = await widget.api.savedLanguage();
     final signedIn = await widget.api.restore();
     if (!mounted) return;
     setState(() {
-      if (lang != null && supportedLanguages.contains(lang)) _lang = lang;
+      if (lang != null && appLanguages.contains(lang)) _lang = lang;
       _signedIn = signedIn;
     });
     if (signedIn) _push.start();
@@ -57,7 +59,7 @@ class _YardsyncsDriverAppState extends State<YardsyncsDriverApp> {
       debugShowCheckedModeBanner: false,
       theme: yardsyncsTheme(),
       locale: Locale(_lang),
-      supportedLocales: supportedLanguages.map(Locale.new),
+      supportedLocales: appLanguages.map(Locale.new),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

@@ -38,15 +38,15 @@ class LanguageButton extends StatelessWidget {
       tooltip: tr(lang, 'language'),
       onSelected: onLanguage,
       itemBuilder: (_) => [
-        for (final code in supportedLanguages)
-          CheckedPopupMenuItem(value: code, checked: code == lang, child: Text(languageNames[code]!)),
+        for (final code in appLanguages)
+          CheckedPopupMenuItem(value: code, checked: code == lang, child: Text(languageName(code))),
       ],
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.translate, size: 20, color: color),
           const SizedBox(width: 6),
-          Text(languageNames[lang]!, style: TextStyle(color: color, fontSize: 15)),
+          Text(languageName(lang), style: TextStyle(color: color, fontSize: 15)),
         ]),
       ),
     );

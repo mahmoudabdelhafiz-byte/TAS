@@ -1,4 +1,5 @@
 // Portal text in English and Arabic. Arabic must have every English key (the type enforces it).
+// Language packs on the server add more languages, or correct these texts, at run time (see languages.ts).
 // Placeholders: {name}. Server messages (problem details) are English and shown as they come.
 
 import type { Lang } from './time.ts';
@@ -1227,10 +1228,16 @@ export const ar: Record<TextKey, string> = {
   'track.result.Fail': 'غير مُستوفى',
 };
 
-const dictionaries: Record<Lang, Record<TextKey, string>> = { en, ar };
+const dictionaries: Record<Lang, Partial<Record<TextKey, string>>> = { en: { ...en }, ar: { ...ar } };
+
+/** Adds a language pack's portal texts (over the built-in ones for en / ar); unknown keys are ignored. */
+export function addDictionary(lang: Lang, texts: Record<string, string>): void {
+  const known = Object.entries(texts).filter(([key, text]) => key in en && typeof text === 'string' && text.trim() !== '');
+  dictionaries[lang] = { ...(dictionaries[lang] ?? {}), ...Object.fromEntries(known) };
+}
 
 export function translate(lang: Lang, key: TextKey, values?: Record<string, string | number>): string {
-  const text = dictionaries[lang][key] ?? en[key];
+  const text = dictionaries[lang]?.[key] ?? en[key];
   return values ? text.replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? '')) : text;
 }
 

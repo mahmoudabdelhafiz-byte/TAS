@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { guideText } from '../help/content.ts';
+import { guidesIn } from '../help/content.ts';
 import { guidesFor } from '../help/guides.ts';
 import { parseMarkdown } from '../lib/markdown.ts';
 import { BlockView } from '../ui/Markdown.tsx';
@@ -11,8 +11,8 @@ export function Help() {
   const { t, lang, user, route, go } = useApp();
   const list = useMemo(() => guidesFor(screensFor(user.role)), [user.role]);
   const current = list.find(g => g.id === route.params.g) ?? list[0];
-  const blocks = useMemo(() => parseMarkdown(guideText[lang][current.id] ?? ''), [lang, current.id]);
-  const titleOf = (id: string) => /^#\s+(.*)$/m.exec(guideText[lang][id] ?? '')?.[1] ?? id;
+  const blocks = useMemo(() => parseMarkdown(guidesIn(lang)[current.id] ?? ''), [lang, current.id]);
+  const titleOf = (id: string) => /^#\s+(.*)$/m.exec(guidesIn(lang)[id] ?? '')?.[1] ?? id;
 
   return (
     <section className="screen help">

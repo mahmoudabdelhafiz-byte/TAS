@@ -1,11 +1,12 @@
 // Dates and times are always shown in the terminal's time zone, whatever the browser's zone is.
 // The API speaks UTC instants (ISO strings) and local calendar dates ("2026-10-20").
 
-export type Lang = 'en' | 'ar';
+/** A two-letter language code: en and ar are built in, language packs add others. */
+export type Lang = string;
 
-/** Gregorian calendar and Latin digits in Arabic too: plates, container numbers and times read the same at the gate. */
+/** Gregorian calendar and Latin digits in every language: plates, container numbers and times read the same at the gate. */
 export function locale(lang: Lang): string {
-  return lang === 'ar' ? 'ar-u-ca-gregory-nu-latn' : 'en-GB';
+  return lang === 'en' ? 'en-GB' : `${lang}-u-ca-gregory-nu-latn`;
 }
 
 /** The local calendar date ("YYYY-MM-DD") at an instant in a time zone. */

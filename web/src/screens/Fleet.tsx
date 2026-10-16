@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { languageName, messageLanguages } from '../lib/languages.ts';
 import { isAdminRole, isCompanyRole } from '../lib/routes.ts';
 import { stamp } from '../lib/time.ts';
 import type { Company, Country, Driver, Terminal, Truck, UserRole } from '../lib/types.ts';
@@ -161,7 +162,6 @@ function Trucks({ companyId, canEdit, canBlock }: { companyId: number; canEdit: 
   );
 }
 
-const languages = [['ar', 'العربية'], ['en', 'English'], ['ur', 'اردو'], ['hi', 'हिन्दी']] as const;
 
 /** A driver whose personal data was erased keeps this ID number. */
 const erased = (x: { idNumber: string }) => x.idNumber.startsWith('ERASED-');
@@ -223,7 +223,7 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
                   <tr key={x.driverId}>
                     <td>{x.fullName}</td>
                     <td className="num"><bdi>{x.mobile}</bdi></td>
-                    <td>{languages.find(l => l[0] === x.preferredLanguage)?.[1] ?? x.preferredLanguage}</td>
+                    <td>{languageName(x.preferredLanguage.trim())}</td>
                     <td>{erased(x) ? <span className="muted">{t('fleet.erased')}</span>
                       : x.isBlocked ? <span className="check-fail">{t('fleet.blocked')}</span> : <span className="ok-text">{t('fleet.active')}</span>}</td>
                     <td className="cell-action">
@@ -252,7 +252,7 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
             <input value={form.mobile} dir="ltr" inputMode="tel" placeholder={country?.mobileExample ?? ''} onChange={e => setForm({ ...form, mobile: e.target.value })} /></label>
           <label className="field"><span>{t('fleet.messagesIn')}</span>
             <select value={form.preferredLanguage} onChange={e => setForm({ ...form, preferredLanguage: e.target.value })}>
-              {languages.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+              {messageLanguages().map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
             </select></label>
           <ActionButton kind="primary" disabled={!form.fullName.trim() || !form.idNumber.trim() || !form.mobile.trim()} onError={m.setError}
             onRun={async () => {

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'gate_pass.dart';
 import 'models.dart';
+import 'strings.dart';
 import 'trip_tracker.dart';
 import 'yard.dart';
 
@@ -90,6 +91,22 @@ class DriverApi {
     final id = List.generate(24, (_) => 'abcdefghijklmnopqrstuvwxyz0123456789'[random.nextInt(36)]).join();
     await _store.write(_installKey, id);
     return id;
+  }
+
+  /// Language packs on the server with texts for the app: more languages, or corrected texts. Best effort.
+  Future<void> loadLanguagePacks() async {
+    try {
+      final list = await _send('GET', '/api/languages', auth: false) as List<dynamic>;
+      for (final item in list.cast<Map<String, dynamic>>()) {
+        if (item['fromPack'] != true || item['app'] != true) continue;
+        final code = item['code'] as String;
+        final pack = await _send('GET', '/api/languages/${Uri.encodeComponent(code)}', auth: false) as Map<String, dynamic>;
+        final texts = ((pack['app'] as Map<String, dynamic>?) ?? const {}).map((k, v) => MapEntry(k, '$v'));
+        addLanguagePack(code, item['name'] as String? ?? code, item['direction'] == 'rtl', texts);
+      }
+    } catch (_) {
+      // Offline or an older server: the built-in languages.
+    }
   }
 
   /// How mobile numbers are typed in the installation's country, e.g. "05XXXXXXXX" (public; null when unreachable).

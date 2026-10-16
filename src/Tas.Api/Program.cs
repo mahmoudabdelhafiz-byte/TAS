@@ -69,6 +69,10 @@ builder.Services.AddRateLimiter(o =>
 
 var app = builder.Build();
 
+// Language packs (Languages:Path): more languages, or corrections to the built-in ones, without a new version.
+// A pack with a mistake stops the start, with what is wrong.
+Tas.Application.Languages.LanguageCatalog.Use(Tas.Infrastructure.LanguagePackLoader.Load(Tas.Infrastructure.LanguagePackLoader.FolderFor(app.Configuration)));
+
 // Test-only switches must never reach a real server: refuse to start rather than run unsafely.
 if (SecurityChecks.Unsafe(app.Configuration, app.Environment) is { Count: > 0 } unsafeSettings)
     throw new InvalidOperationException("Unsafe settings for " + app.Environment.EnvironmentName + ": " + string.Join(" ", unsafeSettings));
