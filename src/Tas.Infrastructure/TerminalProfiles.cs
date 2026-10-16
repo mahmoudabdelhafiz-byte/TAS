@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Tas.Application.Countries;
 using Tas.Infrastructure.Notifications;
 using Tas.Infrastructure.Persistence;
 
@@ -11,9 +12,10 @@ namespace Tas.Infrastructure;
 /// installation serves several operators. Anything a terminal doesn't set falls back to the installation's setting:
 ///
 ///   Terminals__JED1__Tos=N4                               the TOS adapter (Fake or N4; default Tos:Adapter)
-///   Terminals__JED1__Brand=RSGT                            the name in messages (default Brand, then "Yardsyncs")
+///   Terminals__JED1__Brand=HARBOR1                         the name in messages (default Brand, then "Yardsyncs")
+///   Terminals__JED1__Country=SA                            holidays and currency (default Country, then SA)
 ///   Terminals__JED1__Notifications__SmsProvider=Unifonic   any Notifications setting: providers, accounts,
-///   Terminals__JED1__Notifications__Unifonic__SenderId=RSGT   SMS sender name, email sender address and name
+///   Terminals__JED1__Notifications__Unifonic__SenderId=HARBOR1   SMS sender name, email sender address and name
 ///
 /// Secrets stay in environment variables, as for the installation-wide settings.
 /// </summary>
@@ -45,6 +47,13 @@ public sealed class TerminalProfiles(IConfiguration config)
     public string BrandFor(string? code) =>
         (code is null ? null : Clean(config[$"Terminals:{code}:Brand"])) ?? Clean(config["Brand"]) ?? DefaultBrand;
 
+    /// <summary>The installation's country (setting Country): reads mobile numbers and plates for every terminal.</summary>
+    public CountryPack InstallationCountry => CountryPacks.Find(config["Country"]) ?? CountryPacks.SaudiArabia;
+
+    /// <summary>The terminal's country, for its public holidays and currency.</summary>
+    public CountryPack CountryFor(string? code) =>
+        (code is null ? null : CountryPacks.Find(config[$"Terminals:{code}:Country"])) ?? InstallationCountry;
+
     public bool HasOwnNotifications(string? code) => code is not null && config.GetSection($"Terminals:{code}:Notifications").Exists();
 
     /// <summary>The installation's notification settings with the terminal's own on top.</summary>
@@ -66,14 +75,19 @@ public sealed class TerminalProfiles(IConfiguration config)
         var problems = new List<string>();
         if (!TosAdapters.Contains(DefaultTos, StringComparer.OrdinalIgnoreCase))
             problems.Add($"Unknown TOS adapter '{config["Tos:Adapter"]}' in Tos:Adapter.");
+        var countries = string.Join(", ", CountryPacks.All.Select(p => p.Code));
+        if (Clean(config["Country"]) is { } country && CountryPacks.Find(country) is null)
+            problems.Add($"Unknown country '{country}' in Country (Yardsyncs has: {countries}).");
         foreach (var code in ConfiguredTerminals())
         {
             var tos = Normalize(config[$"Terminals:{code}:Tos"]);
             if (tos is not null && !TosAdapters.Contains(tos, StringComparer.OrdinalIgnoreCase))
                 problems.Add($"Unknown TOS adapter '{tos}' in Terminals:{code}:Tos.");
+            if (Clean(config[$"Terminals:{code}:Country"]) is { } own && CountryPacks.Find(own) is null)
+                problems.Add($"Unknown country '{own}' in Terminals:{code}:Country (Yardsyncs has: {countries}).");
         }
         if (problems.Count > 0)
-            throw new InvalidOperationException(string.Join(" ", problems) + " Use " + string.Join(" or ", TosAdapters) + ".");
+            throw new InvalidOperationException(string.Join(" ", problems) + " TOS adapters: " + string.Join(" or ", TosAdapters) + ".");
     }
 
     private static string? Normalize(string? value)

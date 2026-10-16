@@ -1,25 +1,21 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Tas.Application.Countries;
 
 namespace Tas.Application.MasterData;
 
 /// <summary>
 /// Truck plates in one canonical form so the same truck matches however it was typed or read by gate OCR:
-/// digits first, then letters, upper-case Latin, no spaces. Saudi plate letters are mapped from Arabic
-/// to their official Latin equivalents and Arabic-Indic digits to 0–9.
+/// digits first, then letters, upper-case Latin, no spaces. Arabic plate letters are mapped to the Latin letter they
+/// stand for in the country pack (Saudi plates today), Arabic-Indic digits to 0–9.
 ///   "1234 ABJ", "ABJ-1234", "أ ب ح ١٢٣٤" → "1234ABJ"
 /// </summary>
 public static class PlateNumber
 {
-    private static readonly Dictionary<char, char> SaudiLetters = new()
-    {
-        ['ا'] = 'A', ['أ'] = 'A', ['إ'] = 'A', ['آ'] = 'A',
-        ['ب'] = 'B', ['ح'] = 'J', ['د'] = 'D', ['ر'] = 'R', ['س'] = 'S', ['ص'] = 'X', ['ط'] = 'T',
-        ['ع'] = 'E', ['ق'] = 'G', ['ك'] = 'K', ['ل'] = 'L', ['م'] = 'Z', ['ن'] = 'N',
-        ['ه'] = 'H', ['ة'] = 'H', ['و'] = 'U', ['ى'] = 'V', ['ي'] = 'V',
-    };
+    /// <summary>Normalizes with the installation's country pack.</summary>
+    public static string Normalize(string? value) => Normalize(value, CountryPacks.Installation);
 
-    public static string Normalize(string? value)
+    public static string Normalize(string? value, CountryPack country)
     {
         var digits = new StringBuilder();
         var letters = new StringBuilder();
@@ -29,7 +25,7 @@ public static class PlateNumber
             var digit = Digits.ToAscii(c);
             if (digit is not null)
                 digits.Append(digit.Value);
-            else if (SaudiLetters.TryGetValue(c, out var mapped))
+            else if (country.PlateLetters.TryGetValue(c, out var mapped))
                 letters.Append(mapped);
             else if (c is >= 'a' and <= 'z' or >= 'A' and <= 'Z')
                 letters.Append(char.ToUpperInvariant(c));
@@ -43,14 +39,19 @@ public static class PlateNumber
         normalized.Length is >= 2 and <= 12 && normalized.Any(char.IsAsciiDigit);
 }
 
-/// <summary>Mobile numbers in E.164 ("+9665XXXXXXXX"). Saudi local forms (05…, 5…, 9665…, 009665…) are converted.</summary>
+/// <summary>
+/// Mobile numbers in E.164 ("+9665XXXXXXXX"). Numbers typed with "+" or "00" work from any country; local forms
+/// follow the country pack: in Saudi Arabia 05…, 5… and 9665… become +9665….
+/// </summary>
 public static partial class PhoneNumber
 {
     [GeneratedRegex(@"^\+[1-9][0-9]{7,14}$")]
     private static partial Regex E164();
 
-    /// <summary>The E.164 form, or null when it is not a usable mobile number.</summary>
-    public static string? Normalize(string? value)
+    /// <summary>The E.164 form with the installation's country pack, or null when it is not a usable mobile number.</summary>
+    public static string? Normalize(string? value) => Normalize(value, CountryPacks.Installation);
+
+    public static string? Normalize(string? value, CountryPack country)
     {
         if (string.IsNullOrWhiteSpace(value))
             return null;
@@ -65,10 +66,15 @@ public static partial class PhoneNumber
         }
 
         var n = sb.ToString();
+        var rule = country.Mobile;
+        bool Mobile(string national) => national.Length == rule.Length && rule.Starts.Any(national.StartsWith);
+
         if (n.StartsWith("00", StringComparison.Ordinal)) n = "+" + n[2..];
-        else if (n.StartsWith("05", StringComparison.Ordinal) && n.Length == 10) n = "+966" + n[1..];
-        else if (n.StartsWith('5') && n.Length == 9) n = "+966" + n;
-        else if (n.StartsWith("966", StringComparison.Ordinal)) n = "+" + n;
+        else if (n.StartsWith('+')) { }
+        else if (rule.TrunkPrefix.Length > 0 && n.StartsWith(rule.TrunkPrefix, StringComparison.Ordinal) && Mobile(n[rule.TrunkPrefix.Length..]))
+            n = "+" + rule.DialCode + n[rule.TrunkPrefix.Length..];
+        else if (Mobile(n)) n = "+" + rule.DialCode + n;
+        else if (n.StartsWith(rule.DialCode, StringComparison.Ordinal)) n = "+" + n;
 
         return E164().IsMatch(n) ? n : null;
     }

@@ -51,6 +51,25 @@ public class TerminalProfilesTests
         Assert.Throws<InvalidOperationException>(() => Profiles(("Tos:Adapter", "SAP")).Validate());
     }
 
+    [Fact]
+    public void Each_terminal_can_be_in_its_own_country()
+    {
+        var p = Profiles(("Country", "ae"), ("Terminals:DEMO:Country", "OM"));
+        Assert.Equal("AE", p.InstallationCountry.Code);
+        Assert.Equal("OM", p.CountryFor("DEMO").Code);
+        Assert.Equal("AE", p.CountryFor("JED1").Code);
+        Assert.Equal("SA", Profiles().CountryFor("DEMO").Code);
+    }
+
+    [Fact]
+    public void An_unknown_country_stops_the_app()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() => Profiles(("Terminals:JED1:Country", "Saudi")).Validate());
+        Assert.Contains("Terminals:JED1:Country", error.Message);
+        Assert.Throws<InvalidOperationException>(() => Profiles(("Country", "ZZ")).Validate());
+        Profiles(("Country", "qa")).Validate();
+    }
+
     private sealed class NamedSender(NotificationChannel channel, string name) : INotificationSender
     {
         public NotificationChannel Channel => channel;

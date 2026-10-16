@@ -103,7 +103,10 @@ public static class DependencyInjection
         // "Tos:OnUnavailable" = Warn (default) or Reject.
         services.AddSingleton(new TosSettings(config.GetValue("Tos:OnUnavailable", TosUnavailablePolicy.Warn)));
         services.AddSingleton<TerminalProfiles>();
-        new TerminalProfiles(config).Validate();
+        var terminalProfiles = new TerminalProfiles(config);
+        terminalProfiles.Validate();
+        // Mobile numbers and plates are read with the installation's country everywhere (companies and drivers are shared).
+        Tas.Application.Countries.CountryPacks.UseForInstallation(terminalProfiles.InstallationCountry);
         services.Configure<FakeTosOptions>(config.GetSection("FakeTos"));
         services.AddSingleton<FakeTosAdapter>();
         services.Configure<N4Options>(config.GetSection("N4"));

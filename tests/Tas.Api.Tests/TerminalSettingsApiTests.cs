@@ -44,4 +44,38 @@ public sealed class TerminalSettingsApiTests(TasApiFactory factory) : ApiTestBas
         Assert.Equal("DEMO: Fake", plain.Tos);
         Assert.Equal("Yardsyncs", Assert.Single(plain.Terminals).Brand);
     }
+
+    private sealed record CountryRow(string Code, string DialCode, string MobileExample, string IdNameEn, string Currency);
+
+    private sealed record HolidayRow(DateOnly Date, string NameEn, string NameAr, bool Lunar);
+
+    private sealed record TerminalRow(string Code, string Country, string Currency);
+
+    [Fact]
+    public async Task Each_terminal_has_the_holidays_of_its_country()
+    {
+        if (!Enabled) return;
+
+        // Public, so the drivers' app can show how to type the mobile number before sign-in.
+        var country = await Read<CountryRow>(await Factory.CreateClient().GetAsync("/api/country"));
+        Assert.Equal(("SA", "+966", "05XXXXXXXX", "SAR"), (country.Code, country.DialCode, country.MobileExample, country.Currency));
+
+        var dispatcher = await As(DemoDataSeeder.DispatcherEmail);
+        var saudi = await Read<List<HolidayRow>>(await dispatcher.GetAsync($"{Terminal}/holidays?year=2026"));
+        Assert.Contains(saudi, h => h.Date == new DateOnly(2026, 9, 23) && h.NameEn == "National Day");
+        Assert.Equal(HttpStatusCode.BadRequest, (await dispatcher.GetAsync($"{Terminal}/holidays?year=1990")).StatusCode);
+        var demo = Assert.Single(await Read<List<TerminalRow>>(await dispatcher.GetAsync("/api/terminals")));
+        Assert.Equal(("SA", "SAR"), (demo.Country, demo.Currency));
+
+        // The same terminal set up as one in the Emirates: its holidays and currency, the installation's mobile rules.
+        using var emirates = Factory.WithWebHostBuilder(b => b.UseSetting("Terminals:DEMO:Country", "AE"));
+        var login = await emirates.CreateClient().PostAsJsonAsync("/api/auth/login", new { email = DemoDataSeeder.DispatcherEmail, password = Password });
+        var client = emirates.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", (await Read<TokenResponse>(login)).AccessToken);
+        var uae = await Read<List<HolidayRow>>(await client.GetAsync($"{Terminal}/holidays?year=2026"));
+        Assert.Contains(uae, h => h.Date == new DateOnly(2026, 12, 2));
+        Assert.DoesNotContain(uae, h => h.NameEn == "Founding Day");
+        Assert.Equal("AED", Assert.Single(await Read<List<TerminalRow>>(await client.GetAsync("/api/terminals"))).Currency);
+        Assert.Equal("SA", (await Read<CountryRow>(await client.GetAsync("/api/country"))).Code);
+    }
 }

@@ -13,9 +13,18 @@ public sealed record ActiveBody(bool Active, string? Reason);
 
 public sealed record TerminalView(
     int TerminalId, string Code, string Name, Tas.Domain.TerminalType TerminalType, string TimeZone, int SlotMinutes, int BookingHorizonDays,
-    int? OperatorId = null);
+    int? OperatorId = null, string Country = "SA", string Currency = "SAR");
 
 public sealed record TerminalOperatorBody(int? OperatorId);
+
+/// <summary>A country pack as the portal and the drivers' app need it.</summary>
+public sealed record CountryView(
+    string Code, string NameEn, string NameAr, string DialCode, string MobileExample, string IdNameEn, string IdNameAr,
+    string Currency, int CurrencyDecimals, string TimeZone)
+{
+    public static CountryView From(Tas.Application.Countries.CountryPack p) =>
+        new(p.Code, p.NameEn, p.NameAr, "+" + p.Mobile.DialCode, p.Mobile.Example, p.IdNameEn, p.IdNameAr, p.Currency, p.CurrencyDecimals, p.TimeZone);
+}
 
 /// <summary>Companies, trucks, drivers, categories, cargo releases and users.</summary>
 public static class MasterDataEndpoints
@@ -115,7 +124,26 @@ public static class MasterDataEndpoints
 
         // The terminals the signed-in user can work at (the portal's terminal picker).
         // Companies and system admins see every active terminal; terminal staff see their own; operator admins their operator's.
-        app.MapGet("/api/terminals", async (HttpContext http, TasDbContext db, CancellationToken ct) =>
+        // The installation's country: how mobiles are typed, the drivers' ID document (public: the drivers' app shows it before sign-in).
+        app.MapGet("/api/country", (Tas.Infrastructure.TerminalProfiles profiles) => Results.Ok(CountryView.From(profiles.InstallationCountry)))
+            .AllowAnonymous();
+
+        // The terminal's public holidays in a year (lunar ones are expected dates: they follow the moon sighting).
+        app.MapGet("/api/terminals/{terminalId:int}/holidays", async (
+            int terminalId, int? year, HttpContext http, TasDbContext db, Tas.Infrastructure.TerminalProfiles profiles, CancellationToken ct) =>
+        {
+            if (!AccessRules.CanAccessTerminal(TasApi.User(http)!, terminalId))
+                return TasApi.Forbidden("You cannot see this terminal.");
+            var code = await Tas.Infrastructure.TerminalProfiles.CodeAsync(db, terminalId, ct);
+            if (code is null)
+                return TasApi.Problem(StatusCodes.Status404NotFound, $"Terminal {terminalId} not found.");
+            var y = year ?? DateTime.UtcNow.Year;
+            if (y is < 2000 or > 2075)
+                return TasApi.Problem(StatusCodes.Status400BadRequest, "Year must be between 2000 and 2075.");
+            return Results.Ok(profiles.CountryFor(code).Holidays(y));
+        }).RequireAuthorization();
+
+        app.MapGet("/api/terminals", async (HttpContext http, TasDbContext db, Tas.Infrastructure.TerminalProfiles profiles, CancellationToken ct) =>
         {
             var user = TasApi.User(http)!;
             var query = db.Terminals.AsNoTracking().Where(t => t.IsActive);
@@ -127,10 +155,15 @@ public static class MasterDataEndpoints
             else if (user.IsTerminalStaff && !user.IsSysAdmin)
                 query = query.Where(t => t.TerminalId == user.TerminalId);
 
-            return Results.Ok(await query
+            var terminals = await query
                 .OrderBy(t => t.Code)
-                .Select(t => new TerminalView(t.TerminalId, t.Code, t.Name, t.TerminalType, t.TimeZone, t.SlotMinutes, t.BookingHorizonDays, t.OperatorId))
-                .ToListAsync(ct));
+                .Select(t => new TerminalView(t.TerminalId, t.Code, t.Name, t.TerminalType, t.TimeZone, t.SlotMinutes, t.BookingHorizonDays, t.OperatorId, "SA", "SAR"))
+                .ToListAsync(ct);
+            return Results.Ok(terminals.Select(t =>
+            {
+                var country = profiles.CountryFor(t.Code);
+                return t with { Country = country.Code, Currency = country.Currency };
+            }));
         }).RequireAuthorization();
 
         // ================================================================ operators (system admins; operator admins see their own)

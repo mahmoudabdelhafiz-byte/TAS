@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { canChangeCapacity } from '../lib/routes.ts';
 import { clock, slotRange } from '../lib/time.ts';
-import type { AdminResponse, Category, Override, OverrideAction, SlotBoardRow } from '../lib/types.ts';
+import type { AdminResponse, Category, Holiday, Override, OverrideAction, SlotBoardRow } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, DayStepper, LoadError, Notice, Panel, useLoad } from '../ui/kit.tsx';
 import { categoryName } from './Book.tsx';
@@ -29,6 +29,13 @@ export function SlotBoard() {
       ? api.get<Override[]>(`${base}/capacity/overrides?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
       : Promise.resolve([] as Override[])),
     [base, from, to]);
+
+  // Public holidays of the terminal's country: a reminder to plan the day, never a closure by itself.
+  const year = date.slice(0, 4);
+  const holidays = useLoad(() => api.get<Holiday[]>(`${base}/holidays?year=${year}`), [base, year]);
+  const holiday = (holidays.data ?? []).filter(h => h.date === date);
+  const holidayName = [...new Set(holiday.map(h => (lang === 'ar' ? h.nameAr : h.nameEn)))].join(lang === 'ar' ? '، ' : ', ');
+  const dayClosed = rows.length > 0 && rows.every(r => r.isClosed);
 
   const cats = [...(categories.data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
   const tone = new Map(cats.map((c, i) => [c.code, tones[i % tones.length]]));
@@ -58,6 +65,22 @@ export function SlotBoard() {
         {done && <Notice kind="ok" onClose={() => setDone(null)}>{done}</Notice>}
         {error && <Notice kind="error" onClose={() => setError(null)}>{error}</Notice>}
         {board.data && rows.length === 0 && <p className="empty">{t('slots.empty')}</p>}
+        {holiday.length > 0 && (
+          <div className="holiday-note" role="note">
+            <p>
+              <strong>{t('slots.holiday', { name: holidayName })}</strong>{' '}
+              {holiday.some(h => h.lunar) ? t('slots.holidayLunar') : t('slots.holidayFixed')}
+            </p>
+            {editable && rows.length > 0 && !dayClosed && (
+              <ActionButton kind="secondary" onError={setError} onRun={async () => {
+                await api.post<AdminResponse<Override>>(`${base}/capacity/overrides`, {
+                  startAt: rows[0].startAt, endAt: rows[rows.length - 1].endAt, category: null, action: 'Close', value: null, reason: holidayName,
+                });
+                changed(t('slots.dayClosed'));
+              }}>{t('slots.closeDay')}</ActionButton>
+            )}
+          </div>
+        )}
 
         {rows.length > 0 && (
           <>
