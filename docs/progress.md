@@ -410,6 +410,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Conformance tests any adapter must pass (`TosAdapterConformance` with `TosScenario`); the demo TOS and N4 (against a simulated TasLookup) pass them |
 | ✅ | "Connecting another TOS" in the public documentation; the demo TOS can act unreachable (`FakeTos:Unreachable`) to try the warning flow |
 
+### 40. Terminal onboarding (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Add a terminal (`POST /api/terminals`): system admins, or operator admins for their own operator; starts with the usual move types (breakbulk too for multipurpose), an in and an out lane and the usual booking rules |
+| ✅ | The checklist (`GET /api/terminals/{id}/setup`): move types, weekly plan, bookable slots, gate lanes, TOS, staff, companies, map; "ready to book" once the first four are done |
+| ✅ | **Terminal set-up** screen: the steps in order, each with its quick actions (usual move types, a starter weekly plan, make slots, add lanes and move types, test the TOS connection) or a link to the screen that does it |
+
 ---
 
 ## Remaining
@@ -487,7 +494,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Languages as packs: portal and messages in more languages without code changes | Section 37. Help guides stay English / Arabic |
 | ✅ | Branding per operator: logo, colours, sender name in messages ("Yardsyncs" by default) | Section 38 |
 | ✅ | TOS adapter kit: documented interface + test suite any new TOS adapter must pass | Section 39 |
-| ⬜ | Terminal onboarding wizard: terminal, move types, weekly plan, lanes, TOS connection, settings above | |
+| ✅ | Terminal onboarding wizard: terminal, move types, weekly plan, lanes, TOS connection, settings above | Section 40; TOS and message settings stay in `.env` |
 | ⬜ | Product name in the code and repository: "TAS" → Yardsyncs | |
 
 ### Phase H — Yardsyncs Autogate (next module)

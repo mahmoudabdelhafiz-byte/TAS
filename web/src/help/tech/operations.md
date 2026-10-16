@@ -42,6 +42,21 @@ Integration__Terminals__JED1__Url=...                        events to that term
 codes for drivers use the installation's settings, because a driver works at several terminals. An unknown TOS name
 stops the server from starting, so a typo can't turn into failed bookings.
 
+### Adding a terminal
+
+In the portal, **Terminal set-up** lets system admins and operator admins add a terminal. It starts with the usual
+move types, an in and an out lane and the usual booking rules. The same screen then works through the checklist.
+Through the API:
+
+```
+POST /api/terminals                         {"code": "JED2", "name": "...", "terminalType": "Container", "timeZone": "Asia/Riyadh"}
+GET  /api/terminals/{id}/setup              the checklist: which steps are done, and whether trucks can book
+POST /api/terminals/{id}/setup/tos-test     asks the terminal's TOS a harmless question
+```
+
+The terminal's TOS and message settings stay in `.env` (`Terminals__<code>__…`), as above. The checklist shows when
+the TOS is still the demo one.
+
 ### Country
 
 `Country` (SA by default; AE, OM, BH, KW and QA are also included) decides how the installation reads mobile numbers

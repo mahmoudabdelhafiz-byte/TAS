@@ -533,6 +533,7 @@ appointments.MapPut("/{appointmentNo}/assignment", async (
 
 app.MapMasterData();
 app.MapBranding();
+app.MapOnboarding();
 app.MapGate();
 app.MapDriverApp();
 

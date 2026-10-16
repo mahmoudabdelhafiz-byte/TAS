@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<TerminalDataService>();
         services.AddScoped<OperatorService>();
         services.AddScoped<Tas.Infrastructure.Brands.BrandingService>();
+        services.AddScoped<Tas.Infrastructure.Onboarding.OnboardingService>();
         services.AddHostedService<SlotGenerationWorker>();
 
         // Booking
