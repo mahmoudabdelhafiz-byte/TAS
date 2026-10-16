@@ -2,6 +2,20 @@
 
 For terminal admins and operator admins: companies and users, operators, the terminal map, personal data and the system's health.
 
+## Setting up a terminal
+
+**Terminal set-up** shows what the terminal has and what it still needs, step by step. Trucks can book once the first
+four steps are done: move types, weekly plan, bookable slots and gate lanes. Each step opens with its quick actions:
+
+- **Add the usual move types**
+- **Make a starter plan**: gate hours, days and trucks per slot
+- **Make the slots now**
+- **Add a lane**
+- **Test the connection** to the terminal operating system
+
+System admins and operator admins can **Add a terminal** there. It starts with the usual move types, an in and an out
+lane and the usual booking rules.
+
 ## Bringing a trucking company on board
 
 1. **Fleet & users** → **Companies** → **Register a company**: name, CR number and type.
