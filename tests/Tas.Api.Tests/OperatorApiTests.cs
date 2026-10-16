@@ -20,8 +20,6 @@ public sealed class OperatorApiTests(TasApiFactory factory) : ApiTestBase(factor
     private const string RootEmail = "root@yardsyncs.example";
     private const string OperatorAdminEmail = "ops@harbor-one.example";
 
-    private sealed record Wrapped<T>(T Value);
-
     private sealed record TerminalRow(int TerminalId, string Code, int? OperatorId);
 
     private sealed record UserRow(int UserId, string Email, UserRole Role, int? OperatorId);
@@ -48,7 +46,7 @@ public sealed class OperatorApiTests(TasApiFactory factory) : ApiTestBase(factor
         var sys = await As(RootEmail);
         var created = await sys.PostAsJsonAsync("/api/operators", new { code = "harbor1", name = "Harbor One" });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var op = (await Read<Wrapped<OperatorView>>(created)).Value;
+        var op = (await Read<AdminResponse<OperatorView>>(created)).Data;
         Assert.Equal("HARBOR1", op.Code);
         Assert.Equal(HttpStatusCode.Conflict, (await sys.PostAsJsonAsync("/api/operators", new { code = "HARBOR1", name = "Again" })).StatusCode);
 

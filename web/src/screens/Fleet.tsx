@@ -560,9 +560,9 @@ function Operators() {
               <input dir="ltr" maxLength={20} value={created.code} onChange={e => setCreated({ ...created, code: e.target.value.toUpperCase() })} /></label>
             <label className="field"><span>{t('fleet.name')}</span><input maxLength={150} value={created.name} onChange={e => setCreated({ ...created, name: e.target.value })} /></label>
             <ActionButton kind="primary" disabled={created.code.trim().length < 2 || !created.name.trim()} onError={m.setError} onRun={async () => {
-              const result = await api.post<{ value: OperatorRow }>('/api/operators', { code: created.code.trim(), name: created.name.trim() });
+              const result = await api.post<{ data: OperatorRow }>('/api/operators', { code: created.code.trim(), name: created.name.trim() });
               setCreated({ code: '', name: '' });
-              setPicked(result.value.operatorId);
+              setPicked(result.data.operatorId);
               list.reload();
             }}>{t('fleet.addOperator')}</ActionButton>
           </form>
