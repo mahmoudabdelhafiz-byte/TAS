@@ -72,3 +72,14 @@ the link below the list opens that truck's ticket.
 
 **At the gate**, **In the terminal**, **Completed today**, **Average turn time** and **At the trouble desk** are for
 the whole terminal, updated every few seconds.
+
+## Inspection
+
+**Inspect** on a truck at the gate or inside opens its inspection, for **Gate in** or **Gate out** and each container.
+Type the **Seal seen**: the screen shows the seal the company declared, and a different number is flagged. Tick **Seal
+broken** or **No seal** if so. **Add damage** for each damage (side, kind, **major** if serious, a note), then **Save
+inspection**. After saving, **Take or add a photo** adds photos (from the phone or tablet camera), and each damage can
+point to its photo. An automatic lane fills the inspection from its cameras; check it and save to confirm.
+
+**Inspections** lists them with the seal problems and damage, and any disputes from trucking companies. Planners and
+admins answer a dispute with **Accept** or **Reject** and a note for the company.

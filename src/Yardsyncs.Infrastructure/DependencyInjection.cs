@@ -76,6 +76,7 @@ public static class DependencyInjection
         services.AddScoped<LaneService>();
         services.AddScoped<DeviceService>();
         services.AddScoped<GateTicketService>();
+        services.AddScoped<InspectionService>();
         services.Configure<Yardsyncs.Application.Gate.LaneControllerOptions>(config.GetSection("LaneController"));
         services.AddScoped<LaneControllerService>();
         services.AddHostedService<LaneControllerWorker>();

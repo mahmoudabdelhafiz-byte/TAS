@@ -24,6 +24,7 @@ public sealed class LaneControllerService(
     YardsyncsDbContext db,
     GateService gate,
     DeviceService devices,
+    InspectionService inspections,
     TimeProvider clock,
     IOptions<LaneControllerOptions> options,
     ILogger<LaneControllerService> logger)
@@ -119,6 +120,9 @@ public sealed class LaneControllerService(
         }
         await db.LaneTransactions.Where(t => t.TransactionId == txId && t.Status == LaneTransactionStatus.Admitted)
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.Status, LaneTransactionStatus.Passed).SetProperty(t => t.ClosedAt, now), ct);
+
+        // What the cameras saw (seals, damage) becomes the passage's inspection.
+        await inspections.FromLaneAsync(txId, ct);
     }
 
     /// <summary>

@@ -190,9 +190,14 @@ public sealed class TosGateService(
                 i.ContainerNo is null ? [] : seals)).ToList());
     }
 
-    /// <summary>Seals the lane cameras read for this appointment's truck.</summary>
+    /// <summary>Seals seen at gate-in for this appointment: the clerk's inspection first, else what the lane cameras read.</summary>
     private async Task<IReadOnlyList<string>> SealsAsync(long appointmentId, CancellationToken ct)
     {
+        var inspected = await db.GateInspections.AsNoTracking()
+            .Where(i => i.AppointmentId == appointmentId && i.Stage == InspectionStage.In && i.SealSeen != null)
+            .Select(i => i.SealSeen!).ToListAsync(ct);
+        if (inspected.Count > 0)
+            return inspected.Distinct().Take(4).ToList();
         var reads = await db.LaneDeviceReads.AsNoTracking()
             .Where(r => r.TransactionId != null && db.LaneTransactions.Any(t => t.TransactionId == r.TransactionId && t.AppointmentId == appointmentId))
             .ToListAsync(ct);

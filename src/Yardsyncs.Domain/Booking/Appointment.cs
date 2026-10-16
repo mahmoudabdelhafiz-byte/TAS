@@ -125,6 +125,10 @@ public sealed class AppointmentItem
     public decimal? ActualTonnage { get; set; }
     public ValidationStatus ValidationStatus { get; set; } = ValidationStatus.Pending;
     public string? TosRef { get; set; }
+
+    /// <summary>The seal number the company declared, checked at the gate.</summary>
+    public string? SealNo { get; set; }
+
     public List<ValidationResult> ValidationResults { get; set; } = [];
 }
 

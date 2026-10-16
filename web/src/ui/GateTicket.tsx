@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { stamp } from '../lib/time.ts';
 import { useApp } from './context.tsx';
 import { LoadError, useLoad } from './kit.tsx';
+import { DamageLine, sealText } from './Inspection.tsx';
+import type { DamageKind, DamageSeverity, DamageSide, SealStatus } from '../lib/types.ts';
 
 export interface GateTicketData {
   terminalName: string;
@@ -18,8 +20,8 @@ export interface GateTicketData {
   inLane: string | null;
   outLane: string | null;
   tosVisitReference: string | null;
-  moves: { category: string; categoryAr: string; containerNo: string | null; isoType: string | null; reference: string | null; seals: string[] }[];
-  damage: { photo: string | null; note: string | null; side: string | null }[];
+  moves: { category: string; categoryAr: string; containerNo: string | null; isoType: string | null; reference: string | null; seals: string[]; sealStatus: SealStatus }[];
+  damage: { containerNo: string | null; side: DamageSide | null; kind: DamageKind | null; severity: DamageSeverity | null; note: string | null }[];
   weightKg: number | null;
 }
 
@@ -71,7 +73,7 @@ export function GateTicket({ appointmentNo, onClose }: { appointmentNo: string; 
                     <td>{lang === 'ar' ? m.categoryAr : m.category}</td>
                     <td><bdi>{m.containerNo ?? '—'}</bdi>{m.isoType && <span className="muted"> {m.isoType}</span>}</td>
                     <td><bdi>{m.reference ?? '—'}</bdi></td>
-                    <td><bdi>{m.seals.join(', ') || '—'}</bdi></td>
+                    <td><bdi>{m.seals.join(', ') || '—'}</bdi>{m.sealStatus !== 'NotChecked' && m.sealStatus !== 'Ok' && <span className={`seal seal-${m.sealStatus}`}> · {t(sealText[m.sealStatus])}</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -79,7 +81,9 @@ export function GateTicket({ appointmentNo, onClose }: { appointmentNo: string; 
             <h3>{t('ticket.damage')}</h3>
             {x.damage.length === 0
               ? <p>{t('ticket.noDamage')}</p>
-              : <ul className="ticket-damage">{x.damage.map((d, i) => <li key={i} dir="auto">{[d.side, d.note].filter(Boolean).join(': ') || t('ticket.photoOnly')}</li>)}</ul>}
+              : <ul className="ticket-damage">{x.damage.map((d, i) => (
+                <li key={i}>{d.containerNo && <><bdi>{d.containerNo}</bdi> · </>}{d.side || d.kind || d.note ? <DamageLine d={d} /> : t('ticket.photoOnly')}</li>
+              ))}</ul>}
             <div className="ticket-sign">
               <p>{t('ticket.signDriver')}</p>
               <p>{t('ticket.signClerk')}</p>

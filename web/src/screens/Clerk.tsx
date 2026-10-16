@@ -5,6 +5,7 @@ import type { Lane, LaneTransaction, LaneTransactionDetail } from '../lib/types.
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, useLoad } from '../ui/kit.tsx';
 import { LaneStrip, txText } from './Gate.tsx';
+import { InspectionEditor } from '../ui/Inspection.tsx';
 
 /** How long after its last read a referred truck can still be at the lane (as the server's recheck window). */
 const STILL_AT_LANE_MS = 15 * 60_000;
@@ -94,6 +95,7 @@ function Case({ id, onDone, onError }: { id: number; onDone: (m?: string) => voi
   const [fix, setFix] = useState<{ plate: string; containers: string; appointmentNo: string } | null>(null);
   const [note, setNote] = useState('');
   const [message, setMessage] = useState('');
+  const [inspecting, setInspecting] = useState(false);
 
   if (detail.error) return <LoadError error={detail.error} retry={detail.reload} />;
   const d = detail.data;
@@ -204,6 +206,7 @@ function Case({ id, onDone, onError }: { id: number; onDone: (m?: string) => voi
           {has('Intercom') && <ActionButton onError={onError} onRun={send('Call')}>{t('clerk.call')}</ActionButton>}
           {has('Intercom') && <ActionButton onError={onError} onRun={send('Hangup')}>{t('clerk.hangup')}</ActionButton>}
           {has('Barrier') && <ActionButton onError={onError} onRun={send('Open')}>{t('lanes.openBarrier')}</ActionButton>}
+          {x.appointmentNo && <button type="button" className="btn btn-secondary" onClick={() => setInspecting(true)}>{t('insp.inspect')}</button>}
         </div>
         {(has('Display') || has('Kiosk')) && (
           <form className="inline-form" onSubmit={e => e.preventDefault()}>
@@ -216,6 +219,7 @@ function Case({ id, onDone, onError }: { id: number; onDone: (m?: string) => voi
           </form>
         )}
       </div>
+      {inspecting && x.appointmentNo && <InspectionEditor appointmentNo={x.appointmentNo} stage="In" onClose={() => setInspecting(false)} />}
     </article>
   );
 }

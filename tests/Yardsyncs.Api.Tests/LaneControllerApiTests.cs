@@ -75,7 +75,11 @@ public sealed class LaneControllerApiTests(YardsyncsApiFactory factory) : ApiTes
         Assert.Equal(LaneCommand.Open, open.Command);
 
         // The rear camera reads the container a moment later: same truck, no second decision.
-        await devices["IN1-OCR"].PostAsJsonAsync("/api/devices/reads", new { containers = new[] { new { number = "MSCU1234566" } } });
+        await devices["IN1-OCR"].PostAsJsonAsync("/api/devices/reads", new
+        {
+            containers = new[] { new { number = "MSCU1234566" } }, seals = new[] { "sl 12345" },
+            damage = new[] { new { photo = "https://ocr.example/d1.jpg", note = "Dent", side = "rear" } },
+        });
         var same = Assert.Single(await Read<List<LaneTransactionView>>(await admin.GetAsync($"{Gate}/transactions?laneId={laneId}")));
         Assert.Equal((2, "MSCU1234566"), (same.ReadCount, same.Containers.Single()));
 
@@ -86,6 +90,11 @@ public sealed class LaneControllerApiTests(YardsyncsApiFactory factory) : ApiTes
         Assert.Contains(board.InTerminal, t => t.AppointmentNo == booked.AppointmentNo);
         var lane = (await Read<List<LaneView>>(await admin.GetAsync($"{Gate}/lanes"))).Single(l => l.LaneId == laneId);
         Assert.Equal(LaneTransactionStatus.Passed, lane.Transaction!.Status);
+
+        // What the cameras saw became the gate-in inspection.
+        var inspected = Assert.Single((await Read<AppointmentInspections>(await admin.GetAsync($"{Appointments}/{booked.AppointmentNo}/inspections"))).Inspections);
+        Assert.Equal((InspectionSource.Camera, "SL12345", SealStatus.Ok, InspectionStage.In), (inspected.Source, inspected.SealSeen, inspected.SealStatus, inspected.Stage));
+        Assert.Equal(DamageSide.Rear, Assert.Single(inspected.Damage).Side);
     }
 
     [Fact]

@@ -124,6 +124,8 @@ export interface AppointmentItem {
   plannedTonnage: number | null;
   validationStatus: string;
   checks: Check[];
+  /** The seal number the company declared. */
+  sealNo?: string | null;
 }
 
 export interface Appointment {
@@ -439,4 +441,70 @@ export interface ControlRoomBoard {
   };
   trucks: ControlTruck[];
   map: { areas: YardMapArea[]; roads: [number, number][][]; bounds: number[] };
+}
+
+export type InspectionStage = 'In' | 'Out';
+export type SealStatus = 'Ok' | 'Mismatch' | 'Missing' | 'Broken' | 'NotChecked';
+export type DamageSide = 'Front' | 'Rear' | 'Left' | 'Right' | 'Top' | 'Underside' | 'Inside' | 'Door';
+export type DamageKind = 'Dent' | 'Hole' | 'Cut' | 'Scratch' | 'Rust' | 'Broken' | 'Missing' | 'Wet' | 'Other';
+export type DamageSeverity = 'Minor' | 'Major';
+export type DisputeStatus = 'Open' | 'Accepted' | 'Rejected';
+
+export interface DamageEntry {
+  damageId?: number;
+  side: DamageSide | null;
+  kind: DamageKind;
+  severity: DamageSeverity;
+  note: string | null;
+  photoRef: string | null;
+  photoId: number | null;
+}
+
+export interface Dispute {
+  disputeId: number;
+  status: DisputeStatus;
+  reason: string;
+  openedAt: string;
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+}
+
+export interface Inspection {
+  inspectionId: number;
+  stage: InspectionStage;
+  containerNo: string | null;
+  sealExpected: string | null;
+  sealSeen: string | null;
+  sealStatus: SealStatus;
+  damageFound: boolean;
+  notes: string | null;
+  source: 'Camera' | 'Clerk';
+  inspectedAt: string;
+  damage: DamageEntry[];
+  photoIds: number[];
+  dispute: Dispute | null;
+}
+
+export interface AppointmentInspections {
+  appointmentNo: string;
+  status: string;
+  companyName: string;
+  truckPlate: string | null;
+  items: { index: number; containerNo: string | null; category: string; sealNo: string | null }[];
+  inspections: Inspection[];
+  newAtGateOut: { containerNo: string | null; side: DamageSide | null; kind: DamageKind; severity: DamageSeverity }[];
+}
+
+export interface InspectionRow {
+  inspectionId: number;
+  appointmentNo: string;
+  companyName: string;
+  containerNo: string | null;
+  stage: InspectionStage;
+  inspectedAt: string;
+  source: 'Camera' | 'Clerk';
+  sealStatus: SealStatus;
+  damageCount: number;
+  dispute: DisputeStatus | null;
+  disputeId: number | null;
 }

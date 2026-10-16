@@ -546,6 +546,7 @@ app.MapOnboarding();
 app.MapCharges();
 app.MapGate();
 app.MapDevices();
+app.MapInspections();
 app.MapDriverApp();
 
 // ================================================================ development helpers
