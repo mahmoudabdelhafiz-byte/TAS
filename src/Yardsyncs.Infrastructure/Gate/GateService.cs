@@ -225,6 +225,8 @@ public sealed class GateService(
 
         AddHistory(appointment.AppointmentId, AppointmentStatus.Arrived, AppointmentStatus.GateIn, clerk?.UserId, "Gate in", now);
         AddEvent(terminalId, laneId, appointment.AppointmentId, GateEventType.GateIn, null, [], null, now);
+        await Yardsyncs.Infrastructure.Tos.TosGateService.QueueAsync(db, terminalId, appointment.AppointmentId, TosGateStage.GateIn,
+            input.LaneCode?.Trim().ToUpperInvariant(), now, ct);
         await db.SaveChangesAsync(ct);
         await AfterGateInAsync(appointment.AppointmentId, ct);
         return AdminResult<AppointmentDto>.Ok((await queries.GetAsync(terminalId, number, ct))!);
@@ -270,6 +272,7 @@ public sealed class GateService(
 
         AddHistory(appointment.AppointmentId, AppointmentStatus.GateIn, AppointmentStatus.Completed, clerk?.UserId, $"Gate out at lane {lane.LaneCode}", now);
         AddEvent(terminalId, lane.LaneId, appointment.AppointmentId, GateEventType.GateOut, input.PlateRead, [], null, now);
+        await Yardsyncs.Infrastructure.Tos.TosGateService.QueueAsync(db, terminalId, appointment.AppointmentId, TosGateStage.GateOut, lane.LaneCode, now, ct);
         await db.SaveChangesAsync(ct);
 
         return AdminResult<GateOutResult>.Ok(new GateOutResult(
@@ -473,6 +476,8 @@ public sealed class GateService(
 
         AddHistory(appointmentId, current, AppointmentStatus.GateIn, clerk.UserId, reason, now);
         AddEvent(terminalId, laneId, appointmentId, GateEventType.GateIn, null, [], reason, now);
+        var laneCode = laneId is null ? null : await db.GateLanes.AsNoTracking().Where(l => l.LaneId == laneId).Select(l => l.LaneCode).SingleOrDefaultAsync(ct);
+        await Yardsyncs.Infrastructure.Tos.TosGateService.QueueAsync(db, terminalId, appointmentId, TosGateStage.GateIn, laneCode, now, ct);
         await db.SaveChangesAsync(ct);
         await AfterGateInAsync(appointmentId, ct);
         return null;

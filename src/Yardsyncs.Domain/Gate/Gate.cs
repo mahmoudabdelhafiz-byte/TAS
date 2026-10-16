@@ -316,3 +316,43 @@ public sealed class GateTrouble
     public DateTimeOffset? ResolvedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+public enum TosMessageStatus
+{
+    Queued,
+    Sent,
+
+    /// <summary>Given up (refused by the TOS, or unreachable too many times): a person has to look.</summary>
+    Failed,
+}
+
+/// <summary>A gate passage waiting for, or recorded in, the TOS.</summary>
+public sealed class TosGateMessage
+{
+    public long MessageId { get; set; }
+    public int TerminalId { get; set; }
+    public long AppointmentId { get; set; }
+
+    /// <summary>GateIn or GateOut (Yardsyncs.Application.Tos.TosGateStage), stored as GATE_IN / GATE_OUT.</summary>
+    public TosGateStageCode Stage { get; set; }
+
+    public string? LaneCode { get; set; }
+    public DateTimeOffset OccurredAt { get; set; }
+    public TosMessageStatus Status { get; set; } = TosMessageStatus.Queued;
+    public int Attempts { get; set; }
+    public DateTimeOffset NextAttemptAt { get; set; }
+    public DateTimeOffset? SentAt { get; set; }
+
+    /// <summary>The TOS's key for the truck visit.</summary>
+    public string? TosReference { get; set; }
+
+    public string? LastError { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>The stage as stored (the domain can't see the application's TosGateStage).</summary>
+public enum TosGateStageCode
+{
+    GateIn,
+    GateOut,
+}

@@ -37,6 +37,7 @@ public sealed class YardsyncsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Privacy:CleanUpEnabled", "false"); // run by the test
         builder.UseSetting("LaneController:Enabled", "false"); // no background worker: decide on each read
         builder.UseSetting("LaneController:SettleSeconds", "0");
+        builder.UseSetting("TosGate:Enabled", "false"); // sent by the test (POST …/gate/tos-records/send)
         builder.UseSetting("Assistant:ApiKey", "test-key"); // the model is FakeAssistantModel below
         builder.UseSetting("Assistant:PerMinute", "1000");
         builder.ConfigureTestServices(services => services.AddSingleton<Yardsyncs.Infrastructure.Assistant.IAssistantModel>(Assistant));
@@ -47,6 +48,7 @@ public sealed class YardsyncsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("PasswordLinks:ExposeTokenForTesting", "true");
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
         builder.UseSetting("FakeTos:PaymentWarning:0", "CMAU5100028");
+        builder.UseSetting("FakeTos:GateRefused:0", "MSCU5523417"); // the demo TOS refuses this one at the gate
         builder.UseSetting("FakeTos:YardPositions:MSCU1234566", "B2.14.03.2");
         builder.UseSetting("FakeTos:DefaultBlocks:0", "A1");
         builder.UseSetting("FakeTos:DefaultBlocks:1", "B2");

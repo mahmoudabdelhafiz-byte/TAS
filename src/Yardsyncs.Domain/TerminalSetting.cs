@@ -37,8 +37,12 @@ public sealed record TerminalSettings(
     long FeeBooking = 0,
     long FeeNoShow = 0,
     long FeeLateCancel = 0,
-    int LateCancelHours = 0)
+    int LateCancelHours = 0,
+    bool TosGateWrite = false)
 {
+    /// <summary>Record each gate-in and gate-out in the TOS (truck visit and gate transactions); off until the TOS link is tested.</summary>
+    public const string TosGateWriteKey = "tos_gate_write";
+
     /// <summary>Fees, in the currency's smallest unit (halalas for SAR); 0 = no fee.</summary>
     public const string FeeBookingKey = "fee_booking";
     public const string FeeNoShowKey = "fee_no_show";
@@ -77,6 +81,7 @@ public sealed record TerminalSettings(
             Get(FeeBookingKey, 0),
             Get(FeeNoShowKey, 0),
             Get(FeeLateCancelKey, 0),
-            Get(LateCancelHoursKey, 0));
+            Get(LateCancelHoursKey, 0),
+            Get(TosGateWriteKey, 0) != 0);
     }
 }

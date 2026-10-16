@@ -97,6 +97,22 @@ public static class GateEndpoints
             int terminalId, long transactionId, TransactionCorrectionInput body, HttpContext http, LaneControllerService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.RecheckAsync(YardsyncsApi.User(http)!, terminalId, transactionId, body, ct)));
 
+        // The gate ticket (equipment interchange receipt) of a visit.
+        gate.MapGet("/tickets/{appointmentNo}", async (int terminalId, string appointmentNo, HttpContext http, GateTicketService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? (await service.TicketAsync(terminalId, appointmentNo, ct) is { } ticket
+                ? Results.Ok(ticket)
+                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Appointment {appointmentNo} not found.")));
+
+        // Gate passages recorded in the TOS (terminals with tos_gate_write): what is waiting or failed; admins send now / again.
+        gate.MapGet("/tos-records", async (int terminalId, bool? problemsOnly, HttpContext http, Yardsyncs.Infrastructure.Tos.TosGateService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, problemsOnly ?? false, ct)));
+
+        gate.MapPost("/tos-records/send", async (int terminalId, HttpContext http, Yardsyncs.Infrastructure.Tos.TosGateService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? Results.Ok(new { tried = await service.SendDueAsync(terminalId, ct) }));
+
+        gate.MapPost("/tos-records/{messageId:long}/retry", async (int terminalId, long messageId, HttpContext http, Yardsyncs.Infrastructure.Tos.TosGateService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.RetryAsync(terminalId, messageId, ct)));
+
         gate.MapPost("/lanes/{laneId:int}/devices/{deviceId:int}/key", async (
             int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>
             NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.IssueKeyAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, ct)));

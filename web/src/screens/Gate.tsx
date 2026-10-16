@@ -5,6 +5,7 @@ import { clock, duration, stamp } from '../lib/time.ts';
 import type { AdminResponse, ArrivalResult, GateBoard, GateBoardTruck, Lane, LaneState, Trouble } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, TrafficLight, useLoad } from '../ui/kit.tsx';
+import { GateTicket } from '../ui/GateTicket.tsx';
 
 export function GateScreen() {
   const { api, t, terminal } = useApp();
@@ -15,6 +16,8 @@ export function GateScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [exitLane, setExitLane] = useState('');
+  const [ticket, setTicket] = useState<string | null>(null);
+  const [lastOut, setLastOut] = useState<string | null>(null);
 
   const working = (lanes.data ?? []).filter(l => l.isActive);
   const inLanes = working.filter(l => l.direction === 'In' && l.state === 'Open');
@@ -91,13 +94,18 @@ export function GateScreen() {
           <TruckTable trucks={b?.inTerminal ?? []} empty={t('gate.noneInside')} timeLabel={t('gate.inside')}
             minutes={x => (x.gateInAt ? (Date.now() - new Date(x.gateInAt).getTime()) / 60_000 : x.minutesSinceArrival)}
             action={x => (
-              <ActionButton onError={setError} disabled={!exit}
-                onRun={async () => { await api.post(`${base}/out`, { laneCode: exit, appointmentNo: x.appointmentNo }); refresh(); }}>
-                {t('gate.gateOut')}
-              </ActionButton>
+              <span className="row-actions">
+                <button type="button" className="link-btn" onClick={() => setTicket(x.appointmentNo)}>{t('ticket.open')}</button>
+                <ActionButton onError={setError} disabled={!exit}
+                  onRun={async () => { await api.post(`${base}/out`, { laneCode: exit, appointmentNo: x.appointmentNo }); setLastOut(x.appointmentNo); refresh(); }}>
+                  {t('gate.gateOut')}
+                </ActionButton>
+              </span>
             )} />
+          {lastOut && <p className="hint"><button type="button" className="link-btn" onClick={() => setTicket(lastOut)}>{t('ticket.openLast', { no: lastOut })}</button></p>}
         </div>
       </div>
+      {ticket && <GateTicket appointmentNo={ticket} onClose={() => setTicket(null)} />}
     </section>
   );
 }

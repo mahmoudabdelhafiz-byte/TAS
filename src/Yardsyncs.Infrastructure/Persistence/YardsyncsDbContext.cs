@@ -41,6 +41,7 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<LaneDeviceRead> LaneDeviceReads => Set<LaneDeviceRead>();
     public DbSet<LaneDeviceCommand> LaneDeviceCommands => Set<LaneDeviceCommand>();
     public DbSet<LaneTransaction> LaneTransactions => Set<LaneTransaction>();
+    public DbSet<TosGateMessage> TosGateMessages => Set<TosGateMessage>();
     public DbSet<GateEvent> GateEvents => Set<GateEvent>();
     public DbSet<GateTrouble> GateTroubles => Set<GateTrouble>();
     public DbSet<Truck> Trucks => Set<Truck>();
@@ -157,6 +158,14 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
             e.HasKey(x => x.ReadId);
             e.Property(x => x.Payload).HasColumnType("jsonb");
             e.Property(x => x.ReceivedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<TosGateMessage>(e =>
+        {
+            e.HasKey(x => x.MessageId);
+            e.Property(x => x.Stage).HasUpperCaseConversion();
+            e.Property(x => x.Status).HasUpperCaseConversion();
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<LaneTransaction>(e =>

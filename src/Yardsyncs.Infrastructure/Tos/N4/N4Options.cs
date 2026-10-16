@@ -42,6 +42,16 @@ public sealed class N4TerminalOptions
 
     public int TimeoutSeconds { get; set; } = 15;
 
+    // Gate passages written to N4 (terminal setting tos_gate_write). The N4 user then needs gate rights.
+    /// <summary>The N4 gate id trucks pass through, e.g. MAIN_GATE.</summary>
+    public string GateId { get; set; } = "GATE";
+
+    public string IngateStage { get; set; } = "ingate";
+    public string OutgateStage { get; set; } = "outgate";
+
+    /// <summary>Overrides of the move type → N4 transaction type mapping, e.g. { "BB_DELIVERY": "DC" }.</summary>
+    public Dictionary<string, string> TranTypes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Namespaces of the ArgoService WSDL; change only if your N4 version differs.</summary>
     public string ArgoNamespace { get; set; } = "http://www.navis.com/services/argoservice";
 
