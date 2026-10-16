@@ -39,15 +39,17 @@ settings still to look at (demo TOS, messages not sent, bootstrap password). See
 
 ## Upgrading
 
+Released versions come as images (`ghcr.io/mahmoudabdelhafiz-byte/yardsyncs:1.2.0`); see `docs/releasing.md`.
+
 ```bash
-git pull                     # or set YARDSYNCS_IMAGE to the new version
-docker compose build app     # when building here
-docker compose up -d
+./upgrade.sh 1.2.0        # backup, switch to the image, wait until ready
+./upgrade.sh --rollback   # the version before, with the database from the backup taken before the upgrade
 ```
 
-The app creates or upgrades the database itself when it starts (several instances wait for each other). To run the
-upgrade on its own, e.g. before switching traffic: `docker compose run --rm app migrate`.
-`/health/ready` answers 503 until the database is at the version the app needs.
+The app creates or upgrades the database itself when it starts (several instances wait for each other); to run the
+database upgrade on its own: `docker compose run --rm app migrate`. `/health/ready` answers 503 until the database is
+at the version the app needs. Without internet: `docker load < yardsyncs-1.2.0.tar.gz` (from the release page) first.
+When building from this folder instead of using released images: `git pull && docker compose build app && docker compose up -d`.
 
 ## Backups and restore
 

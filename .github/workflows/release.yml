@@ -1,0 +1,133 @@
+# Images and releases (docs/releasing.md).
+#   push to main   → image <VERSION>-main.<run>, "edge" and "sha-<commit>"; deployed to staging when it is set up
+#   tag vX.Y.Z     → image X.Y.Z, X.Y and "latest"; a GitHub release with the install kit and the image as a file
+#                    (for terminals without internet); deployed to production after approval when it is set up
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/mahmoudabdelhafiz-byte/yardsyncs
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Version
+        id: version
+        run: |
+          base=$(tr -d ' \n' < VERSION)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version=${GITHUB_REF#refs/tags/v}
+            [ "$version" = "$base" ] || echo "::warning title=version::tag v$version but VERSION says $base"
+            tags="$IMAGE:$version"
+            # A final release (no "-rc.1" part) also moves X.Y and latest.
+            if [[ "$version" =~ ^([0-9]+\.[0-9]+)\.[0-9]+$ ]]; then
+              tags="$tags,$IMAGE:${BASH_REMATCH[1]},$IMAGE:latest"
+            fi
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            version="$base-main.$GITHUB_RUN_NUMBER"
+            tags="$IMAGE:$version,$IMAGE:edge,$IMAGE:sha-${GITHUB_SHA::7}"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "::notice title=version::$version"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.version.outputs.tags }}
+          build-args: VERSION=${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=Yardsyncs
+            org.opencontainers.image.description=Yardsyncs truck appointment system: API and web portal
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Known vulnerabilities in the image
+        run: |
+          docker pull "$IMAGE:${{ steps.version.outputs.version }}"
+          bash .github/scan-image.sh "$IMAGE:${{ steps.version.outputs.version }}" "${{ steps.version.outputs.release }}"
+
+      - name: Image as a file and install kit (releases)
+        if: steps.version.outputs.release == 'true'
+        run: |
+          v=${{ steps.version.outputs.version }}
+          docker save "$IMAGE:$v" | gzip > "yardsyncs-$v.tar.gz"
+          sed -i "s#^YARDSYNCS_IMAGE=.*#YARDSYNCS_IMAGE=$IMAGE:$v#" deploy/.env.example
+          tar czf "yardsyncs-deploy-$v.tar.gz" --exclude=deploy/.env --exclude=deploy/backups deploy
+          sha256sum "yardsyncs-$v.tar.gz" "yardsyncs-deploy-$v.tar.gz" > SHA256SUMS
+          prerelease=""; [[ "$v" == *-* ]] && prerelease="--prerelease"
+          gh release create "v$v" $prerelease --title "Yardsyncs $v" --generate-notes \
+            "yardsyncs-deploy-$v.tar.gz" "yardsyncs-$v.tar.gz" SHA256SUMS
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Staging: every change on main, once the server and its secrets exist (Settings → Environments → staging):
+  # DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS and DEPLOY_PATH (the server's deploy folder).
+  staging:
+    needs: image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v5
+      - name: Upgrade staging
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: bash .github/deploy-remote.sh "${{ needs.image.outputs.version }}"
+
+  # Production: releases only, after approval (add required reviewers to the production environment).
+  production:
+    needs: image
+    if: needs.image.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - name: Upgrade production
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: bash .github/deploy-remote.sh "${{ needs.image.outputs.version }}"

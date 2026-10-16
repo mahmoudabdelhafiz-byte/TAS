@@ -328,6 +328,18 @@ Details and results in [`loadtest/README.md`](../loadtest/README.md).
 | ✅ | Found and fixed: the same container booked twice at the same moment got two appointments (lock per container in the booking transaction) |
 | ✅ | Found and fixed: the database pool could take every PostgreSQL connection (pool 60, PostgreSQL 150 in `deploy/`) |
 
+
+### 31. Releases and environments (2026-10-16)
+Details in [`releasing.md`](releasing.md).
+
+| | Item |
+|---|---|
+| ✅ | Image published to GitHub's registry on every merge (`edge`, `<VERSION>-main.<n>`) and on every tag (`1.2.0`, `1.2`, `latest`), with provenance and a software bill of materials |
+| ✅ | Release page per version: install kit, image as a file for terminals without internet, checksums |
+| ✅ | `deploy/upgrade.sh`: backup, switch version, wait until ready; `--rollback` to the version and database before; tested in CI on every pull request |
+| ✅ | Environments: staging upgraded on every merge, production on a release after approval — over SSH once the servers and secrets exist |
+| ✅ | Known vulnerabilities: image scanned (Grype), .NET and npm packages checked, Dependabot weekly |
+
 ---
 
 ## Remaining
@@ -379,7 +391,8 @@ Details and results in [`loadtest/README.md`](../loadtest/README.md).
 | | Item |
 |---|---|
 | ✅ | One Docker image (API + portal) for both hosting modes |
-| ⬜ | Environments dev / staging / production; image published to a registry with version tags; automatic updates for the cloud |
+| ✅ | Environments dev / staging / production; image published to a registry with version tags; automatic updates for staging, approved updates for production (`docs/releasing.md`) |
+| ⬜ | Staging and cloud servers themselves (machines, domain, secrets in GitHub environments) |
 | ⬜ | **Cloud (hosted by us):** one installation serving several terminals, managed PostgreSQL, TLS, automatic updates |
 | ✅ | **On-premise (at the terminal):** Docker Compose package with install, upgrade and restore guide (`deploy/`) |
 | ⬜ | On-premise: Kubernetes / Helm variant if a terminal asks; rollback of a database upgrade (today: restore the backup taken before) |
@@ -389,7 +402,7 @@ Details and results in [`loadtest/README.md`](../loadtest/README.md).
 | ✅ | Backups, health checks, JSON logging, status for monitoring |
 | ⬜ | Alerting wired to the customer's monitoring (rules listed in `deploy/README.md`); off-site copy of backups |
 | ✅ | Security review; PDPL privacy: retention, drivers' copy and erasure, location notice (`docs/security.md`) |
-| ⬜ | Outside penetration test; dependency scanning in CI; two-step sign-in for admins; audit trail screen; secret rotation procedure |
+| ⬜ | Outside penetration test; two-step sign-in for admins; audit trail screen; secret rotation procedure |
 | ✅ | Load test for peak booking times (CI size every pull request; `peak` profile to run on the customer's staging before go-live) |
 | ⬜ | User guides (Arabic / English) and onboarding for trucking companies |
 | ⬜ | **Reminder for Mahmoud when development is finished:** make the GitHub repository private (Settings → Danger Zone → Change visibility) |

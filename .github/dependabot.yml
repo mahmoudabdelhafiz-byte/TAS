@@ -1,0 +1,24 @@
+# Weekly update proposals for the libraries and tools Yardsyncs depends on (security fixes arrive as pull requests,
+# which CI then tests like any other change).
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule: { interval: weekly, day: sunday }
+    open-pull-requests-limit: 5
+    groups:
+      microsoft: { patterns: ["Microsoft.*", "System.*", "Npgsql*"] }
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly, day: sunday }
+    open-pull-requests-limit: 5
+  - package-ecosystem: pub
+    directory: /mobile
+    schedule: { interval: weekly, day: sunday }
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly, day: sunday }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }

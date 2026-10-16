@@ -15,3 +15,4 @@ deploy/.env
 deploy/backups/
 loadtest/summary.json
 loadtest/k6.log
+deploy/.upgrade-last
