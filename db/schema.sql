@@ -1,5 +1,5 @@
 /* =====================================================================
-   Truck Appointment System (TAS) — PostgreSQL schema, draft v1.6
+   Truck Appointment System (TAS) — PostgreSQL schema, draft v1.7
    Requires PostgreSQL 15+ and PostGIS (for geofences).
    Multi-terminal. See docs/data-model.md for the design.
 
@@ -381,7 +381,7 @@ CREATE TABLE gate_trouble (
     plate_read       varchar(20)  NULL,
     container_reads  varchar(60)  NULL,   -- comma-separated
     reason_code      varchar(20)  NOT NULL CHECK (reason_code IN
-                       ('NO_APPOINTMENT','EARLY','LATE','NOT_CLEARED','BLOCKED','ALREADY_IN','CANCELLED')),
+                       ('NO_APPOINTMENT','EARLY','LATE','NOT_CLEARED','BLOCKED','ALREADY_IN','CANCELLED','DRIVER_UNKNOWN')),
     reason_text      varchar(400) NOT NULL,
     status           varchar(10)  NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN','RESOLVED')),
     resolution       varchar(15)  NULL CHECK (resolution IN ('ADMITTED','REJECTED','WALK_IN','DISMISSED')),

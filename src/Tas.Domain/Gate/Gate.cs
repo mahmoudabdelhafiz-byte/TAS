@@ -53,6 +53,9 @@ public enum TroubleReason
     Blocked,
     AlreadyIn,
     Cancelled,
+
+    /// <summary>The driver is not identified as the terminal requires (no driver named, or no gate pass from the driver's app).</summary>
+    DriverUnknown,
 }
 
 public enum TroubleStatus

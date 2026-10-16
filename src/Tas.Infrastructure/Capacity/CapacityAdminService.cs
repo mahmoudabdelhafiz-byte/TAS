@@ -339,6 +339,10 @@ public sealed class CapacityAdminService(
             [TerminalSettings.LateGraceKey] = settings.LateGraceMinutes,
             [TerminalSettings.CancelCutoffKey] = settings.CancelCutoffMinutes,
             [TerminalSettings.MaxPerTruckPerDayKey] = settings.MaxAppointmentsPerTruckPerDay,
+            [TerminalSettings.GateByNumberKey] = settings.GateByNumber ? 1 : 0,
+            [TerminalSettings.GateByPlateKey] = settings.GateByPlate ? 1 : 0,
+            [TerminalSettings.GateByContainerKey] = settings.GateByContainer ? 1 : 0,
+            [TerminalSettings.DriverIdentityKey] = (int)settings.DriverIdentity,
         };
     }
 
@@ -440,7 +444,7 @@ public sealed class CapacityAdminService(
         if (affected.Count == 0)
             return;
 
-        var channel = NotificationQueue.DriverChannel(config);
+        var channel = NotificationQueue.DriverChannel(config, terminal.Code);
         foreach (var a in affected)
         {
             var values = new Dictionary<string, string>

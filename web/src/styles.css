@@ -580,6 +580,8 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .chips li.inactive { opacity: 0.55; }
 .inline-form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 12px; margin-top: 8px; }
 .inline-form .field { margin: 0; }
+.plain-fieldset { margin: 0; padding: 0; border: 0; }
+.plain-fieldset legend { margin-bottom: 4px; font-weight: 600; color: var(--ink); }
 .day-picks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; border: 0; }
 .day-picks legend { margin-bottom: 4px; color: var(--muted); font-size: 14px; }
 .holiday-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;

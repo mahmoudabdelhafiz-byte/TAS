@@ -12,9 +12,19 @@ namespace Tas.Infrastructure.Notifications;
 /// </summary>
 public static class NotificationQueue
 {
-    /// <summary>"Notifications:DriverChannel": Sms (default) or Whatsapp.</summary>
-    public static NotificationChannel DriverChannel(IConfiguration? config) =>
-        config?.GetValue("Notifications:DriverChannel", NotificationChannel.Sms) ?? NotificationChannel.Sms;
+    /// <summary>
+    /// How drivers without the app get messages: "Terminals:&lt;code&gt;:Notifications:DriverChannel", else
+    /// "Notifications:DriverChannel": Sms (default) or Whatsapp.
+    /// </summary>
+    public static NotificationChannel DriverChannel(IConfiguration? config, string? terminalCode = null)
+    {
+        var installation = config?.GetValue("Notifications:DriverChannel", NotificationChannel.Sms) ?? NotificationChannel.Sms;
+        return terminalCode is null || config is null ? installation : config.GetValue($"Terminals:{terminalCode}:Notifications:DriverChannel", installation);
+    }
+
+    /// <summary>The driver channel of a terminal, by its id.</summary>
+    public static async Task<NotificationChannel> DriverChannelAsync(TasDbContext db, IConfiguration? config, int terminalId, CancellationToken ct) =>
+        DriverChannel(config, await TerminalProfiles.CodeAsync(db, terminalId, ct));
 
     /// <summary>Push first for drivers with the app: a push provider is set and "Notifications:DriverPush" is not off.</summary>
     public static bool PushFirst(IConfiguration? config)

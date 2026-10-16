@@ -21,6 +21,10 @@ public static class CapacityConfigValidator
         [TerminalSettings.LateGraceKey] = (0, 240),
         [TerminalSettings.CancelCutoffKey] = (0, 1440),
         [TerminalSettings.MaxPerTruckPerDayKey] = (0, 50),
+        [TerminalSettings.GateByNumberKey] = (0, 1),
+        [TerminalSettings.GateByPlateKey] = (0, 1),
+        [TerminalSettings.GateByContainerKey] = (0, 1),
+        [TerminalSettings.DriverIdentityKey] = (0, 2),
     };
 
     // ------------------------------------------------------------ templates

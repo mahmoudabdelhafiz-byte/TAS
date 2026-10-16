@@ -138,3 +138,57 @@ public class GateDeciderTests
         Assert.Equal(3, AvailabilityCalculator.ReservedUnits(reservations, slot, slot.AddHours(-1), bookingCompanyId: 9, walkIn: true));
     }
 }
+
+/// <summary>Per-terminal gate rules: how appointments are found, and how strictly the driver is identified.</summary>
+public class GateSettingsTests
+{
+    private static readonly TimeZoneInfo Riyadh = TimeZoneInfo.FindSystemTimeZoneById("Asia/Riyadh");
+    private static readonly DateTimeOffset Now = new(2026, 10, 20, 10, 5, 0, TimeSpan.FromHours(3));
+
+    private static GateCandidate Candidate(bool hasDriver = true) =>
+        new(1, "DEMO-261020-00001", "QR1", AppointmentStatus.EnRoute, Now.AddMinutes(-5), Now.AddMinutes(55), "1234ABJ",
+            new HashSet<string> { "HLXU8700018" }, hasDriver);
+
+    [Fact]
+    public void A_terminal_can_stop_finding_appointments_by_number_plate_or_container()
+    {
+        var strict = TerminalSettings.Defaults with { GateByNumber = false, GateByPlate = false, GateByContainer = false };
+        Assert.Null(GateMatcher.Match(new GateReads("1234 ABJ", [], null, null), [Candidate()], Now, strict).Appointment);
+        Assert.Null(GateMatcher.Match(new GateReads(null, ["HLXU8700018"], null, null), [Candidate()], Now, strict).Appointment);
+        var number = GateMatcher.Match(new GateReads(null, [], null, "DEMO-261020-00001"), [Candidate()], Now, strict);
+        Assert.Null(number.Appointment);
+        Assert.Contains(number.Warnings, w => w.Contains("gate pass"));
+
+        // The gate pass always works; the defaults find by everything.
+        Assert.Equal(MatchMethod.QrCode, GateMatcher.Match(new GateReads(null, [], "qr1", null), [Candidate()], Now, strict).Method);
+        Assert.Equal(MatchMethod.Plate, GateMatcher.Match(new GateReads("1234 ABJ", [], null, null), [Candidate()], Now, TerminalSettings.Defaults).Method);
+    }
+
+    [Fact]
+    public void The_driver_is_identified_as_strictly_as_the_terminal_requires()
+    {
+        GateDecision Decide(DriverIdentity level, GateCandidate a, bool pass) =>
+            GateDecider.Decide(a, TrafficLight.Green, "", false, false, Now, TerminalSettings.Defaults with { DriverIdentity = level }, Riyadh, pass);
+
+        Assert.Equal(GateDecisionKind.Admit, Decide(DriverIdentity.NotChecked, Candidate(hasDriver: false), pass: false).Kind);
+        Assert.Equal(TroubleReason.DriverUnknown, Decide(DriverIdentity.NamedDriver, Candidate(hasDriver: false), pass: false).Reason);
+        Assert.Equal(GateDecisionKind.Admit, Decide(DriverIdentity.NamedDriver, Candidate(), pass: false).Kind);
+        var noPass = Decide(DriverIdentity.DriverGatePass, Candidate(), pass: false);
+        Assert.Equal(TroubleReason.DriverUnknown, noPass.Reason);
+        Assert.Contains("Yardsyncs mobile", noPass.Message);
+        Assert.Equal(GateDecisionKind.Admit, Decide(DriverIdentity.DriverGatePass, Candidate(), pass: true).Kind);
+    }
+
+    [Fact]
+    public void Settings_are_read_with_defaults()
+    {
+        var s = TerminalSettings.From([
+            new TerminalSetting { SettingKey = TerminalSettings.GateByPlateKey, SettingValue = "0" },
+            new TerminalSetting { SettingKey = TerminalSettings.DriverIdentityKey, SettingValue = "2" },
+        ]);
+        Assert.False(s.GateByPlate);
+        Assert.True(s.GateByNumber && s.GateByContainer);
+        Assert.Equal(DriverIdentity.DriverGatePass, s.DriverIdentity);
+        Assert.Equal(DriverIdentity.NotChecked, TerminalSettings.Defaults.DriverIdentity);
+    }
+}

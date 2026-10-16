@@ -179,14 +179,14 @@ public sealed class NotificationDispatcher(
                 AppointmentId = n.AppointmentId,
                 TerminalId = n.TerminalId,
                 DriverId = n.DriverId,
-                Channel = o.DriverChannel,
+                Channel = DriverChannel(o, n.TerminalId),
                 TemplateCode = n.TemplateCode,
                 Language = n.Language,
                 Status = NotificationStatus.Queued,
                 Params = n.Params,
                 CreatedAt = now,
             });
-            n.LastError = Truncate($"{error} Sent by {o.DriverChannel} instead.", 400);
+            n.LastError = Truncate($"{error} Sent by {DriverChannel(o, n.TerminalId)} instead.", 400);
         }
         return result;
     }
@@ -238,7 +238,8 @@ public sealed class NotificationDispatcher(
                 [NotificationText.Keys.GateOpens] = TimeZoneInfo.ConvertTime(a.StartAt.AddMinutes(-early), zone).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
                 [NotificationText.Keys.Items] = string.Join(", ", a.Moves.Where(m => m is not null)),
             };
-            await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, NotificationTemplates.SlotReminder, values, o.DriverChannel, now, ct, includeBooker: false, pushFirst: o.PushFirst);
+            await NotificationQueue.ForAppointmentAsync(db, a.AppointmentId, NotificationTemplates.SlotReminder, values,
+                DriverChannel(o, a.TerminalId, await TerminalCodeAsync(a.TerminalId, ct)), now, ct, includeBooker: false, pushFirst: o.PushFirst);
         }
 
         await db.SaveChangesAsync(ct);
@@ -252,6 +253,13 @@ public sealed class NotificationDispatcher(
             && a.Slot.EndAt > clock.GetUtcNow(), ct);
 
     /// <summary>Drivers: mobile. Users: email for EMAIL, mobile for SMS / WhatsApp.</summary>
+    /// <summary>The terminal's driver channel (Terminals:&lt;code&gt;:Notifications:DriverChannel), else the installation's.</summary>
+    private NotificationChannel DriverChannel(NotificationOptions o, int? terminalId, string? code = null)
+    {
+        code ??= terminalId is { } id ? TerminalProfiles.CachedCode(id) : null;
+        return code is not null && profiles is not null && profiles.HasOwnNotifications(code) ? profiles.NotificationsFor(code).DriverChannel : o.DriverChannel;
+    }
+
     private async Task<string?> TerminalCodeAsync(int? terminalId, CancellationToken ct) =>
         terminalId is { } id ? await TerminalProfiles.CodeAsync(db, id, ct) : null;
 

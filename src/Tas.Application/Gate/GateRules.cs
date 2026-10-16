@@ -10,6 +10,7 @@ namespace Tas.Application.Gate;
 public sealed record GateReads(string? PlateRead, IReadOnlyList<string> ContainerReads, string? QrToken, string? AppointmentNo);
 
 /// <summary>An appointment the truck might be coming for.</summary>
+/// <param name="HasDriver">The appointment names its driver.</param>
 public sealed record GateCandidate(
     long AppointmentId,
     string AppointmentNo,
@@ -18,7 +19,8 @@ public sealed record GateCandidate(
     DateTimeOffset SlotStart,
     DateTimeOffset SlotEnd,
     string? TruckPlateNormalized,
-    IReadOnlySet<string> Containers);
+    IReadOnlySet<string> Containers,
+    bool HasDriver = true);
 
 public enum MatchMethod
 {
@@ -44,10 +46,14 @@ public static class GateMatcher
     /// <summary>
     /// QR code or appointment number win outright. Otherwise the plate (Arabic or Latin) picks the truck's
     /// appointment closest to now; failing that, a container read does. Reads that don't fit the chosen
-    /// appointment are reported as warnings for the clerk.
+    /// appointment are reported as warnings for the clerk. A terminal can turn off finding appointments by number,
+    /// plate or container (<paramref name="settings"/>); the QR gate pass always works.
     /// </summary>
-    public static GateMatch Match(GateReads reads, IReadOnlyList<GateCandidate> candidates, DateTimeOffset now)
+    public static GateMatch Match(GateReads reads, IReadOnlyList<GateCandidate> candidates, DateTimeOffset now, TerminalSettings? settings = null)
     {
+        var byNumberOn = settings?.GateByNumber ?? true;
+        var byPlateOn = settings?.GateByPlate ?? true;
+        var byContainerOn = settings?.GateByContainer ?? true;
         var warnings = new List<string>();
         var containers = reads.ContainerReads
             .Select(ContainerNumber.Normalize)
@@ -75,7 +81,9 @@ public static class GateMatcher
             warnings.Add("The QR code does not belong to any appointment at this terminal.");
         }
 
-        if (!string.IsNullOrWhiteSpace(reads.AppointmentNo))
+        if (!string.IsNullOrWhiteSpace(reads.AppointmentNo) && !byNumberOn)
+            warnings.Add("This terminal doesn't find appointments by their number: scan the driver's gate pass.");
+        else if (!string.IsNullOrWhiteSpace(reads.AppointmentNo))
         {
             var byNumber = candidates.FirstOrDefault(c => string.Equals(c.AppointmentNo, reads.AppointmentNo.Trim(), StringComparison.OrdinalIgnoreCase));
             if (byNumber is not null)
@@ -83,7 +91,7 @@ public static class GateMatcher
             warnings.Add($"Appointment {reads.AppointmentNo.Trim().ToUpperInvariant()} was not found.");
         }
 
-        var plateRead = PlateNumber.Normalize(reads.PlateRead);
+        var plateRead = byPlateOn ? PlateNumber.Normalize(reads.PlateRead) : "";
         if (plateRead.Length > 0)
         {
             var byPlate = Closest(candidates.Where(c => c.TruckPlateNormalized == plateRead), now);
@@ -91,7 +99,7 @@ public static class GateMatcher
                 return Found(byPlate, MatchMethod.Plate);
         }
 
-        if (containers.Count > 0)
+        if (containers.Count > 0 && byContainerOn)
         {
             var byContainer = Closest(candidates.Where(c => containers.Any(c.Containers.Contains)), now);
             if (byContainer is not null)
@@ -112,7 +120,9 @@ public static class GateMatcher
 public static class GateDecider
 {
     /// <summary>
-    /// Admit only a live appointment whose truck and driver aren't blocked, inside its window, with nothing red.
+    /// Admit only a live appointment whose truck and driver aren't blocked, inside its window, with nothing red, and
+    /// whose driver is identified as the terminal requires (<paramref name="driverPassShown"/>: the driver's live gate
+    /// pass from Yardsyncs mobile was scanned).
     /// Everything else goes to the trouble desk with the reason — the clerk decides.
     /// </summary>
     public static GateDecision Decide(
@@ -123,7 +133,8 @@ public static class GateDecider
         bool driverBlocked,
         DateTimeOffset now,
         TerminalSettings settings,
-        TimeZoneInfo timeZone)
+        TimeZoneInfo timeZone,
+        bool driverPassShown = false)
     {
         string Local(DateTimeOffset t) => TimeZoneInfo.ConvertTime(t, timeZone).ToString("HH:mm");
 
@@ -144,6 +155,10 @@ public static class GateDecider
             return Refer(TroubleReason.Blocked, "This truck is blocked at the terminal.");
         if (driverBlocked)
             return Refer(TroubleReason.Blocked, "This driver is blocked at the terminal.");
+        if (settings.DriverIdentity >= DriverIdentity.NamedDriver && !appointment.HasDriver)
+            return Refer(TroubleReason.DriverUnknown, $"Appointment {appointment.AppointmentNo} names no driver: the terminal requires one. Check the driver's ID and assign them.");
+        if (settings.DriverIdentity == DriverIdentity.DriverGatePass && !driverPassShown)
+            return Refer(TroubleReason.DriverUnknown, "The terminal requires the driver's gate pass from Yardsyncs mobile: check the driver's ID against the appointment.");
 
         if (now > appointment.SlotEnd.AddMinutes(settings.LateGraceMinutes))
             return Refer(TroubleReason.Late, $"Late: the arrival window closed at {Local(appointment.SlotEnd.AddMinutes(settings.LateGraceMinutes))}.");
