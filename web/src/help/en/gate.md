@@ -34,6 +34,10 @@ A lane with connected equipment also shows its latest read (plate and containers
 amber may be misread) and any device that is **Not working**. **Open barrier** raises the lane's barrier from here,
 for a truck you have admitted.
 
+At an **Automatic** lane the lane decides for itself, as you would: a truck on time gets green and the barrier opens;
+otherwise it waits on red with the reason on the lane display, and the tile shows **Waiting for a clerk**. Its case is
+on the trouble desk: **Let in** there opens that lane's barrier.
+
 ## Trouble desk
 
 Every truck sent to the trouble desk waits in **Trouble desk** with its reason. Write a **Note** (required), then

@@ -822,7 +822,12 @@
     "lanes.copy": "Copy key",
     "lanes.keyDone": "Done",
     "lanes.devicesDown": "Not working:",
-    "lanes.openBarrier": "Open barrier"
+    "lanes.openBarrier": "Open barrier",
+    "lanes.tx.Open": "Reading the truck…",
+    "lanes.tx.Admitted": "Let in:",
+    "lanes.tx.Referred": "Waiting for a clerk",
+    "lanes.tx.Passed": "Through:",
+    "lanes.tx.Abandoned": "Truck not identified"
   },
   "app": {
     "appName": "Yardsyncs mobile",

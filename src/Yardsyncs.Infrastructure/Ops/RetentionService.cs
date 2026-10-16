@@ -73,9 +73,10 @@ public sealed class RetentionService(YardsyncsDbContext db, IOptions<PrivacyOpti
             DELETE FROM integration_event WHERE status <> 'QUEUED' AND created_at < {events}
             """, ct);
 
-        // Lane device reads carry plates and photo references; commands go with them.
+        // Lane device reads and truck transactions carry plates and photo references; commands go with them.
         removed["laneReads"] = await db.Database.ExecuteSqlAsync($"DELETE FROM lane_device_read WHERE received_at < {events}", ct)
-            + await db.Database.ExecuteSqlAsync($"DELETE FROM lane_device_command WHERE created_at < {events}", ct);
+            + await db.Database.ExecuteSqlAsync($"DELETE FROM lane_device_command WHERE created_at < {events}", ct)
+            + await db.Database.ExecuteSqlAsync($"DELETE FROM lane_transaction WHERE last_read_at < {events}", ct);
 
         removed["signInCodes"] = await db.Database.ExecuteSqlAsync($"DELETE FROM driver_otp WHERE created_at < {codes}", ct);
         removed["sessions"] = await db.Database.ExecuteSqlAsync($"""

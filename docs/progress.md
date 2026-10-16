@@ -456,6 +456,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Portal: device connection (online / fault / offline / not connected) and **Device key** on the Lanes screen; latest read, devices down and **Open barrier** on the gate screen; lane activity endpoint |
 | ✅ | Technical page *Connecting lane devices*; reference adapter `deploy/device-adapter/simulator.mjs` |
 
+### 46. Autogate lane controller (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | One transaction per truck at an automatic lane (migration 020): reads gathered (same truck within 30 s unless another plate), decided after 3 s of quiet or at once for a kiosk entry / gate pass, by the same rules as a clerk (match, TOS re-check, window, holds, blocks) |
+| ✅ | Let in: green, barrier open, welcome on the display, gate ticket at the printer; the barrier's confirmation gates the truck in. Referred: red, the reason on the display, a trouble-desk case; letting it in there opens that lane's barrier; a barrier that fails calls a clerk |
+| ✅ | Exit lanes: gate-out by plate or appointment number, then green and open, or a clerk |
+| ✅ | Gate screen shows each automatic lane's current truck; `GET …/gate/transactions`; settings `LaneController__*`; runs inside Yardsyncs (next to the lanes when installed at the terminal) |
+
 ---
 
 ## Remaining
@@ -542,7 +550,8 @@ Details in [`releasing.md`](releasing.md).
 |---|---|---|
 | ✅ | Lane model: lanes, devices per lane (cameras, OCR, RFID reader, kiosk, barrier, traffic light, intercom, weighbridge), lane states | Section 44 |
 | ✅ | Device adapters, vendor-neutral: OCR results in (plate, container numbers, ISO code, seal, damage photos), barrier / light / display commands out | Section 45; vendor-specific adapters (a given OCR make's own protocol) per customer |
-| ⬜ | Lane controller service at the terminal: one transaction per truck — identify, match appointment, re-check, decide, open barrier or send to remote clerk | On-premise next to the lanes, keeps working if the cloud link drops |
+| ✅ | Lane controller service at the terminal: one transaction per truck — identify, match appointment, re-check, decide, open barrier or send to remote clerk | Section 46; runs inside Yardsyncs, so at the terminal when Yardsyncs is installed there |
+| ⬜ | Edge mode for cloud-hosted terminals: a small lane agent at the terminal with today's appointments cached, so automatic lanes keep deciding when the link to the cloud drops, and sync back afterwards | Needed only where Yardsyncs is hosted in the cloud and the lanes run automatic |
 | ⬜ | Remote clerk station: live lane view, photos, OCR corrections, intercom, admit / refer / reject — grows out of today's trouble desk | |
 | ⬜ | TOS gate transaction: create the truck visit and gate-in / gate-out in the TOS (N4 gate API), print or send the EIR / gate ticket | Needs TOS write access |
 | ⬜ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | |
@@ -569,7 +578,7 @@ Former open questions, now options each terminal chooses. Default in **bold**.
 | TOS | **Navis N4 (web services + TasLookup)** · fake TOS for demos · further adapters per customer (other TOS, EDI, database views) | N4 + fake done; adapter chosen per terminal → Phase G |
 | National appointment / port community platform | **none** · integration module per country / port when required | Phase C, per customer |
 | Driver identity | **mobile one-time code** · national e-ID where available (e.g. Nafath in Saudi Arabia) · ID + selfie check | Phase E |
-| Gate identification | **appointment number / QR** · plate OCR · container OCR · RFID tag · geofence check-in — any combination per lane | Gate API accepts all reads; lane devices, manual / automatic per lane and device reads done; matching by RFID tag with the lane controller |
+| Gate identification | **appointment number / QR** · plate OCR · container OCR · RFID tag · geofence check-in — any combination per lane | Gate API accepts all reads; lane devices, manual / automatic per lane and device reads done; matching by RFID tag ⬜ (tags are gathered per truck; the gate doesn't match on them yet) |
 | Fees | **free** · booking fee · no-show / late penalty · paid priority slots; payment gateway per country | Phase F (billing) |
 | Slot length | **60 min**, 15 / 30 / 120 per terminal; different lengths by time of day as an option | Per terminal done; by time of day ⬜ |
 | Yard position source | **TOS position at gate-in** · earlier when the TOS has a pre-advised truck visit (needs TOS write-back) | At gate-in done |

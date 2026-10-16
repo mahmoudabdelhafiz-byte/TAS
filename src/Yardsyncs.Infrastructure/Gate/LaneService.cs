@@ -37,7 +37,13 @@ public sealed class LaneService(YardsyncsDbContext db, TimeProvider clock, ILogg
         var lastRead = recent.GroupBy(r => r.LaneId)
             .ToDictionary(g => g.Key, g => DeviceService.View(g.First(), codes.GetValueOrDefault(g.First().DeviceId, "?")));
 
-        return lanes.Select(l => LaneView.From(l, devices[l.LaneId].ToList(), settings, now, lastRead.GetValueOrDefault(l.LaneId))).ToList();
+        var transactions = (await db.LaneTransactions.AsNoTracking()
+                .Where(t => t.TerminalId == terminalId && t.LastReadAt >= since)
+                .OrderByDescending(t => t.LastReadAt).ThenByDescending(t => t.TransactionId).Take(200).ToListAsync(ct))
+            .GroupBy(t => t.LaneId).ToDictionary(g => g.Key, g => g.First());
+
+        return lanes.Select(l => LaneView.From(l, devices[l.LaneId].ToList(), settings, now, lastRead.GetValueOrDefault(l.LaneId),
+            transactions.TryGetValue(l.LaneId, out var t) ? LaneTransactionView.From(t, l.LaneCode) : null)).ToList();
     }
 
     public async Task<AdminResult<LaneView>> CreateAsync(CurrentUser admin, int terminalId, LaneInput input, CancellationToken ct = default)

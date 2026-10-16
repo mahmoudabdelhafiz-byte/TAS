@@ -33,9 +33,17 @@ public static class GateEndpoints
         gate.MapGet("/troubles", async (int terminalId, bool? openOnly, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.ListTroublesAsync(terminalId, openOnly ?? true, ct)));
 
+        // At an automatic lane, letting a referred truck in opens that lane's barrier.
         gate.MapPost("/troubles/{troubleId:long}/resolve", async (
-            int terminalId, long troubleId, ResolveTroubleInput body, HttpContext http, GateService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.ResolveAsync(YardsyncsApi.User(http)!, terminalId, troubleId, body, ct)));
+            int terminalId, long troubleId, ResolveTroubleInput body, HttpContext http, GateService service, LaneControllerService controller, CancellationToken ct) =>
+        {
+            if (Denied(http, terminalId) is { } denied)
+                return denied;
+            var result = await service.ResolveAsync(YardsyncsApi.User(http)!, terminalId, troubleId, body, ct);
+            if (result.Value is { Resolution: { } resolution })
+                await controller.OnTroubleResolvedAsync(troubleId, resolution, ct);
+            return YardsyncsApi.Admin(result);
+        });
 
         gate.MapGet("/board", async (int terminalId, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.BoardAsync(terminalId, ct)));
@@ -74,6 +82,10 @@ public static class GateEndpoints
             Denied(http, terminalId) ?? (await service.ActivityAsync(terminalId, laneId, limit ?? 20, ct) is { } activity
                 ? Results.Ok(activity)
                 : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Lane {laneId} not found.")));
+
+        // Lane controller: each truck's passage through an automatic lane.
+        gate.MapGet("/transactions", async (int terminalId, int? laneId, int? limit, HttpContext http, LaneControllerService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, laneId, limit ?? 50, ct)));
 
         gate.MapPost("/lanes/{laneId:int}/devices/{deviceId:int}/key", async (
             int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>

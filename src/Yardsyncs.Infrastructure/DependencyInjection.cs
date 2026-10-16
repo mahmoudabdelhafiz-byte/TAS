@@ -75,6 +75,9 @@ public static class DependencyInjection
         services.AddScoped<GateService>();
         services.AddScoped<LaneService>();
         services.AddScoped<DeviceService>();
+        services.Configure<Yardsyncs.Application.Gate.LaneControllerOptions>(config.GetSection("LaneController"));
+        services.AddScoped<LaneControllerService>();
+        services.AddHostedService<LaneControllerWorker>();
 
         // Notifications: outbox delivery; provider per channel from "Notifications" (default: Log = not sent).
         services.Configure<NotificationOptions>(config.GetSection("Notifications"));
