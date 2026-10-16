@@ -94,6 +94,13 @@ jobs:
                   first_frame = next((l.strip() for l in trace.splitlines() if " in " in l), "")
                   text = f"{msg} | {first_frame}".replace("%", "%25").replace("\r", "").replace("\n", "%0A")[:1500]
                   print(f"::error title={r.get('testName')}::{text}")
+      - name: Known vulnerabilities in packages
+        run: |
+          dotnet list TAS.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          grep -E "^\s+>\s" vulnerable.txt | sed -E 's/\s+/ /g' | sort -u | head -30 | while read -r line; do
+            echo "::warning title=vulnerable package::$line"
+          done || true
+
       - name: Publish build errors
         if: failure()
         run: |
@@ -122,6 +129,12 @@ jobs:
 
       - name: Type-check and build
         run: npm run build
+
+      - name: Known vulnerabilities in packages
+        run: |
+          npm audit --omit=dev --json > audit.json || true
+          jq -r '.vulnerabilities // {} | to_entries[] | "\(.value.severity) \(.key) \(.value.range)"' audit.json | sort -u | head -20 \
+            | while read -r line; do echo "::warning title=npm audit::$line"; done || true
 
       - name: Publish errors
         if: failure()
@@ -251,6 +264,28 @@ jobs:
           ready && grep -q Healthy ready.json
           docker compose -f docker-compose.yml -f docker-compose.smoke.yml run --rm backup now
           ls -l backups/ && ls backups/tas-*.dump
+
+      - name: Upgrade and roll back
+        working-directory: deploy
+        env:
+          COMPOSE_FILES: -f docker-compose.yml -f docker-compose.smoke.yml
+          READY_URL: http://localhost:8080/health/ready
+          READY_SECONDS: "180"
+        run: |
+          psql() { docker compose $COMPOSE_FILES exec -T db psql -U tas -d tas -Atc "$1"; }
+          docker tag yardsyncs:latest yardsyncs:ci-next
+          ./upgrade.sh yardsyncs:ci-next
+          grep -q '^YARDSYNCS_IMAGE=yardsyncs:ci-next$' .env
+          psql "CREATE TABLE made_after_upgrade (x int)"
+          ./upgrade.sh --status
+          ./upgrade.sh --rollback
+          grep -q '^YARDSYNCS_IMAGE=yardsyncs:latest$' .env
+          [ "$(psql "SELECT to_regclass('made_after_upgrade') IS NULL")" = "t" ]
+          curl -fsS -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' \
+            -d '{"email":"admin@ci.example","password":"Yard-Ci-2026-pass"}' | grep -q accessToken
+
+      - name: Known vulnerabilities in the image
+        run: bash .github/scan-image.sh yardsyncs:latest false
 
       # Peak hour on the CI runner: dispatchers booking the busy hours, trucks reporting positions, control room
       # watching (loadtest/README.md). Thresholds in loadtest/peak.js; the booking rules are checked afterwards.

@@ -57,6 +57,8 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   (data location, providers, privacy notice, breach reporting). Outside Development / Testing the app refuses to start
   with test switches on, builds password links only from `PasswordLinks:PortalUrl`, and keeps codes and links out of
   the logs; `/api/ops/status` lists `warnings` for settings to look at.
+- Versions, images (`ghcr.io/mahmoudabdelhafiz-byte/yardsyncs`), environments, releases, upgrade and rollback:
+  [`docs/releasing.md`](docs/releasing.md).
 - Load test of the peak booking hour: [`loadtest/`](loadtest/README.md) (k6; runs in CI on every pull request).
 - Personal data is cleaned up daily (`Privacy:LocationDays` 30, `Privacy:MessageDays` 180, `Privacy:EventDays` 90,
   `Privacy:TokenDays` 30). Drivers: `GET /api/companies/{c}/drivers/{d}/personal-data` (copy) and

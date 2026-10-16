@@ -104,8 +104,11 @@ database query today and gets a screen when a customer needs it.
 | Item | Why it matters |
 |---|---|
 | Penetration test by an outside firm before the first go-live | A second pair of eyes; often a customer requirement |
-| Dependency scanning in CI (Dependabot / `dotnet list package --vulnerable`, `npm audit`) | Known holes in libraries |
 | Two-step sign-in for terminal admins and system admins | Admin accounts can change everything |
 | Audit trail screen and export | Investigations without database access |
 | Secret rotation procedure (sign-in key, gate pass key, provider keys) | After staff changes or a leak |
 | Copy of data for portal users as a screen | Same right as drivers; today a query |
+
+Done since the first review: dependency scanning — Dependabot weekly; `dotnet list package --vulnerable` and
+`npm audit` on every pull request; the image scanned with Grype on every pull request and release (a critical
+problem with a fix stops a release). See `docs/releasing.md`.
