@@ -343,6 +343,10 @@ public sealed class CapacityAdminService(
             [TerminalSettings.GateByPlateKey] = settings.GateByPlate ? 1 : 0,
             [TerminalSettings.GateByContainerKey] = settings.GateByContainer ? 1 : 0,
             [TerminalSettings.DriverIdentityKey] = (int)settings.DriverIdentity,
+            [TerminalSettings.FeeBookingKey] = (int)settings.FeeBooking,
+            [TerminalSettings.FeeNoShowKey] = (int)settings.FeeNoShow,
+            [TerminalSettings.FeeLateCancelKey] = (int)settings.FeeLateCancel,
+            [TerminalSettings.LateCancelHoursKey] = settings.LateCancelHours,
         };
     }
 

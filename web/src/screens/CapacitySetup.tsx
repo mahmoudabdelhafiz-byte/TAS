@@ -8,6 +8,7 @@ import {
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, useLoad } from '../ui/kit.tsx';
 import { categoryName } from './Book.tsx';
+import { fromMinor, toMinor, type FeeSchedule } from '../lib/money.ts';
 
 interface Template {
   templateId: number;
@@ -466,7 +467,7 @@ const settingText = {
 } as const;
 
 function Rules({ editable }: { editable: boolean }) {
-  const { api, t, lang, terminal } = useApp();
+  const { api, t, lang, terminal, user } = useApp();
   const base = `/api/terminals/${terminal.terminalId}`;
   const rules = useLoad(() => api.get<{ category: string; hoursBefore: number }[]>(`${base}/capacity/release-rules`), [base]);
   const settings = useLoad(() => api.get<Record<string, number>>(`${base}/settings`), [base]);
@@ -509,6 +510,7 @@ function Rules({ editable }: { editable: boolean }) {
       </div>
 
       <GateRules editable={editable} />
+      <Fees editable={editable && (user.role === 'TerminalAdmin' || user.role === 'OperatorAdmin' || user.role === 'SysAdmin')} />
 
       <div className="book-side form-stack">
         <h2>{t('setup.settings')}</h2>
@@ -579,6 +581,60 @@ function GateRules({ editable }: { editable: boolean }) {
               settings.reload();
               setDone(t('slots.applied'));
             }}>{t('setup.saveGate')}</ActionButton>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+const feeKeys = ['fee_booking', 'fee_no_show', 'fee_late_cancel'] as const;
+const feeText = { fee_booking: 'fees.booking', fee_no_show: 'fees.noShow', fee_late_cancel: 'fees.lateCancel' } as const;
+
+/** The terminal's fees, typed in its currency's major unit; stored in the smallest unit. */
+function Fees({ editable }: { editable: boolean }) {
+  const { api, t, terminal } = useApp();
+  const base = `/api/terminals/${terminal.terminalId}`;
+  const fees = useLoad(() => api.get<FeeSchedule>(`${base}/fees`), [base]);
+  const [form, setForm] = useState<Record<string, string> | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const f = fees.data;
+  const values = form ?? (f ? {
+    fee_booking: fromMinor(f.booking, f.decimals), fee_no_show: fromMinor(f.noShow, f.decimals),
+    fee_late_cancel: fromMinor(f.lateCancel, f.decimals), late_cancel_hours: String(f.lateCancelHours),
+  } : null);
+  const minor = f && values ? feeKeys.map(k => toMinor(values[k], f.decimals)) : [];
+  const hours = values ? Number(values.late_cancel_hours || '0') : 0;
+  const valid = minor.every(v => v !== null) && Number.isInteger(hours) && hours >= 0 && hours <= 168;
+
+  return (
+    <div className="book-side form-stack">
+      <h2>{t('fees.title')}</h2>
+      <p className="hint">{t('fees.hint')}</p>
+      {done && <Notice kind="ok" onClose={() => setDone(null)}>{done}</Notice>}
+      {error && <Notice kind="error" onClose={() => setError(null)}>{error}</Notice>}
+      {f && values && (
+        <>
+          {feeKeys.map(k => (
+            <label key={k} className="field field-row">
+              <span>{t(feeText[k])} <small className="muted">({f.currency})</small></span>
+              <input inputMode="decimal" dir="ltr" value={values[k]} disabled={!editable} onChange={e => setForm({ ...values, [k]: e.target.value })} />
+            </label>
+          ))}
+          <label className="field field-row">
+            <span>{t('fees.lateCancelHours')}</span>
+            <input inputMode="numeric" dir="ltr" value={values.late_cancel_hours} disabled={!editable} onChange={e => setForm({ ...values, late_cancel_hours: e.target.value })} />
+          </label>
+          {editable && (
+            <ActionButton kind="primary" disabled={form === null || !valid} onError={setError} onRun={async () => {
+              await api.put(`${base}/settings`, {
+                values: { fee_booking: minor[0], fee_no_show: minor[1], fee_late_cancel: minor[2], late_cancel_hours: hours }, reason: null,
+              });
+              setForm(null);
+              fees.reload();
+              setDone(t('slots.applied'));
+            }}>{t('fees.save')}</ActionButton>
           )}
         </>
       )}

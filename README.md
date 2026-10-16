@@ -63,6 +63,8 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   are signed with (`Terminals__<code>__Brand`) and any message setting (`Terminals__<code>__Notifications__…`:
   providers, accounts, SMS sender name, email sender); the installation's settings fill the rest. `/api/ops/status`
   lists each terminal's set-up.
+- Fees per terminal (booking, no-show, late cancellation) charged against appointments; `GET /api/terminals/{id}/fees`,
+  `GET /api/terminals/{id}/charges?from=&to=[&format=csv]`, `POST …/charges/{id}/waive`.
 - New terminals: **Terminal set-up** in the portal (`POST /api/terminals`, `GET /api/terminals/{id}/setup`): the usual
   move types, lanes and rules, then a checklist until trucks can book.
 - Another TOS: the TOS adapter kit (`TosContract`, conformance tests in `tests/Tas.Infrastructure.Tests/TosKit/`,

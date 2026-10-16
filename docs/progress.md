@@ -424,6 +424,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Gate identification per terminal: the gate pass always; appointment number, plate and container number can each be turned off (**At the gate** in Capacity setup → Rules) |
 | ✅ | Driver identity per terminal: not checked, a named driver, or the named driver's own gate pass; trucks that don't meet it go to the trouble desk as "Driver not identified" (migration 016) |
 
+### 42. Fees (2026-10-16)
+| | Item |
+|---|---|
+| ✅ | Per terminal, in its country's currency: booking, no-show and late-cancellation fees, and the late-cancellation window (Capacity setup → Rules → Fees, terminal admins) |
+| ✅ | Charges recorded against the appointment, once per kind (migration 017): at booking, at no-show, at a late cancellation; cancelling in time, or a cancellation by the terminal, waives the booking fee |
+| ✅ | Companies see the fees before booking; **Charges** screen and `GET /api/terminals/{id}/charges` (JSON or CSV) with totals per company; companies see their own only |
+| ✅ | Terminal admins waive a charge with a reason (kept, audited); billing and payment stay in the terminal's own system |
+
 ---
 
 ## Remaining
@@ -495,7 +503,8 @@ Details in [`releasing.md`](releasing.md).
 ### Phase G — Generic product (any terminal operator)
 | | Item | Notes |
 |---|---|---|
-| 🟡 | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Done: TOS, message providers, sender names, brand (section 34); driver channel, gate identification, driver identity (section 41). Left: fees (no fees in Yardsyncs yet) |
+| ✅ | Settings per terminal instead of per installation: TOS adapter, gate identification, driver identity, fees, notification providers and sender names | Sections 34, 41, 42 |
+| ⬜ | Online payment of fees (card / SADAD) | Charges are recorded and reported; collecting them needs a payment provider ❓ customer |
 | ✅ | Tenants: terminal operator → terminals; operator admins | Section 35. Competitors: separate installations / cloud instances |
 | ✅ | Country packs: plate formats, mobile number rules, national holidays, currencies, ID types | Section 36: SA, AE, OM, BH, KW, QA. More countries are new entries in `CountryPacks` with their tests |
 | ✅ | Languages as packs: portal and messages in more languages without code changes | Section 37. Help guides stay English / Arabic |

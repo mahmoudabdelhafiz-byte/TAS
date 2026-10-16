@@ -27,7 +27,8 @@ public sealed class BookingService(
     AppointmentQueryService queries,
     TimeProvider clock,
     ILogger<BookingService> logger,
-    TosSettings? tosSettings = null)
+    TosSettings? tosSettings = null,
+    ChargeService? charges = null)
 {
     private readonly TosUnavailablePolicy _onTosUnavailable = (tosSettings ?? new TosSettings()).OnUnavailable;
 
@@ -291,6 +292,11 @@ public sealed class BookingService(
 
         db.Appointments.Add(appointment);
         await db.SaveChangesAsync(ct);
+        if (charges is not null)
+        {
+            await charges.ChargeAsync(appointment, ChargeKind.Booking, ct);
+            await db.SaveChangesAsync(ct);
+        }
         await tx.CommitAsync(ct);
 
         logger.LogInformation("Booked {AppointmentNo} for company {CompanyId} in slot {SlotId}", appointment.AppointmentNo, p.Company.CompanyId, p.Slot.SlotId);
@@ -321,6 +327,8 @@ public sealed class BookingService(
         }
 
         await ReleaseCapacityAsync(appointment!, ct);
+        if (charges is not null)
+            await charges.CancelledAsync(appointment!, appointment!.Slot.StartAt, byTerminal: user.IsTerminalStaff, user.UserId, ct);
         AddHistory(appointment!, AppointmentStatus.Cancelled, user.UserId, string.IsNullOrWhiteSpace(reason) ? "Cancelled" : reason, now);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

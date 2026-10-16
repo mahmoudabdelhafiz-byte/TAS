@@ -75,3 +75,9 @@ its place is freed; no-shows are counted per company.
 
 At the gate the clerk scans the gate code or types the plate. A truck with a valid appointment that is **Clear to go**
 is let in; anything else goes to the trouble desk.
+
+## Fees
+
+Some terminals charge fees: for booking, for a no-show, or for cancelling late. The booking form shows the terminal's
+fees before you book. Cancelling before the late-cancellation window refunds the booking fee. Company admins see their
+company's charges under **Charges** and can download them as a file.

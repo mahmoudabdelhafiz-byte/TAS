@@ -150,3 +150,26 @@ public sealed class AppointmentStatusHistory
     public string? Reason { get; set; }
     public DateTimeOffset ChangedAt { get; set; }
 }
+
+public enum ChargeKind
+{
+    Booking,
+    NoShow,
+    LateCancel,
+}
+
+/// <summary>A fee charged for an appointment (once per kind), in the currency's smallest unit; it can be waived with a reason.</summary>
+public sealed class AppointmentCharge
+{
+    public long ChargeId { get; set; }
+    public int TerminalId { get; set; }
+    public long AppointmentId { get; set; }
+    public int CompanyId { get; set; }
+    public ChargeKind Kind { get; set; }
+    public long AmountMinor { get; set; }
+    public string Currency { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? WaivedAt { get; set; }
+    public int? WaivedBy { get; set; }
+    public string? WaiveReason { get; set; }
+}

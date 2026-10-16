@@ -32,3 +32,19 @@ public class BrandingRulesTests
         Assert.Null(BrandingService.ImageType([]));
     }
 }
+
+/// <summary>The charges CSV: amounts in major units, and cells that a spreadsheet would run as formulas are defused.</summary>
+public class ChargeCsvTests
+{
+    [Fact]
+    public void Amounts_and_dangerous_cells()
+    {
+        var at = new DateTimeOffset(2026, 10, 20, 7, 0, 0, TimeSpan.Zero);
+        var report = new Tas.Infrastructure.Booking.ChargeReport(new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), "KWD", 3,
+            [new(1, "DEMO-1", 7, "=HYPERLINK(\"x\")", Tas.Domain.Booking.ChargeKind.NoShow, 12500, "KWD", at, null, null)], [], 12500);
+        var csv = Tas.Infrastructure.Booking.ChargeService.Csv(report);
+        Assert.Contains(",12.500,KWD,2026-10-20T07:00:00Z,", csv);
+        Assert.Contains("\"'=HYPERLINK(\"\"x\"\")\"", csv);
+        Assert.Contains(",NoShow,", csv);
+    }
+}

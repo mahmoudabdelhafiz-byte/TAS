@@ -55,6 +55,7 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
     public DbSet<AppointmentItem> AppointmentItems => Set<AppointmentItem>();
     public DbSet<ValidationResult> ValidationResults => Set<ValidationResult>();
     public DbSet<AppointmentStatusHistory> AppointmentStatusHistory => Set<AppointmentStatusHistory>();
+    public DbSet<AppointmentCharge> AppointmentCharges => Set<AppointmentCharge>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -297,6 +298,14 @@ public sealed class TasDbContext(DbContextOptions<TasDbContext> options) : DbCon
             e.HasKey(x => x.ValidationId);
             e.Property(x => x.CheckType).HasUpperCaseConversion();
             e.Property(x => x.Result).HasUpperCaseConversion();
+        });
+
+        b.Entity<AppointmentCharge>(e =>
+        {
+            e.HasKey(x => x.ChargeId);
+            e.Property(x => x.Kind).HasUpperCaseConversion();
+            e.Property(x => x.Currency).HasColumnType("char(3)");
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<AppointmentStatusHistory>(e =>

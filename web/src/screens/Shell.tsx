@@ -13,6 +13,7 @@ import { Fleet } from './Fleet.tsx';
 import { Kpi } from './Kpi.tsx';
 import { MapEditor } from './MapEditor.tsx';
 import { Onboard } from './Onboard.tsx';
+import { Charges } from './Charges.tsx';
 import { ControlRoom } from './ControlRoom.tsx';
 import { TrackContainers } from './TrackContainers.tsx';
 import { GateScreen } from './Gate.tsx';
@@ -29,6 +30,7 @@ const navText: Record<Screen, TextKey> = {
   slots: 'nav.slots',
   setup: 'nav.setup',
   onboard: 'nav.onboard',
+  charges: 'nav.charges',
   map: 'nav.map',
   control: 'nav.control',
   gate: 'nav.gate',
@@ -101,6 +103,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
           {screen === 'setup' && <CapacitySetup />}
           {screen === 'map' && <MapEditor />}
           {screen === 'onboard' && <Onboard />}
+          {screen === 'charges' && <Charges />}
           {screen === 'control' && <ControlRoom />}
           {screen === 'kpi' && <Kpi />}
           {screen === 'fleet' && <Fleet />}
@@ -141,6 +144,7 @@ function NavIcon({ screen }: { screen: Screen }) {
     control: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" /></>,
     map: <><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" /><path d="M9 4v14M15 6v14" /></>,
     setup: <><rect x="3" y="4" width="18" height="16" rx="1" /><path d="M3 9h18M9 4v16M15 4v16" /></>,
+    charges: <><rect x="3" y="5" width="18" height="14" rx="1.5" /><path d="M3 10h18M7 15h4" /></>,
     onboard: <><path d="M5 6l2 2 3-3M5 12l2 2 3-3M5 18l2 2 3-3" /><path d="M13 7h8M13 13h8M13 19h8" /></>,
     help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6" /><circle cx="12" cy="17.2" r="0.6" fill="currentColor" /></>,
   };
