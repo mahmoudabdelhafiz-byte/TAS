@@ -13,3 +13,5 @@ web/dist/
 src/Tas.Api/wwwroot/
 deploy/.env
 deploy/backups/
+loadtest/summary.json
+loadtest/k6.log

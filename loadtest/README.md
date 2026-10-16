@@ -1,0 +1,73 @@
+# Load test: the peak booking hour
+
+`peak.js` ([k6](https://k6.io)) plays the morning rush against a Yardsyncs server, four kinds of traffic at once:
+
+| Who | What they do |
+|---|---|
+| Dispatchers | Sign in once; look at availability for the next five days; book an import pickup, mostly into 06:00–10:00; cancel 5 % and move 5 % of what they booked; think 0.5–1.5 s |
+| Browsers | Refresh availability and the appointment list every 2–4 s |
+| Trucks | Drivers on the way report their position from the app (every 5 s in CI, every 15 s like the real app) |
+| Control room | Planners watch the control room and the gate board every 3 s |
+
+A booking answered "slot just filled" (409) is a normal answer in a rush, not a failure. After the run,
+`check.sql` checks that the booking rules held: no slot or import quota booked past its capacity, slot and category
+counters equal to the appointments in them, no container in two live appointments.
+
+## Running it
+
+The server must run as **Development** (the test seeds companies and drivers through `/api/dev/load-seed` and reads
+drivers' sign-in codes from the answers) with the sign-in rate limit lifted, because every virtual user comes from one
+address. `compose.load.yml` does that on top of `deploy/`. Never point the test at a production server.
+
+```bash
+cd deploy
+docker compose -f docker-compose.yml -f docker-compose.smoke.yml -f ../loadtest/compose.load.yml up -d db app
+docker run --rm --network host -v "$PWD/../loadtest:/scripts" grafana/k6:0.54.0 run /scripts/peak.js            # CI size
+docker run --rm --network host -e PROFILE=peak -v "$PWD/../loadtest:/scripts" grafana/k6:0.54.0 run /scripts/peak.js  # a busy terminal
+docker compose -f docker-compose.yml -f docker-compose.smoke.yml exec -T db psql -U tas -d tas -At < ../loadtest/check.sql
+```
+
+`BASE_URL` points it at another server (a staging copy of the customer's installation). CI runs the `ci` profile in
+the `deploy` job on every pull request; the timings are in the job's notices.
+
+| Profile | Dispatchers | Browsers | Trucks reporting | Control room | Duration |
+|---|---|---|---|---|---|
+| `ci` | 60 | 20 | 150 (every 5 s) | 4 | 2 min |
+| `peak` | 300 | 100 | 1 000 (every 15 s) | 10 | 10 min |
+
+Pass marks (the test fails above them): no more than 1 % failed requests; 95 % of bookings under 1.5 s, of
+availability, appointment lists and positions under 0.8 s, of the control room under 2 s and of the gate board under 1 s.
+
+## Results
+
+**2026-10-16, CI runner** (GitHub `ubuntu-latest`, 4 CPU / 16 GB; database, app and k6 on the same machine), profile `ci`:
+
+| | p95 | p99 | max |
+|---|---|---|---|
+| Book | 83 ms | 875 ms | 1 053 ms |
+| Availability | 16 ms | 1 024 ms | 1 344 ms |
+| Appointment list | 30 ms | 283 ms | 376 ms |
+| Position report | 26 ms | 1 227 ms | 1 352 ms |
+| Control room | 52 ms | 1 491 ms | 1 541 ms |
+| Gate board | 14 ms | 220 ms | 228 ms |
+
+14 954 requests (110 per second), none failed. 1 825 trucks booked; the five days were full within the run, after which
+dispatchers kept finding no free slot (5 153 times), as they do on a real rush morning. The slowest 1 % come in short
+bursts on a machine that also runs the database and the load generator; the 95th percentiles are far under the marks.
+Booking rules afterwards: 1 908 live appointments, nothing oversold, counters equal to the appointments, no container
+booked twice.
+
+**What the load test found and what changed**
+
+- *The same container booked twice at the same moment got two appointments.* The "container already booked" check ran
+  before the booking's transaction. Now each container is locked for the length of the transaction and checked again
+  (`ConcurrencyApiTests`).
+- *Connections.* Under load the app's database pool grows to its default of 100 connections, which is all PostgreSQL
+  allows by default: after the first run the rules check could not connect at all, and neither could a backup or an
+  administrator. `deploy/` now caps the pool at 60 (`DB_POOL`) and gives PostgreSQL 150 (`DB_MAX_CONNECTIONS`); the
+  next run held 61 connections.
+- Capacity counters held: no slot or quota was booked past its capacity, and the counters matched the appointments.
+
+**Sizing.** One server of the size in `deploy/README.md` (4 CPU / 8 GB) carries a mid-size terminal's rush with room
+to spare. Before go-live, run the `peak` profile against a staging copy of the customer's installation with the
+customer's capacity templates and record the result here.

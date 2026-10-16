@@ -317,6 +317,17 @@ Findings and the PDPL picture in [`security.md`](security.md).
 | ✅ | Drivers: copy of data and erasure (portal and API), audited, refused while a visit is under way |
 | ✅ | Yardsyncs mobile: location notice before the first trip (what, why, until when, rights), in the four languages |
 
+
+### 30. Load test (2026-10-16)
+Details and results in [`loadtest/README.md`](../loadtest/README.md).
+
+| | Item |
+|---|---|
+| ✅ | k6 test of the morning rush: dispatchers booking the busy hours (with cancels and moves), people refreshing lists, trucks reporting positions, control room and gate board; profiles `ci` and `peak` |
+| ✅ | Runs in CI on every pull request against the Docker image with a fresh database; fails on > 1 % errors or slow 95th percentiles; then checks the booking rules in the database |
+| ✅ | Found and fixed: the same container booked twice at the same moment got two appointments (lock per container in the booking transaction) |
+| ✅ | Found and fixed: the database pool could take every PostgreSQL connection (pool 60, PostgreSQL 150 in `deploy/`) |
+
 ---
 
 ## Remaining
@@ -379,7 +390,7 @@ Findings and the PDPL picture in [`security.md`](security.md).
 | ⬜ | Alerting wired to the customer's monitoring (rules listed in `deploy/README.md`); off-site copy of backups |
 | ✅ | Security review; PDPL privacy: retention, drivers' copy and erasure, location notice (`docs/security.md`) |
 | ⬜ | Outside penetration test; dependency scanning in CI; two-step sign-in for admins; audit trail screen; secret rotation procedure |
-| ⬜ | Load test for peak booking times |
+| ✅ | Load test for peak booking times (CI size every pull request; `peak` profile to run on the customer's staging before go-live) |
 | ⬜ | User guides (Arabic / English) and onboarding for trucking companies |
 | ⬜ | **Reminder for Mahmoud when development is finished:** make the GitHub repository private (Settings → Danger Zone → Change visibility) |
 

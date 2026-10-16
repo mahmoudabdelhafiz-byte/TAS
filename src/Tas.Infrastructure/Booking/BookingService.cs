@@ -196,6 +196,25 @@ public sealed class BookingService(
         // Consume capacity and save, atomically.
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
+        // Two bookings of the same container at the same moment both pass the check above: hold a lock per container
+        // until this transaction ends and look again (found by the load test, loadtest/).
+        var containers = p.Items.Where(i => i.ContainerNo is not null).Select(i => i.ContainerNo!).Distinct().Order(StringComparer.Ordinal).ToList();
+        if (containers.Count > 0)
+        {
+            foreach (var container in containers)
+                await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtext({"container:" + p.Terminal.TerminalId + ":" + container}))", ct);
+            var taken = await LiveAppointments(p.Terminal.TerminalId)
+                .SelectMany(a => a.Items)
+                .Where(i => i.ContainerNo != null && containers.Contains(i.ContainerNo))
+                .Select(i => i.ContainerNo!)
+                .ToListAsync(ct);
+            if (taken.Count > 0)
+            {
+                await tx.RollbackAsync(ct);
+                return BookingOutcome.Conflict($"Container {string.Join(", ", taken.Distinct())} already has a live appointment.");
+            }
+        }
+
         var unitsByCategory = p.Items.GroupBy(i => i.Category.CategoryId).ToDictionary(g => g.Key, g => g.Count());
         var capacityError = await TryConsumeSlotAsync(p.Slot, p.Company.CompanyId, unitsByCategory, now, ct, request.WalkIn);
         if (capacityError is not null)

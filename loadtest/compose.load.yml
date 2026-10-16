@@ -1,0 +1,11 @@
+# Load test only (with deploy/docker-compose.yml and docker-compose.smoke.yml): a Development server, so the test can
+# seed companies and drivers (/api/dev/load-seed) and drivers get their sign-in code in the answer; sign-in rate limits
+# off because every virtual user comes from one address. Never use this on a real server.
+services:
+  app:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      RateLimit__AuthPerMinute: "1000000"
+      DriverLogin__ExposeCodeForTesting: "true"
+      Logging__LogLevel__Default: Warning
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
