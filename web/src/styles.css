@@ -1111,7 +1111,7 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .case td bdi, .lane-read bdi { display: inline-block; margin-inline-end: 6px; }
 
 /* ---------- Gate ticket ---------- */
-.row-actions { display: inline-flex; align-items: center; gap: 14px; }
+.row-actions { display: inline-flex; align-items: center; gap: 14px; white-space: nowrap; }
 .ticket-sheet { position: fixed; inset: 0; z-index: 60; display: grid; place-items: start center; overflow-y: auto; padding: 32px 16px; background: rgba(15, 42, 58, 0.45); }
 .ticket-paper { width: min(44rem, 100%); background: var(--surface); color: var(--text); border-radius: var(--radius); padding: 28px 32px; box-shadow: 0 12px 32px rgba(15, 42, 58, 0.3); font-family: var(--font); }
 [dir='rtl'] .ticket-paper { font-family: var(--font-ar); }
@@ -1135,3 +1135,33 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
   body.print-ticket .ticket-paper { box-shadow: none; width: auto; padding: 0; }
   body.print-ticket .ticket-actions { display: none; }
 }
+
+/* ---------- Inspection ---------- */
+.insp-summary { display: grid; gap: 12px; }
+.insp-card { border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 10px 12px; }
+.insp-card header { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.insp-card p { margin: 6px 0; }
+.insp-container { font-weight: 600; }
+.insp-damage { margin: 4px 0; padding-inline-start: 18px; }
+.insp-damage .major, .insp-new .major { color: var(--red); font-weight: 500; }
+.insp-new { display: inline-block; margin-inline-end: 10px; }
+.seal-Mismatch, .seal-Missing, .seal-Broken { color: var(--red); font-weight: 500; }
+.seal-NotChecked { color: var(--muted); }
+.dispute { margin-top: 8px; padding: 8px 10px; border-radius: var(--radius); background: var(--amber-tint); }
+.dispute-Accepted { background: var(--green-tint); }
+.dispute-Rejected { background: var(--line-soft); }
+.dispute p { margin: 2px 0; }
+.inline-ask.wrap { flex-wrap: wrap; }
+.insp-editor h3 { margin: 10px 0 4px; }
+.seg-group { display: inline-flex; gap: 6px; border: 0; padding: 0; margin: 0; }
+.seg-group legend { font-size: 13px; color: var(--muted); margin-bottom: 4px; padding: 0; }
+.seg-group .seg { border: 1px solid var(--line); cursor: pointer; }
+.seg-group .seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-group .seg:focus-within { outline: 2px solid var(--teal); outline-offset: 2px; }
+.insp-container-one { margin: 0 0 4px; font-weight: 600; align-self: end; }
+.damage-row { padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.file-btn { position: relative; overflow: hidden; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.photo-wait { display: block; width: 160px; height: 120px; background: var(--page); border-radius: var(--radius); }
+.item-seal { margin: 6px 0 0; }
+.item-seal input { width: 12rem; }

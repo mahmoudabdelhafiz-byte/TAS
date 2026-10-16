@@ -6,7 +6,11 @@ using Yardsyncs.Infrastructure.Persistence;
 
 namespace Yardsyncs.Infrastructure.Gate;
 
-public sealed record GateTicketMove(string Category, string CategoryAr, string? ContainerNo, string? IsoType, string? Reference, IReadOnlyList<string> Seals);
+public sealed record GateTicketMove(string Category, string CategoryAr, string? ContainerNo, string? IsoType, string? Reference, IReadOnlyList<string> Seals,
+    SealStatus SealStatus = SealStatus.NotChecked);
+
+/// <summary>Damage seen at gate-in: from the inspection, or as the cameras reported it (kind unknown).</summary>
+public sealed record GateTicketDamage(string? ContainerNo, DamageSide? Side, DamageKind? Kind, DamageSeverity? Severity, string? Note);
 
 /// <summary>
 /// The gate ticket (equipment interchange receipt) for a visit: who and what came through, when and at which lanes,
@@ -27,7 +31,7 @@ public sealed record GateTicketView(
     string? OutLane,
     string? TosVisitReference,
     IReadOnlyList<GateTicketMove> Moves,
-    IReadOnlyList<DamageView> Damage,
+    IReadOnlyList<GateTicketDamage> Damage,
     decimal? WeightKg);
 
 /// <summary>Builds the gate ticket for the gate screen, the lane printer and the driver.</summary>
@@ -63,7 +67,13 @@ public sealed class GateTicketService(YardsyncsDbContext db, Yardsyncs.Infrastru
                 .OrderBy(r => r.ReceivedAt).ToListAsync(ct))
             .Select(DeviceService.Normalized).ToList();
         var seals = reads.SelectMany(r => r.Seals).Distinct().ToList();
-        var damage = reads.SelectMany(r => r.Damage).ToList();
+        var inspections = await db.GateInspections.AsNoTracking().Include(i => i.Damage)
+            .Where(i => i.AppointmentId == a.AppointmentId && i.Stage == InspectionStage.In).ToListAsync(ct);
+        var byContainer = inspections.ToDictionary(i => i.ContainerNo);
+        var damage = inspections.Count > 0
+            ? inspections.SelectMany(i => i.Damage.OrderBy(d => d.DamageId).Select(d =>
+                new GateTicketDamage(i.ContainerNo.Length == 0 ? null : i.ContainerNo, d.Side, d.Kind, d.Severity, d.Note))).ToList()
+            : reads.SelectMany(r => r.Damage).Select(d => new GateTicketDamage(null, InspectionRules.SideFrom(d.Side), null, null, d.Note)).ToList();
         var weight = reads.Select(r => r.WeightKg).LastOrDefault(w => w is not null);
 
         var visit = await db.TosGateMessages.AsNoTracking()
@@ -73,7 +83,9 @@ public sealed class GateTicketService(YardsyncsDbContext db, Yardsyncs.Infrastru
         return new GateTicketView(
             terminal, dto.AppointmentNo, dto.Status, dto.CompanyName, dto.TruckPlate, dto.DriverName, dto.SlotLocal,
             a.ArrivedAt, a.GateInAt, a.GateOutAt, inLane, outLane, visit,
-            a.Items.Select(i => new GateTicketMove(i.NameEn, i.NameAr, i.ContainerNo, i.IsoType, i.Reference, i.ContainerNo is null ? [] : seals)).ToList(),
+            a.Items.Select(i => byContainer.TryGetValue(i.ContainerNo ?? "", out var seen)
+                ? new GateTicketMove(i.NameEn, i.NameAr, i.ContainerNo, i.IsoType, i.Reference, seen.SealSeen is null ? [] : [seen.SealSeen], seen.SealStatus)
+                : new GateTicketMove(i.NameEn, i.NameAr, i.ContainerNo, i.IsoType, i.Reference, i.ContainerNo is null ? [] : seals)).ToList(),
             damage, weight);
     }
 }

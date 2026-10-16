@@ -6,6 +6,7 @@ import type { AdminResponse, ArrivalResult, GateBoard, GateBoardTruck, Lane, Lan
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, TrafficLight, useLoad } from '../ui/kit.tsx';
 import { GateTicket } from '../ui/GateTicket.tsx';
+import { InspectionEditor } from '../ui/Inspection.tsx';
 
 export function GateScreen() {
   const { api, t, terminal } = useApp();
@@ -18,6 +19,7 @@ export function GateScreen() {
   const [exitLane, setExitLane] = useState('');
   const [ticket, setTicket] = useState<string | null>(null);
   const [lastOut, setLastOut] = useState<string | null>(null);
+  const [inspect, setInspect] = useState<{ no: string; stage: 'In' | 'Out' } | null>(null);
 
   const working = (lanes.data ?? []).filter(l => l.isActive);
   const inLanes = working.filter(l => l.direction === 'In' && l.state === 'Open');
@@ -74,10 +76,13 @@ export function GateScreen() {
           <TruckTable trucks={b?.atGate ?? []} empty={t('gate.noneAtGate')} timeLabel={t('gate.waiting')}
             minutes={x => x.minutesSinceArrival}
             action={x => (
-              <ActionButton kind="primary" onError={setError}
-                onRun={async () => { await api.post(`${base}/in`, { appointmentNo: x.appointmentNo }); refresh(); }}>
-                {t('gate.gateIn')}
-              </ActionButton>
+              <span className="row-actions">
+                <button type="button" className="link-btn" onClick={() => setInspect({ no: x.appointmentNo, stage: 'In' })}>{t('insp.inspect')}</button>
+                <ActionButton kind="primary" onError={setError}
+                  onRun={async () => { await api.post(`${base}/in`, { appointmentNo: x.appointmentNo }); refresh(); }}>
+                  {t('gate.gateIn')}
+                </ActionButton>
+              </span>
             )} />
 
           <div className="section-row">
@@ -95,6 +100,7 @@ export function GateScreen() {
             minutes={x => (x.gateInAt ? (Date.now() - new Date(x.gateInAt).getTime()) / 60_000 : x.minutesSinceArrival)}
             action={x => (
               <span className="row-actions">
+                <button type="button" className="link-btn" onClick={() => setInspect({ no: x.appointmentNo, stage: 'Out' })}>{t('insp.inspect')}</button>
                 <button type="button" className="link-btn" onClick={() => setTicket(x.appointmentNo)}>{t('ticket.open')}</button>
                 <ActionButton onError={setError} disabled={!exit}
                   onRun={async () => { await api.post(`${base}/out`, { laneCode: exit, appointmentNo: x.appointmentNo }); setLastOut(x.appointmentNo); refresh(); }}>
@@ -106,6 +112,7 @@ export function GateScreen() {
         </div>
       </div>
       {ticket && <GateTicket appointmentNo={ticket} onClose={() => setTicket(null)} />}
+      {inspect && <InspectionEditor appointmentNo={inspect.no} stage={inspect.stage} onClose={() => setInspect(null)} />}
     </section>
   );
 }

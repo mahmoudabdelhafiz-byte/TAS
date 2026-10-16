@@ -32,7 +32,8 @@ public sealed record AppointmentItemDto(
     string? CargoRef,
     decimal? PlannedTonnage,
     ValidationStatus ValidationStatus,
-    IReadOnlyList<CheckDto> Checks);
+    IReadOnlyList<CheckDto> Checks,
+    string? SealNo = null);
 
 /// <param name="Item">1-based item number in the request, when the check belongs to an item.</param>
 public sealed record CheckDto(int? Item, CheckType Type, CheckResult Result, string? Message, string Source);

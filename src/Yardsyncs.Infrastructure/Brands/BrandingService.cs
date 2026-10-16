@@ -211,7 +211,7 @@ public sealed partial class BrandingService(YardsyncsDbContext db, TerminalProfi
         return AdminResult<BrandSettings>.Ok(Settings(operatorId, row));
     }
 
-    internal static string? ImageType(byte[] b) => b switch
+    public static string? ImageType(byte[] b) => b switch
     {
         [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, ..] => "image/png",
         [0xFF, 0xD8, 0xFF, ..] => "image/jpeg",

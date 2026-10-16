@@ -5,6 +5,7 @@ import type { Appointment, AppointmentItem, Category, Company, Driver, Notificat
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, DayStepper, LoadError, Notice, Panel, TrafficLight, useLoad } from '../ui/kit.tsx';
 import { categoryName } from './Book.tsx';
+import { InspectionSummary } from '../ui/Inspection.tsx';
 
 const active = (a: Appointment) => a.status === 'Confirmed' || a.status === 'EnRoute';
 
@@ -199,6 +200,10 @@ function AppointmentPanel({ number, byCode, onClose, onChanged }: {
                   <span dir="ltr" className="item-ref">{itemLabel(item)}</span>
                   <span className="muted">{categoryName(byCode.get(item.category), item.category, lang)}</span>
                 </div>
+                {item.containerNo && (
+                  <SealField path={`${path}/items/${i + 1}/seal`} seal={item.sealNo ?? null} editable={active(a)}
+                    onSaved={() => { detail.reload(); }} onError={setError} />
+                )}
                 <ul className="checks">
                   {item.checks.map((c, j) => (
                     <li key={j} className={`check check-${c.result.toLowerCase()}`}>
@@ -210,6 +215,13 @@ function AppointmentPanel({ number, byCode, onClose, onChanged }: {
               </li>
             ))}
           </ul>
+
+          {(a.status === 'Arrived' || a.status === 'GateIn' || a.status === 'Completed') && (
+            <>
+              <h3>{t('insp.title')}</h3>
+              <InspectionSummary appointmentNo={a.appointmentNo} />
+            </>
+          )}
 
           <h3>{t('appt.messages')}</h3>
           {messages.data && messages.data.length === 0 && <p className="muted">{t('appt.noMessages')}</p>}
@@ -320,6 +332,29 @@ function CancelForm({ onConfirm, onCancel, onError }: {
         </ActionButton>
         <button type="button" className="link-btn" onClick={onCancel}>{t('appt.keep')}</button>
       </div>
+    </div>
+  );
+}
+
+/** The seal the company declares for a container, until the truck reaches the gate. */
+function SealField({ path, seal, editable, onSaved, onError }: {
+  path: string; seal: string | null; editable: boolean; onSaved: () => void; onError: (m: string) => void;
+}) {
+  const { api, t } = useApp();
+  const [value, setValue] = useState<string | null>(null);
+  if (!editable) return seal ? <p className="item-seal">{t('insp.sealLabel')} <bdi>{seal}</bdi></p> : null;
+  const current = value ?? seal ?? '';
+  return (
+    <div className="inline-ask item-seal">
+      <label className="visually-hidden" htmlFor={path}>{t('insp.declareSeal')}</label>
+      <input id={path} dir="ltr" value={current} maxLength={24} placeholder={t('insp.declareSeal')} onChange={e => setValue(e.target.value.toUpperCase())} />
+      {value !== null && value !== (seal ?? '') && (
+        <ActionButton onError={onError} onRun={async () => {
+          await api.put(path, { sealNo: value.trim() || null });
+          setValue(null);
+          onSaved();
+        }}>{t('insp.saveSeal')}</ActionButton>
+      )}
     </div>
   );
 }

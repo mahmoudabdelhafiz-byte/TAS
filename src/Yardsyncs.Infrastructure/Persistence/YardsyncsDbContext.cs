@@ -42,6 +42,10 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<LaneDeviceCommand> LaneDeviceCommands => Set<LaneDeviceCommand>();
     public DbSet<LaneTransaction> LaneTransactions => Set<LaneTransaction>();
     public DbSet<TosGateMessage> TosGateMessages => Set<TosGateMessage>();
+    public DbSet<GateInspection> GateInspections => Set<GateInspection>();
+    public DbSet<InspectionDamage> InspectionDamages => Set<InspectionDamage>();
+    public DbSet<InspectionPhoto> InspectionPhotos => Set<InspectionPhoto>();
+    public DbSet<InspectionDispute> InspectionDisputes => Set<InspectionDispute>();
     public DbSet<GateEvent> GateEvents => Set<GateEvent>();
     public DbSet<GateTrouble> GateTroubles => Set<GateTrouble>();
     public DbSet<Truck> Trucks => Set<Truck>();
@@ -158,6 +162,35 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
             e.HasKey(x => x.ReadId);
             e.Property(x => x.Payload).HasColumnType("jsonb");
             e.Property(x => x.ReceivedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<GateInspection>(e =>
+        {
+            e.HasKey(x => x.InspectionId);
+            e.Property(x => x.Stage).HasUpperCaseConversion();
+            e.Property(x => x.SealStatus).HasUpperCaseConversion();
+            e.Property(x => x.Source).HasUpperCaseConversion();
+            e.HasMany(x => x.Damage).WithOne().HasForeignKey(d => d.InspectionId);
+        });
+
+        b.Entity<InspectionDamage>(e =>
+        {
+            e.HasKey(x => x.DamageId);
+            e.Property(x => x.Side).HasConversion(new UpperSnakeEnumConverter<DamageSide>());
+            e.Property(x => x.Kind).HasUpperCaseConversion();
+            e.Property(x => x.Severity).HasUpperCaseConversion();
+        });
+
+        b.Entity<InspectionPhoto>(e =>
+        {
+            e.HasKey(x => x.PhotoId);
+            e.Property(x => x.UploadedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<InspectionDispute>(e =>
+        {
+            e.HasKey(x => x.DisputeId);
+            e.Property(x => x.Status).HasUpperCaseConversion();
         });
 
         b.Entity<TosGateMessage>(e =>

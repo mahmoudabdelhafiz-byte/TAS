@@ -81,3 +81,12 @@ is let in; anything else goes to the trouble desk.
 Some terminals charge fees: for booking, for a no-show, or for cancelling late. The booking form shows the terminal's
 fees before you book. Cancelling before the late-cancellation window refunds the booking fee. Company admins see their
 company's charges under **Charges** and can download them as a file.
+
+## Seals and inspections
+
+For a container with a seal, type the **Seal number** under the container in the appointment and **Save seal**, up to
+the moment the truck reaches the gate. The gate checks the seal against it.
+
+At the gate the container is inspected, by the lane cameras or a clerk: the seal, and any damage with photos. You see
+the inspection in the appointment and under **Inspections**. If you disagree with one, **Dispute this inspection**, say
+why, and **Send dispute**. The terminal answers there.
