@@ -6,7 +6,8 @@ them.
 ## Trucks
 
 **Add a truck** with its plate, in Arabic or Latin letters (both are matched at the gate). A truck the terminal
-blocks shows **Blocked** and can't be booked; ask the terminal why.
+blocks shows **Blocked** and can't be booked; ask the terminal why. **Edit** changes a plate (a new plate counts
+for the next visits at the gate); **Save changes** keeps it.
 
 ## Drivers
 
@@ -14,13 +15,16 @@ blocks shows **Blocked** and can't be booked; ask the terminal why.
 messages and app: Arabic, English, Urdu or Hindi).
 
 The mobile number is how the driver signs in to **Yardsyncs mobile**: it must be the driver's own phone. Give drivers
-the guide **Yardsyncs mobile for drivers** (on this help page, ready to print).
+the guide **Yardsyncs mobile for drivers** (on this help page, ready to print). **Edit** changes a driver's details;
+a new mobile number signs the driver out of the app, and they sign in again with a code sent to the new number.
 
 ## Users
 
 The company admin adds the company's portal users with **Add a user**: name, email and role (**Company admin** or
 **Dispatcher**). The user gets an email to choose their own password. **Send password link** sends a new one when a
-user is locked out; **Deactivate** ends a user's access at once (for someone who has left).
+user is locked out; **Deactivate** ends a user's access at once (for someone who has left). **Edit** changes a
+user's name, mobile, language and role; a new role takes effect at once (the user signs in again). Nobody changes
+their own role.
 
 ## Drivers' personal data
 
