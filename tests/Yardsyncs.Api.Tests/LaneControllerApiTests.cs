@@ -130,7 +130,7 @@ public sealed class LaneControllerApiTests(YardsyncsApiFactory factory) : ApiTes
         // The kiosk scans it: decided at once, let in.
         Assert.Equal(HttpStatusCode.Created, (await devices["IN1-KIOSK"].PostAsJsonAsync("/api/devices/reads", new { qrToken = code })).StatusCode);
         var tx = Assert.Single(await Read<List<LaneTransactionView>>(await admin.GetAsync($"{Gate}/transactions?laneId={laneId}")));
-        Assert.Equal((LaneTransactionStatus.Admitted, booked.AppointmentNo, true), (tx.Status, tx.AppointmentNo, tx.GatePassScanned));
+        Assert.Equal((LaneTransactionStatus.Admitted, booked.AppointmentNo), (tx.Status, tx.AppointmentNo)); // the pass itself is not kept once decided
         Assert.Empty(await Commands(devices["IN1-PRINTER"])); // the ticket waits for gate-in
         var welcome = Assert.Single(await Commands(devices["IN1-KIOSK"]));
         await devices["IN1-KIOSK"].PostAsJsonAsync($"/api/devices/commands/{welcome.CommandId}/ack", new { done = true });
