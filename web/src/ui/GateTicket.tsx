@@ -6,6 +6,8 @@ import { LoadError, useLoad } from './kit.tsx';
 import { DamageLine, sealText } from './Inspection.tsx';
 import type { DamageKind, DamageSeverity, DamageSide, SealStatus } from '../lib/types.ts';
 
+const exitText = { Ok: 'ticket.exit.Ok', Problem: 'ticket.exit.Problem', NotChecked: 'ticket.exit.NotChecked' } as const;
+
 export interface GateTicketData {
   terminalName: string;
   appointmentNo: string;
@@ -23,6 +25,10 @@ export interface GateTicketData {
   moves: { category: string; categoryAr: string; containerNo: string | null; isoType: string | null; reference: string | null; seals: string[]; sealStatus: SealStatus }[];
   damage: { containerNo: string | null; side: DamageSide | null; kind: DamageKind | null; severity: DamageSeverity | null; note: string | null }[];
   weightKg: number | null;
+  exitStatus: 'Ok' | 'Problem' | 'NotChecked' | null;
+  exitProblems: string | null;
+  exitNote: string | null;
+  netWeightKg: number | null;
 }
 
 /**
@@ -64,6 +70,8 @@ export function GateTicket({ appointmentNo, onClose }: { appointmentNo: string; 
               <div><dt>{t('ticket.out')}</dt><dd className="num">{when(x.gateOutAt)}{x.outLane && <> · <bdi>{x.outLane}</bdi></>}</dd></div>
               <div><dt>{t('ticket.tosVisit')}</dt><dd><bdi>{x.tosVisitReference ?? t('ticket.notRecorded')}</bdi></dd></div>
               {x.weightKg !== null && <div><dt>{t('ticket.weight')}</dt><dd className="num"><bdi dir="ltr">{x.weightKg} kg</bdi></dd></div>}
+              {x.netWeightKg !== null && <div><dt>{t('ticket.netWeight')}</dt><dd className="num"><bdi dir="ltr">{x.netWeightKg} kg</bdi></dd></div>}
+              {x.exitStatus && <div><dt>{t('ticket.exitCheck')}</dt><dd className={x.exitStatus === 'Problem' ? 'check-fail' : undefined}>{t(exitText[x.exitStatus])}</dd></div>}
             </dl>
             <table className="grid compact ticket-moves">
               <thead><tr><th>{t('ticket.move')}</th><th>{t('ticket.container')}</th><th>{t('ticket.reference')}</th><th>{t('ticket.seals')}</th></tr></thead>
@@ -84,6 +92,9 @@ export function GateTicket({ appointmentNo, onClose }: { appointmentNo: string; 
               : <ul className="ticket-damage">{x.damage.map((d, i) => (
                 <li key={i}>{d.containerNo && <><bdi>{d.containerNo}</bdi> · </>}{d.side || d.kind || d.note ? <DamageLine d={d} /> : t('ticket.photoOnly')}</li>
               ))}</ul>}
+            {x.exitStatus === 'Problem' && (
+              <p className="ticket-exit" dir="auto"><strong>{t('ticket.letOutDespite')}</strong> {x.exitProblems} {x.exitNote && <>· {x.exitNote}</>}</p>
+            )}
             <div className="ticket-sign">
               <p>{t('ticket.signDriver')}</p>
               <p>{t('ticket.signClerk')}</p>

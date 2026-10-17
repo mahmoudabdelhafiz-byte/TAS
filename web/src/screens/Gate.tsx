@@ -20,6 +20,8 @@ export function GateScreen() {
   const [ticket, setTicket] = useState<string | null>(null);
   const [lastOut, setLastOut] = useState<string | null>(null);
   const [inspect, setInspect] = useState<{ no: string; stage: 'In' | 'Out' } | null>(null);
+  const [held, setHeld] = useState<{ no: string; problems: string[] } | null>(null);
+  const [heldNote, setHeldNote] = useState('');
 
   const working = (lanes.data ?? []).filter(l => l.isActive);
   const inLanes = working.filter(l => l.direction === 'In' && l.state === 'Open');
@@ -103,11 +105,40 @@ export function GateScreen() {
                 <button type="button" className="link-btn" onClick={() => setInspect({ no: x.appointmentNo, stage: 'Out' })}>{t('insp.inspect')}</button>
                 <button type="button" className="link-btn" onClick={() => setTicket(x.appointmentNo)}>{t('ticket.open')}</button>
                 <ActionButton onError={setError} disabled={!exit}
-                  onRun={async () => { await api.post(`${base}/out`, { laneCode: exit, appointmentNo: x.appointmentNo }); setLastOut(x.appointmentNo); refresh(); }}>
+                  onRun={async () => {
+                    try {
+                      await api.post(`${base}/out`, { laneCode: exit, appointmentNo: x.appointmentNo });
+                    } catch (e) {
+                      if (e instanceof ApiError && e.status === 409 && e.errors.length > 0) {
+                        setHeld({ no: x.appointmentNo, problems: e.errors });
+                        return;
+                      }
+                      throw e;
+                    }
+                    setLastOut(x.appointmentNo);
+                    refresh();
+                  }}>
                   {t('gate.gateOut')}
                 </ActionButton>
               </span>
             )} />
+          {held && (
+            <div className="exit-held" role="alert">
+              <p><strong>{t('exit.held', { no: held.no })}</strong></p>
+              <ul>{held.problems.map((p, i) => <li key={i} dir="auto">{p}</li>)}</ul>
+              <div className="inline-ask wrap">
+                <input value={heldNote} maxLength={300} placeholder={t('exit.why')} aria-label={t('exit.why')} onChange={e => setHeldNote(e.target.value)} />
+                <ActionButton kind="danger" disabled={!heldNote.trim()} onError={setError} onRun={async () => {
+                  await api.post(`${base}/out`, { laneCode: exit, appointmentNo: held.no, letOut: true, note: heldNote.trim() });
+                  setLastOut(held.no);
+                  setHeld(null);
+                  setHeldNote('');
+                  refresh();
+                }}>{t('exit.letOut')}</ActionButton>
+                <button type="button" className="link-btn" onClick={() => setHeld(null)}>{t('exit.keep')}</button>
+              </div>
+            </div>
+          )}
           {lastOut && <p className="hint"><button type="button" className="link-btn" onClick={() => setTicket(lastOut)}>{t('ticket.openLast', { no: lastOut })}</button></p>}
         </div>
       </div>

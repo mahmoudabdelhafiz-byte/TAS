@@ -113,6 +113,10 @@ public static class GateEndpoints
         gate.MapPost("/tos-records/{messageId:long}/retry", async (int terminalId, long messageId, HttpContext http, Yardsyncs.Infrastructure.Tos.TosGateService service, CancellationToken ct) =>
             NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.RetryAsync(terminalId, messageId, ct)));
 
+        gate.MapPost("/transactions/{transactionId:long}/let-out", async (
+            int terminalId, long transactionId, LetOutInput body, HttpContext http, LaneControllerService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.LetOutAsync(YardsyncsApi.User(http)!, terminalId, transactionId, body.Note, ct)));
+
         gate.MapPost("/lanes/{laneId:int}/devices/{deviceId:int}/key", async (
             int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>
             NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.IssueKeyAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, ct)));

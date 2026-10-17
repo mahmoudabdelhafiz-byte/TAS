@@ -32,7 +32,11 @@ public sealed record GateTicketView(
     string? TosVisitReference,
     IReadOnlyList<GateTicketMove> Moves,
     IReadOnlyList<GateTicketDamage> Damage,
-    decimal? WeightKg);
+    decimal? WeightKg,
+    ExitCheckStatus? ExitStatus = null,
+    string? ExitProblems = null,
+    string? ExitNote = null,
+    decimal? NetWeightKg = null);
 
 /// <summary>Builds the gate ticket for the gate screen, the lane printer and the driver.</summary>
 public sealed class GateTicketService(YardsyncsDbContext db, Yardsyncs.Infrastructure.Booking.AppointmentQueryService queries)
@@ -80,12 +84,15 @@ public sealed class GateTicketService(YardsyncsDbContext db, Yardsyncs.Infrastru
             .Where(m => m.AppointmentId == a.AppointmentId && m.Stage == TosGateStageCode.GateIn && m.Status == TosMessageStatus.Sent)
             .Select(m => m.TosReference).SingleOrDefaultAsync(ct);
 
+        var exit = await db.GateExitChecks.AsNoTracking().SingleOrDefaultAsync(e => e.AppointmentId == a.AppointmentId, ct);
+
         return new GateTicketView(
             terminal, dto.AppointmentNo, dto.Status, dto.CompanyName, dto.TruckPlate, dto.DriverName, dto.SlotLocal,
             a.ArrivedAt, a.GateInAt, a.GateOutAt, inLane, outLane, visit,
             a.Items.Select(i => byContainer.TryGetValue(i.ContainerNo ?? "", out var seen)
                 ? new GateTicketMove(i.NameEn, i.NameAr, i.ContainerNo, i.IsoType, i.Reference, seen.SealSeen is null ? [] : [seen.SealSeen], seen.SealStatus)
                 : new GateTicketMove(i.NameEn, i.NameAr, i.ContainerNo, i.IsoType, i.Reference, i.ContainerNo is null ? [] : seals)).ToList(),
-            damage, weight);
+            damage, weight,
+            exit?.Status, exit?.Problems, exit?.Note, ExitRules.NetKg(exit?.WeightInKg, exit?.WeightOutKg));
     }
 }

@@ -46,6 +46,7 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<InspectionDamage> InspectionDamages => Set<InspectionDamage>();
     public DbSet<InspectionPhoto> InspectionPhotos => Set<InspectionPhoto>();
     public DbSet<InspectionDispute> InspectionDisputes => Set<InspectionDispute>();
+    public DbSet<GateExitCheck> GateExitChecks => Set<GateExitCheck>();
     public DbSet<GateEvent> GateEvents => Set<GateEvent>();
     public DbSet<GateTrouble> GateTroubles => Set<GateTrouble>();
     public DbSet<Truck> Trucks => Set<Truck>();
@@ -99,6 +100,16 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
             e.HasKey(x => x.CategoryId);
             e.Property(x => x.Mode).HasUpperCaseConversion();
             e.Property(x => x.UnitType).HasUpperCaseConversion();
+            e.Property(x => x.Flow).HasConversion(new UpperSnakeEnumConverter<CategoryFlow>());
+        });
+
+        b.Entity<GateExitCheck>(e =>
+        {
+            e.HasKey(x => x.AppointmentId);
+            e.Property(x => x.AppointmentId).ValueGeneratedNever();
+            e.Property(x => x.Status).HasUpperCaseConversion();
+            e.Property(x => x.WeightInKg).HasColumnType("numeric(9,1)");
+            e.Property(x => x.WeightOutKg).HasColumnType("numeric(9,1)");
         });
 
         b.Entity<CapacityTemplate>(e =>

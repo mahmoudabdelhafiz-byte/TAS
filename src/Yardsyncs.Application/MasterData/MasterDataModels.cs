@@ -24,7 +24,8 @@ public sealed record CategoryInput(
     CategoryMode Mode,
     UnitType UnitType = UnitType.Move,
     int SortOrder = 0,
-    bool IsActive = true);
+    bool IsActive = true,
+    CategoryFlow? Flow = null);
 
 public sealed record CargoInput(
     string CargoRef,
@@ -61,10 +62,10 @@ public sealed record DriverView(int DriverId, int CompanyId, string FullName, st
 }
 
 public sealed record CategoryView(
-    int CategoryId, string Code, string NameEn, string NameAr, CategoryMode Mode, UnitType UnitType, int SortOrder, bool IsActive)
+    int CategoryId, string Code, string NameEn, string NameAr, CategoryMode Mode, UnitType UnitType, int SortOrder, bool IsActive, CategoryFlow? Flow = null)
 {
     public static CategoryView From(TransactionCategory c) =>
-        new(c.CategoryId, c.Code, c.NameEn, c.NameAr, c.Mode, c.UnitType, c.SortOrder, c.IsActive);
+        new(c.CategoryId, c.Code, c.NameEn, c.NameAr, c.Mode, c.UnitType, c.SortOrder, c.IsActive, c.Flow);
 }
 
 public sealed record CargoView(

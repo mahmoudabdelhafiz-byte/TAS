@@ -17,8 +17,19 @@ public sealed record ArrivalInput(
 
 public sealed record GateInInput(string AppointmentNo, string? LaneCode = null);
 
-/// <summary>A truck at an exit lane, identified by appointment number or plate read.</summary>
-public sealed record GateOutInput(string LaneCode, string? AppointmentNo = null, string? PlateRead = null);
+/// <summary>
+/// A truck at an exit lane, identified by appointment number or plate read. The containers seen on it are checked
+/// against the visit (sent here, or taken from the exit lane's latest camera read of this truck); a truck with a problem
+/// leaves only when a clerk lets it out with a note.
+/// </summary>
+public sealed record GateOutInput(
+    string LaneCode,
+    string? AppointmentNo = null,
+    string? PlateRead = null,
+    IReadOnlyList<string>? ContainerReads = null,
+    decimal? WeightKg = null,
+    bool LetOut = false,
+    string? Note = null);
 
 public enum TroubleAction
 {
@@ -77,7 +88,9 @@ public sealed record GateOutResult(
     DateTimeOffset? GateInAt,
     DateTimeOffset GateOutAt,
     double? TurnMinutes,
-    double? InTerminalMinutes);
+    double? InTerminalMinutes,
+    ExitCheckResult? ExitCheck = null,
+    decimal? NetWeightKg = null);
 
 public sealed record TroubleView(
     long TroubleId,

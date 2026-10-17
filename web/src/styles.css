@@ -1165,3 +1165,7 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .photo-wait { display: block; width: 160px; height: 120px; background: var(--page); border-radius: var(--radius); }
 .item-seal { margin: 6px 0 0; }
 .item-seal input { width: 12rem; }
+.exit-held { margin: 10px 0 0; padding: 10px 12px; border: 1px solid var(--red); background: var(--red-tint); border-radius: var(--radius); }
+.exit-held p { margin: 0 0 4px; }
+.exit-held ul { margin: 0 0 8px; padding-inline-start: 20px; }
+.ticket-exit { margin: 12px 0 0; padding: 8px 10px; background: var(--red-tint); border-radius: var(--radius); }

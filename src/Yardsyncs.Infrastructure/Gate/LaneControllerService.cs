@@ -163,6 +163,40 @@ public sealed class LaneControllerService(
         await devices.QueueAsync(lane.TerminalId, lane.LaneId, tx.TransactionId, plan, ct);
     }
 
+    /// <summary>
+    /// A clerk lets out a truck the exit lane held: gated out with the clerk's note despite the exit check (or, with no
+    /// visit to close, simply let through), then green and the barrier.
+    /// </summary>
+    public async Task<AdminResult<LaneTransactionView>> LetOutAsync(
+        Yardsyncs.Application.Auth.CurrentUser clerk, int terminalId, long transactionId, string? note, CancellationToken ct = default)
+    {
+        var tx = await db.LaneTransactions.SingleOrDefaultAsync(t => t.TerminalId == terminalId && t.TransactionId == transactionId, ct);
+        if (tx is null)
+            return AdminResult<LaneTransactionView>.NotFound($"Truck transaction {transactionId} not found.");
+        var lane = await db.GateLanes.AsNoTracking().SingleAsync(l => l.LaneId == tx.LaneId, ct);
+        if (lane.Direction != LaneDirection.Out || tx.Status != LaneTransactionStatus.Referred)
+            return AdminResult<LaneTransactionView>.Conflict("Only a truck held at an exit lane can be let out here.");
+        var why = note?.Trim() ?? "";
+        if (why.Length is 0 or > 300)
+            return AdminResult<LaneTransactionView>.Invalid("Say why the truck may leave (at most 300 characters).");
+
+        if (tx.Reason == "EXIT_CHECK")
+        {
+            var result = await gate.GateOutAsync(clerk, terminalId,
+                new GateOutInput(lane.LaneCode, tx.AppointmentNo, tx.Plate, LaneControllerRules.ContainersOf(tx), tx.WeightKg, LetOut: true, Note: why), ct);
+            if (result.Status != AdminStatus.Ok)
+                return new AdminResult<LaneTransactionView>(result.Status, null, result.Errors);
+            db.ChangeTracker.Clear();
+            tx = await db.LaneTransactions.SingleAsync(t => t.TransactionId == transactionId, ct);
+        }
+        tx.Status = LaneTransactionStatus.Admitted;
+        tx.Message = Clip($"Let out by a clerk: {why}");
+        await db.SaveChangesAsync(ct);
+        await devices.QueueAsync(terminalId, lane.LaneId, transactionId, LaneControllerRules.Plan(LaneDirection.Out, true, tx.AppointmentNo, null, null), ct);
+        logger.LogInformation("Lane {Lane}: transaction {Tx} let out by user {UserId}", lane.LaneCode, transactionId, clerk.UserId);
+        return AdminResult<LaneTransactionView>.Ok(LaneTransactionView.From(tx, lane.LaneCode));
+    }
+
     /// <summary>Everything about one truck at a lane, for the remote clerk.</summary>
     public async Task<LaneTransactionDetail?> DetailAsync(int terminalId, long transactionId, CancellationToken ct = default)
     {
@@ -323,12 +357,21 @@ public sealed class LaneControllerService(
         }
         else
         {
-            var result = await gate.GateOutAsync(clerk, tx.TerminalId, new GateOutInput(lane.LaneCode, tx.AppointmentRead, tx.Plate), ct);
-            if (result.Value is { } exit)
+            var result = await gate.GateOutAsync(clerk, tx.TerminalId,
+                new GateOutInput(lane.LaneCode, tx.AppointmentRead, tx.Plate, containers, tx.WeightKg), ct);
+            if (result.Status == AdminStatus.Ok && result.Value is { } exit)
             {
                 status = LaneTransactionStatus.Admitted;
                 appointmentNo = exit.AppointmentNo;
                 message = exit.TurnMinutes is { } m ? $"Gated out after {Math.Round(m)} min." : "Gated out.";
+            }
+            else if (result.Status == AdminStatus.Conflict && result.Value is { } held)
+            {
+                // The exit check found a problem: the truck waits on red for a clerk.
+                status = LaneTransactionStatus.Referred;
+                appointmentNo = held.AppointmentNo;
+                reason = "EXIT_CHECK";
+                message = string.Join(" ", result.Errors);
             }
             else
             {

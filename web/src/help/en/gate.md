@@ -68,6 +68,11 @@ and the turn time counted.
 seals, damage seen at the gate, and the TOS visit once recorded. **Print** prints only the ticket. After a gate out,
 the link below the list opens that truck's ticket.
 
+Where the exit lane has a camera reading container numbers, **Gate out** first checks the truck: a container it came
+to collect must be on it, a container it brought to drop must not be, and nothing else may be. If something is wrong
+the truck stays and the screen says what: **Let out** with the reason (a customs exam, a misread…) lets it go anyway, and
+the ticket shows it. An automatic exit lane holds such a truck on red; let it out from **Remote clerk**.
+
 ## The figures on top
 
 **At the gate**, **In the terminal**, **Completed today**, **Average turn time** and **At the trouble desk** are for

@@ -69,6 +69,8 @@ export interface Category {
   unitType: 'Move' | 'Trip';
   sortOrder: number;
   isActive: boolean;
+  /** Which way the cargo goes: In (brought into the terminal), Out (taken out); null = not checked at the exit. */
+  flow?: 'In' | 'Out' | null;
 }
 
 export interface Company {

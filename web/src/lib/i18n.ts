@@ -979,6 +979,21 @@ export const en = {
   'insp.state.Open': "Open",
   'insp.state.Accepted': "Accepted",
   'insp.state.Rejected': "Rejected",
+  'exit.held': "{no} can't leave as it is:",
+  'exit.why': "Why it may leave anyway",
+  'exit.letOut': "Let out",
+  'exit.keep': "Keep it here",
+  'exit.letOutDone': "Let out: the barrier at {lane} is opening.",
+  'ticket.netWeight': "Cargo weight (in − out)",
+  'ticket.exitCheck': "Exit check",
+  'ticket.exit.Ok': "in order",
+  'ticket.exit.Problem': "let out despite a problem",
+  'ticket.exit.NotChecked': "not checked",
+  'ticket.letOutDespite': "Let out despite:",
+  'onboard.flow': "At the exit",
+  'onboard.flow.auto': "From the code",
+  'onboard.flow.In': "leaves without it",
+  'onboard.flow.Out': "leaves with it",
 } as const;
 
 export type TextKey = keyof typeof en;
@@ -1958,6 +1973,21 @@ export const ar: Record<TextKey, string> = {
   'insp.state.Open': "مفتوح",
   'insp.state.Accepted': "مقبول",
   'insp.state.Rejected': "مرفوض",
+  'exit.held': "لا يمكن خروج {no} كما هي:",
+  'exit.why': "لماذا يُسمح بخروجها رغم ذلك",
+  'exit.letOut': "السماح بالخروج",
+  'exit.keep': "إبقاؤها",
+  'exit.letOutDone': "سُمح بالخروج: حاجز {lane} يُفتح.",
+  'ticket.netWeight': "وزن البضاعة (الدخول − الخروج)",
+  'ticket.exitCheck': "فحص الخروج",
+  'ticket.exit.Ok': "سليم",
+  'ticket.exit.Problem': "خرجت رغم وجود مشكلة",
+  'ticket.exit.NotChecked': "لم يُفحص",
+  'ticket.letOutDespite': "خرجت رغم:",
+  'onboard.flow': "عند الخروج",
+  'onboard.flow.auto': "حسب الرمز",
+  'onboard.flow.In': "تخرج بدونها",
+  'onboard.flow.Out': "تخرج بها",
 };
 
 const dictionaries: Record<Lang, Partial<Record<TextKey, string>>> = { en: { ...en }, ar: { ...ar } };

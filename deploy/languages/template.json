@@ -965,7 +965,22 @@
     "insp.kind.Other": "Other",
     "insp.state.Open": "Open",
     "insp.state.Accepted": "Accepted",
-    "insp.state.Rejected": "Rejected"
+    "insp.state.Rejected": "Rejected",
+    "exit.held": "{no} can't leave as it is:",
+    "exit.why": "Why it may leave anyway",
+    "exit.letOut": "Let out",
+    "exit.keep": "Keep it here",
+    "exit.letOutDone": "Let out: the barrier at {lane} is opening.",
+    "ticket.netWeight": "Cargo weight (in − out)",
+    "ticket.exitCheck": "Exit check",
+    "ticket.exit.Ok": "in order",
+    "ticket.exit.Problem": "let out despite a problem",
+    "ticket.exit.NotChecked": "not checked",
+    "ticket.letOutDespite": "Let out despite:",
+    "onboard.flow": "At the exit",
+    "onboard.flow.auto": "From the code",
+    "onboard.flow.In": "leaves without it",
+    "onboard.flow.Out": "leaves with it"
   },
   "app": {
     "appName": "Yardsyncs mobile",
