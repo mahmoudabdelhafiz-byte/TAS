@@ -34,6 +34,10 @@ public static class CapacityConfigValidator
         [TerminalSettings.LateCancelHoursKey] = (0, 168),
         [TerminalSettings.ReportHourKey] = (0, 23),
         [TerminalSettings.ReportWeekdayKey] = (0, 6),
+        [TerminalSettings.DriverPointsDaysKey] = (1, 1825),
+        [TerminalSettings.DriverWarnPointsKey] = (0, 100),
+        [TerminalSettings.DriverLimitPointsKey] = (0, 100),
+        [TerminalSettings.DriverRecordToCompanyKey] = (0, 1),
     };
 
     // ------------------------------------------------------------ templates

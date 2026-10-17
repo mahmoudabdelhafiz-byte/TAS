@@ -42,8 +42,24 @@ public sealed record TerminalSettings(
     bool Autogate = true,
     bool SealHold = false,
     int ReportHour = 7,
-    int ReportWeekday = 0)
+    int ReportWeekday = 0,
+    int DriverPointsDays = 180,
+    int DriverWarnPoints = 6,
+    int DriverLimitPoints = 0,
+    bool DriverRecordToCompany = true)
 {
+    /// <summary>Days a driver's penalty points count (1–1825).</summary>
+    public const string DriverPointsDaysKey = "driver_points_days";
+
+    /// <summary>From this many points the gate, the trouble desk and the control room see a warning (0 = off).</summary>
+    public const string DriverWarnPointsKey = "driver_warn_points";
+
+    /// <summary>From this many points the driver is sent to the trouble desk at the gate (0 = off).</summary>
+    public const string DriverLimitPointsKey = "driver_limit_points";
+
+    /// <summary>Trucking companies see their own drivers' records (1) or not (0).</summary>
+    public const string DriverRecordToCompanyKey = "driver_record_company";
+
     /// <summary>Local hour the emailed reports go out (0–23); the daily one covers yesterday.</summary>
     public const string ReportHourKey = "report_hour";
 
@@ -105,6 +121,10 @@ public sealed record TerminalSettings(
             Get(ModuleAutogateKey, 1) != 0,
             Get(SealHoldKey, 0) != 0,
             Math.Min(Get(ReportHourKey, 7), 23),
-            Math.Min(Get(ReportWeekdayKey, 0), 6));
+            Math.Min(Get(ReportWeekdayKey, 0), 6),
+            Math.Clamp(Get(DriverPointsDaysKey, 180), 1, 1825),
+            Get(DriverWarnPointsKey, 6),
+            Get(DriverLimitPointsKey, 0),
+            Get(DriverRecordToCompanyKey, 1) != 0);
     }
 }

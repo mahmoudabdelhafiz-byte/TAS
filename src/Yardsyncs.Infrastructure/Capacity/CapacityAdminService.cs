@@ -352,6 +352,10 @@ public sealed class CapacityAdminService(
             [TerminalSettings.LateCancelHoursKey] = settings.LateCancelHours,
             [TerminalSettings.ReportHourKey] = settings.ReportHour,
             [TerminalSettings.ReportWeekdayKey] = settings.ReportWeekday,
+            [TerminalSettings.DriverPointsDaysKey] = settings.DriverPointsDays,
+            [TerminalSettings.DriverWarnPointsKey] = settings.DriverWarnPoints,
+            [TerminalSettings.DriverLimitPointsKey] = settings.DriverLimitPoints,
+            [TerminalSettings.DriverRecordToCompanyKey] = settings.DriverRecordToCompany ? 1 : 0,
         };
     }
 

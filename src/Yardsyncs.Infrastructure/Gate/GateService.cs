@@ -103,6 +103,8 @@ public sealed class GateService(
                 TruckBlocked = a.Truck != null && a.Truck.IsBlocked,
                 DriverBlocked = a.Driver != null && a.Driver.IsBlocked,
                 HasDriver = a.DriverId != null,
+                a.DriverId,
+                DriverName = a.Driver != null ? a.Driver.FullName : null,
             })
             .Take(50)
             .ToListAsync(ct);
@@ -152,6 +154,20 @@ public sealed class GateService(
                 .OrderBy(i => i.ItemId).Select(i => new { i.ContainerNo, i.SealNo }).ToListAsync(ct);
             if (InspectionRules.SealProblem(declared.Select(i => (i.ContainerNo, i.SealNo)), sealReads) is { } sealProblem)
                 decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.SealMismatch, sealProblem);
+        }
+
+        // The driver's record: a warning for the clerk, or the trouble desk past the terminal's limit.
+        if (found?.DriverId is { } recordDriverId && (settings.DriverWarnPoints > 0 || settings.DriverLimitPoints > 0))
+        {
+            var points = await Yardsyncs.Infrastructure.DriverApp.DriverRecordService.PointsAsync(db, terminalId, recordDriverId, settings, now, ct);
+            var standing = Yardsyncs.Application.MasterData.DriverRecordRules.Standing(points, settings);
+            if (Yardsyncs.Application.MasterData.DriverRecordRules.GateWarning(found.DriverName ?? "?", points, standing, settings) is { } line)
+            {
+                if (standing == Yardsyncs.Application.MasterData.DriverStanding.OverLimit && decision.Kind == GateDecisionKind.Admit)
+                    decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.Blocked, line);
+                else
+                    match = match with { Warnings = match.Warnings.Append(line).ToList() };
+            }
         }
 
         if (!record)

@@ -70,6 +70,7 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<AppointmentCharge> AppointmentCharges => Set<AppointmentCharge>();
     public DbSet<AppointmentMessage> AppointmentMessages => Set<AppointmentMessage>();
     public DbSet<ReportSubscription> ReportSubscriptions => Set<ReportSubscription>();
+    public DbSet<DriverIncident> DriverIncidents => Set<DriverIncident>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -259,6 +260,14 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
             e.Property(x => x.Status).HasUpperCaseConversion();
             e.Property(x => x.Resolution).HasConversion(new UpperSnakeEnumConverter<TroubleResolution>());
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<DriverIncident>(e =>
+        {
+            e.HasKey(x => x.IncidentId);
+            e.Property(x => x.Kind).HasUpperCaseConversion();
+            e.Property(x => x.DisputeStatus).HasConversion(new UpperSnakeEnumConverter<DisputeStatus>());
+            e.Property(x => x.RecordedAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<ReportSubscription>(e =>

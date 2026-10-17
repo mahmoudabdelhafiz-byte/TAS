@@ -1276,6 +1276,10 @@
       "subject": "Message from the terminal",
       "body": "Yardsyncs: appointment {appointmentNo}, from the control room: {message}"
     },
+    "DRIVER_INCIDENT": {
+      "subject": "Recorded on your driver record",
+      "body": "Yardsyncs: the terminal recorded \"{reason}\" on appointment {appointmentNo}. See it in Yardsyncs mobile; you can dispute it there."
+    },
     "SIGN_IN_CODE": {
       "subject": "Sign-in code",
       "body": "Yardsyncs: sign-in code {code}. Valid for {minutes} minutes. Do not share it."
