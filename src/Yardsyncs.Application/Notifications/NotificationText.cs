@@ -34,6 +34,9 @@ public static partial class NotificationText
         public const string Stops = "stops";
         public const string Container = "container";
         public const string Terminal = "terminal";
+
+        /// <summary>A control room message, already in the driver's language.</summary>
+        public const string Message = "message";
     }
 
     private static readonly Dictionary<string, Dictionary<string, (string Subject, string Body)>> Templates = new()
@@ -103,6 +106,13 @@ public static partial class NotificationText
                 "Yardsyncs: اپوائنٹمنٹ {appointmentNo}، آپ ٹرمینل کے اندر ہیں۔ {stops} جائیں۔ نقشے کے لیے Yardsyncs mobile کھولیں۔"),
             ["hi"] = ("आप अंदर हैं: अपॉइंटमेंट {appointmentNo}",
                 "Yardsyncs: अपॉइंटमेंट {appointmentNo}, आप टर्मिनल के अंदर हैं। {stops} जाएँ। नक्शे के लिए Yardsyncs mobile खोलें।"),
+        },
+        [NotificationTemplates.ControlRoomMessage] = new()
+        {
+            ["en"] = ("Message from the terminal", "Yardsyncs: appointment {appointmentNo}, from the control room: {message}"),
+            ["ar"] = ("رسالة من المحطة", "Yardsyncs: الموعد {appointmentNo}، من غرفة التحكم: {message}"),
+            ["ur"] = ("ٹرمینل کا پیغام", "Yardsyncs: اپوائنٹمنٹ {appointmentNo}، کنٹرول روم سے: {message}"),
+            ["hi"] = ("टर्मिनल का संदेश", "Yardsyncs: अपॉइंटमेंट {appointmentNo}, कंट्रोल रूम से: {message}"),
         },
     };
 

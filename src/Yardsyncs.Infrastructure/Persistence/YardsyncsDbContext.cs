@@ -68,6 +68,7 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<ValidationResult> ValidationResults => Set<ValidationResult>();
     public DbSet<AppointmentStatusHistory> AppointmentStatusHistory => Set<AppointmentStatusHistory>();
     public DbSet<AppointmentCharge> AppointmentCharges => Set<AppointmentCharge>();
+    public DbSet<AppointmentMessage> AppointmentMessages => Set<AppointmentMessage>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -257,6 +258,14 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
             e.Property(x => x.Status).HasUpperCaseConversion();
             e.Property(x => x.Resolution).HasConversion(new UpperSnakeEnumConverter<TroubleResolution>());
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<AppointmentMessage>(e =>
+        {
+            e.HasKey(x => x.MessageId);
+            e.Property(x => x.Direction).HasUpperCaseConversion();
+            e.Property(x => x.MessageType).HasUpperCaseConversion();
+            e.Property(x => x.SentAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<NotificationLog>(e =>

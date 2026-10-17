@@ -1188,6 +1188,10 @@
       "subject": "You are in: appointment {appointmentNo}",
       "body": "Yardsyncs: appointment {appointmentNo}, you are inside the terminal. Go to {stops}. Open Yardsyncs mobile for the map."
     },
+    "CONTROL_ROOM_MESSAGE": {
+      "subject": "Message from the terminal",
+      "body": "Yardsyncs: appointment {appointmentNo}, from the control room: {message}"
+    },
     "SIGN_IN_CODE": {
       "subject": "Sign-in code",
       "body": "Yardsyncs: sign-in code {code}. Valid for {minutes} minutes. Do not share it."

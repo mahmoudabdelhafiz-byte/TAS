@@ -73,4 +73,7 @@ public static class NotificationTemplates
 
     /// <summary>A followed container became ready to collect (to the portal user who follows it).</summary>
     public const string ContainerReady = "CONTAINER_READY";
+
+    /// <summary>A message from the control room to the driver (push, else the driver channel).</summary>
+    public const string ControlRoomMessage = "CONTROL_ROOM_MESSAGE";
 }

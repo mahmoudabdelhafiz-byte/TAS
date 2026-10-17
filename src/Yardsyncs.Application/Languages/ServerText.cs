@@ -195,6 +195,15 @@ public static class ServerText
             (R(@"A note is required to admit, book or reject a truck\."), "يلزم كتابة ملاحظة للسماح بدخول الشاحنة أو حجزها أو ردّها."),
             (R(@"No open slot right now for a walk-in\."), "لا توجد فترة مفتوحة الآن لزيارة بدون موعد."),
 
+            // ---- messages between the driver and the control room
+            (R(@"Appointment (\S+) not found\."), "الموعد $1 غير موجود."),
+            (R(@"Appointment (\S+) names no driver to write to\."), "الموعد $1 لا يحدد سائقاً لمراسلته."),
+            (R(@"Appointment (\S+) is closed for messages\."), "الموعد $1 مغلق للرسائل."),
+            (R(@"Write a message or choose a ready-made one\."), "اكتب رسالة أو اختر رسالة جاهزة."),
+            (R(@"A message is at most (\d+) characters\."), "الرسالة $1 حرفاً على الأكثر."),
+            (R(@"Send either a ready-made message or a text, not both\."), "أرسل رسالة جاهزة أو نصاً، لا الاثنين معاً."),
+            (R(@"Only terminal staff of this terminal can read and write drivers' messages\."), "قراءة رسائل السائقين والرد عليها لموظفي هذه المحطة فقط."),
+
             // ---- signing in
             (R(@"Wrong email or password\."), "البريد الإلكتروني أو كلمة المرور غير صحيحة."),
             (R(@"Too many failed attempts\. Try again in a few minutes\."), "محاولات فاشلة كثيرة. حاول مجدداً بعد دقائق."),
@@ -241,6 +250,10 @@ public static class ServerText
             (R(@"Early: the arrival window opens at (\d\d:\d\d)\."), "جلدی: آمد کا وقت $1 بجے شروع ہوگا۔"),
             (R(@"Item (\d+): "), "آئٹم $1: "),
             (R(@"Don't set off: "), "روانہ نہ ہوں: "),
+            (R(@"Appointment (\S+) not found\."), "اپوائنٹمنٹ $1 نہیں ملی۔"),
+            (R(@"Appointment (\S+) is closed for messages\."), "اپوائنٹمنٹ $1 پر اب پیغام نہیں بھیجے جا سکتے۔"),
+            (R(@"Write a message or choose a ready-made one\."), "پیغام لکھیں یا تیار پیغام چنیں۔"),
+            (R(@"A message is at most (\d+) characters\."), "پیغام زیادہ سے زیادہ $1 حروف کا ہو سکتا ہے۔"),
         ],
         ["hi"] =
         [
@@ -274,6 +287,10 @@ public static class ServerText
             (R(@"Early: the arrival window opens at (\d\d:\d\d)\."), "जल्दी: पहुँचने का समय $1 बजे शुरू होगा।"),
             (R(@"Item (\d+): "), "आइटम $1: "),
             (R(@"Don't set off: "), "रवाना न हों: "),
+            (R(@"Appointment (\S+) not found\."), "अपॉइंटमेंट $1 नहीं मिला।"),
+            (R(@"Appointment (\S+) is closed for messages\."), "अपॉइंटमेंट $1 पर अब संदेश नहीं भेजे जा सकते।"),
+            (R(@"Write a message or choose a ready-made one\."), "संदेश लिखें या तैयार संदेश चुनें।"),
+            (R(@"A message is at most (\d+) characters\."), "संदेश अधिकतम $1 अक्षरों का हो सकता है।"),
         ],
     };
 }
