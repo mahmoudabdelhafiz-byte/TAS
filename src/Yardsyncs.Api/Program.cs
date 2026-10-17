@@ -50,7 +50,15 @@ builder.Services.AddYardsyncsInfrastructure(builder.Configuration);
 // Yardsyncs Autogate, an add-on module: nothing is registered when Modules:Autogate=false (the truck appointment system alone).
 builder.Services.AddYardsyncsAutogate(builder.Configuration);
 builder.Services.AddOpenApi();
-builder.Services.AddProblemDetails();
+// Errors in the reader's language (Accept-Language): the detail and the list of errors.
+builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
+{
+    var problem = ctx.ProblemDetails;
+    if (problem.Detail is not null)
+        problem.Detail = Yardsyncs.Application.Languages.ServerText.T(problem.Detail);
+    if (problem.Extensions.TryGetValue("errors", out var errors) && errors is IEnumerable<string> list)
+        problem.Extensions["errors"] = Yardsyncs.Application.Languages.ServerText.T(list);
+});
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // Login / refresh: N attempts per minute per client IP (RateLimit:AuthPerMinute, default 10).
@@ -113,6 +121,14 @@ if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
 
 if (app.Configuration.GetValue("Proxy:TrustForwardedHeaders", false))
     app.UseForwardedHeaders();
+
+// The server's own sentences (check results, gate decisions, errors) in the language the portal asks for.
+app.Use((context, next) =>
+{
+    Yardsyncs.Application.Languages.ServerText.Language =
+        Yardsyncs.Application.Languages.ServerText.FromAcceptLanguage(context.Request.Headers.AcceptLanguage);
+    return next(context);
+});
 
 app.UseExceptionHandler();
 
@@ -237,7 +253,8 @@ auth.MapPost("/login/code", async (TwoStepCodeBody body, AuthService service, Ht
     {
         AuthStatus.Ok => PortalSession.Issue(http, result),
         AuthStatus.LockedOut => YardsyncsApi.Problem(StatusCodes.Status423Locked, result.Error!),
-        AuthStatus.InvalidToken => YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "The sign-in took too long. Enter your password again."),
+        AuthStatus.InvalidToken => YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "The sign-in took too long. Enter your password again.",
+            new Dictionary<string, object?> { ["code"] = "challenge_expired" }),
         _ => YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "That code isn't right."),
     };
 }).RequireRateLimiting("auth");

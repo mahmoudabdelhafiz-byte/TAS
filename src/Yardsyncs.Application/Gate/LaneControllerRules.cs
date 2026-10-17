@@ -50,7 +50,7 @@ public sealed record LaneTransactionView(
 {
     public static LaneTransactionView From(LaneTransaction t, string laneCode) => new(
         t.TransactionId, t.LaneId, laneCode, t.Status, t.StartedAt, t.LastReadAt, t.DecidedAt, t.ClosedAt, t.ReadCount, t.Plate,
-        LaneControllerRules.ContainersOf(t), t.AppointmentNo ?? t.AppointmentRead, t.QrToken is not null, t.WeightKg, t.TroubleId, t.Reason, t.Message,
+        LaneControllerRules.ContainersOf(t), t.AppointmentNo ?? t.AppointmentRead, t.QrToken is not null, t.WeightKg, t.TroubleId, t.Reason, Languages.ServerText.TOrNull(t.Message),
         t.PlateCorrected || t.ContainersCorrected);
 }
 

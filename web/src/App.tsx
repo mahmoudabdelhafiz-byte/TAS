@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ApiClient, browserStore } from './lib/api.ts';
+import { ApiClient, browserStore, setServerLanguage } from './lib/api.ts';
 import { translate, translateDynamic, type TextKey } from './lib/i18n.ts';
 import { direction, isPortalLanguage, loadLanguages } from './lib/languages.ts';
 import { applyBrand, defaultBrand, type Brand } from './lib/brand.ts';
@@ -40,6 +40,8 @@ function useHashRoute(): Route {
 export function App() {
   const [user, setUser] = useState<UserProfile | null>(api.user);
   const [lang, setLangState] = useState<Lang>(() => initialLang(api.user));
+  // Before the screens' first requests, so check results and errors come back in this language.
+  setServerLanguage(lang);
   const [ended, setEnded] = useState(false);
   const [, setLanguagesLoaded] = useState(false);
   // The installation's brand, or an operator's at its own web address; after sign-in, the terminal's.

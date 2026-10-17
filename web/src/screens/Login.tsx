@@ -55,7 +55,7 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn, brand }
         setPassword('');
       } else onSignedIn(outcome.user);
     } catch (err) {
-      if (challenge && err instanceof ApiError && err.message.includes('too long')) {
+      if (challenge && err instanceof ApiError && err.code === 'challenge_expired') {
         setChallenge(null);
         setCode('');
       }

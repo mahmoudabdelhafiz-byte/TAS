@@ -550,6 +550,14 @@ Details in [`releasing.md`](releasing.md).
 | ⬜ | Outside penetration test; secret rotation procedure (Phase F) |
 | ⬜ | Real N4, hardware and link-failure acceptance tests on the customer's test systems; staging with monitoring and a restore drill |
 
+### 58. Server messages in Arabic (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | The portal sends its language (`Accept-Language`); the server answers check results (TOS and N4 holds, cut-off, VGM), gate decisions and warnings, the ready-to-go reason, trouble-desk reasons, lane messages, container look-ups and errors in Arabic when asked |
+| ✅ | Stored texts stay English (the audit trail, trouble cases, the lane devices and the lane agent); they are put into the reader's language on the way out. Container numbers, plates and times are kept as they are; a sentence not in the catalog stays English |
+| ✅ | Problems the portal reacts to carry a fixed `code` (`challenge_expired` for a two-step sign-in that took too long) instead of the portal reading the English text |
+| ⬜ | Native review of the Arabic wording (with the portal's); the driver app and notifications keep their own texts |
+
 ---
 
 ## Remaining
@@ -571,7 +579,7 @@ Details in [`releasing.md`](releasing.md).
 | ⬜ | FASAH customs release | If not already reflected in N4 |
 | ⬜ | National appointment platform | Check whether Mawani / FASAH requires integration at the customer's port ❓ |
 | ⬜ | SMS / WhatsApp provider account | Choose Unifonic / Twilio / other, register the "Yardsyncs" sender ID ❓ provider |
-| ⬜ | Native review of message texts | Arabic, Urdu and Hindi wording; translated reasons (reasons from the TOS are in English today) |
+| ⬜ | Native review of message texts | Arabic, Urdu and Hindi wording; the Arabic server texts of section 58 (other languages still get the English reasons) |
 | ✅ | Trucking company API | Section 56: API keys per company (book, or only look), 300 calls a minute per key |
 
 ### Phase D — Operator & company portal (React)
@@ -579,7 +587,7 @@ Details in [`releasing.md`](releasing.md).
 |---|---|
 | ✅ | Edit truck plates / driver details and change user roles in the portal (API exists); also company details. The accounts behind API and gate system keys are kept out of user management |
 | ✅ | Walk-in booking from the trouble desk; appointment search by container / plate across days (also by number and booking / BL reference) |
-| ⬜ | Arabic texts for server messages (check results and errors are English today) |
+| ✅ | Arabic texts for server messages: check results, gate decisions, the ready-to-go reason and errors follow the portal language (section 58) |
 | ⬜ | Native review of the portal's Arabic wording |
 
 ### Phase E — Driver app (Flutter) — next

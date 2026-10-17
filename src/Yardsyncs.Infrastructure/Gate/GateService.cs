@@ -1,3 +1,4 @@
+using Yardsyncs.Application.Languages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Yardsyncs.Application.Auth;
@@ -684,7 +685,7 @@ public sealed class GateService(
             t.TroubleId,
             t.LaneId is { } laneId ? lanes.GetValueOrDefault(laneId) : null,
             t.AppointmentId is { } id ? numbers.GetValueOrDefault(id) : null,
-            t.PlateRead, t.ContainerReads, t.ReasonCode, t.ReasonText, t.Status, t.Resolution, t.ResolutionNote,
+            t.PlateRead, t.ContainerReads, t.ReasonCode, ServerText.T(t.ReasonText), t.Status, t.Resolution, t.ResolutionNote,
             t.CreatedAt, t.ResolvedAt, t.ResolvedBy)).ToList();
     }
 

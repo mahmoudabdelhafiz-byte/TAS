@@ -1,3 +1,4 @@
+using Yardsyncs.Application.Languages;
 using Microsoft.EntityFrameworkCore;
 using Yardsyncs.Application.Booking;
 using Yardsyncs.Domain;
@@ -135,7 +136,7 @@ public sealed class AppointmentQueryService(YardsyncsDbContext db, TimeProvider 
             a.Driver?.FullName,
             a.IsDual,
             light,
-            reason,
+            ServerText.T(reason),
             a.QrToken,
             items.Select((i, n) => new AppointmentItemDto(
                 i.Category.Code,
@@ -148,7 +149,7 @@ public sealed class AppointmentQueryService(YardsyncsDbContext db, TimeProvider 
                 i.ValidationStatus,
                 i.ValidationResults
                     .OrderBy(v => v.ValidationId)
-                    .Select(v => new CheckDto(n + 1, v.CheckType, v.Result, v.Message, v.Source))
+                    .Select(v => new CheckDto(n + 1, v.CheckType, v.Result, ServerText.TOrNull(v.Message), v.Source))
                     .ToList(),
                 i.SealNo)).ToList(),
             a.CreatedAt,

@@ -1,3 +1,4 @@
+using Yardsyncs.Application.Languages;
 using Microsoft.EntityFrameworkCore;
 using Yardsyncs.Application.Auth;
 using Yardsyncs.Application.Booking;
@@ -107,7 +108,7 @@ public sealed class ContainerLookupService(YardsyncsDbContext db, ITosAdapter to
             var problems = mine.Where(k => k.Result == CheckResult.Fail).Select(k => k.Message ?? k.Type.ToString()).ToList();
             var warnings = mine.Where(k => k.Result == CheckResult.Warn).Select(k => k.Message ?? k.Type.ToString()).ToList();
             var status = problems.Count > 0 ? LookupStatus.Blocked : warnings.Count > 0 ? LookupStatus.Warning : LookupStatus.Ready;
-            return new LookupContainer(c.ContainerNo, c.Iso, size, status, problems, warnings, null);
+            return new LookupContainer(c.ContainerNo, c.Iso, size, status, ServerText.T(problems), ServerText.T(warnings), null);
         }).ToList();
 
         return AdminResult<ContainerLookupResult>.Ok(new ContainerLookupResult(category.Code, blNo, result));
