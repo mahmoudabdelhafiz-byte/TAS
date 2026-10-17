@@ -69,3 +69,10 @@ At the bottom of **KPIs**, **Companies** lists every trucking company of the per
 to see its trucks, drivers, holds and charges, the same report the company sees for itself.
 **Download Excel** saves the KPIs (summary, days, hours, companies); **Appointments in Excel** every appointment of
 the period with its gate times, waiting and turn time.
+
+## Reports by email
+
+Under **Reports by email** at the bottom of **KPIs**, add the people who should get the reports (they need no portal
+account), each in English or Arabic, and tick **Daily** and / or **Weekly**. The daily report covers yesterday and
+today's bookings; the weekly one the seven days before; both come with the figures as an Excel file. Choose the hour
+(**Sent at**) and the day of the weekly one (**Weekly report on**). The installation must have email set up.

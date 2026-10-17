@@ -350,6 +350,8 @@ public sealed class CapacityAdminService(
             [TerminalSettings.FeeNoShowKey] = (int)settings.FeeNoShow,
             [TerminalSettings.FeeLateCancelKey] = (int)settings.FeeLateCancel,
             [TerminalSettings.LateCancelHoursKey] = settings.LateCancelHours,
+            [TerminalSettings.ReportHourKey] = settings.ReportHour,
+            [TerminalSettings.ReportWeekdayKey] = settings.ReportWeekday,
         };
     }
 

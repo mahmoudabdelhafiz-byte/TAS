@@ -173,6 +173,8 @@ public sealed class SmtpEmailSender(SmtpOptions options) : INotificationSender
             BodyEncoding = Encoding.UTF8,
             SubjectEncoding = Encoding.UTF8,
         };
+        foreach (var file in message.Attachments)
+            mail.Attachments.Add(new Attachment(new MemoryStream(file.Content), file.FileName, file.ContentType));
         using var smtp = new SmtpClient(options.Host, options.Port) { EnableSsl = options.EnableSsl };
         if (!string.IsNullOrEmpty(options.Username))
             smtp.Credentials = new NetworkCredential(options.Username, options.Password);

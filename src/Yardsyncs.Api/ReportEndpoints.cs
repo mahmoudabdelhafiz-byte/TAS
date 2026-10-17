@@ -48,8 +48,27 @@ public static class ReportEndpoints
                 : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Company {company} not found."));
         });
 
+        // Who gets the reports by email (planners and terminal admins); the hour and weekday are terminal settings.
+        var mail = app.MapGroup("/api/terminals/{terminalId:int}/report-subscriptions").RequireAuthorization();
+
+        mail.MapGet("/", async (int terminalId, HttpContext http, ReportMailService service, CancellationToken ct) =>
+            Manage(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, ct)));
+
+        mail.MapPost("/", async (int terminalId, ReportSubscriptionInput body, HttpContext http, ReportMailService service, CancellationToken ct) =>
+            Manage(http, terminalId) ?? YardsyncsApi.Admin(await service.SaveAsync(YardsyncsApi.User(http)!, terminalId, body, ct)));
+
+        mail.MapDelete("/{subscriptionId:int}", async (int terminalId, int subscriptionId, HttpContext http, ReportMailService service, CancellationToken ct) =>
+            Manage(http, terminalId) ?? (await service.RemoveAsync(terminalId, subscriptionId, ct)
+                ? Results.NoContent()
+                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Recipient {subscriptionId} not found.")));
+
         return app;
     }
+
+    private static IResult? Manage(HttpContext http, int terminalId) =>
+        AccessRules.CanManageCapacity(YardsyncsApi.User(http)!, terminalId)
+            ? null
+            : YardsyncsApi.Forbidden("Only planners and terminal admins of this terminal choose who gets its reports.");
 
     /// <summary>
     /// The company a report is for: a company user always gets their own; terminal staff any (or all, when not required).
