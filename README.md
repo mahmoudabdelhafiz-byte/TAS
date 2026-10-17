@@ -382,7 +382,7 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `GET` | `/api/driver/gate-pass` | Secret for the rotating gate QR `YS1:{passId}:{appointmentNo}:{code}` (8 digits, changes every 30 s, made offline on the phone; revoked on sign-in elsewhere) |
 | `POST` | `/api/driver/appointments/{no}/position` | `{latitude, longitude, speed?}` on the way: arrival estimate, terminal areas entered, automatic check-in in the pre-gate area. Inside the terminal (after gate-in): `atStop` when the truck reaches the block of its current stop (within 10 m, slower than ~15 km/h) → `TRUCK_AT_BLOCK` |
 | `GET` | `/api/driver/message-templates` | Ready-made messages to the control room, in the app's language (`Accept-Language`) |
-| `GET` / `POST` | `/api/driver/appointments/{no}/messages` | The visit's messages with the control room (reading marks theirs read); send `{templateCode}` or `{text}` (500 characters) |
+| `GET` / `POST` | `/api/driver/appointments/{no}/messages` | The visit's messages with the control room (reading marks theirs read); send `{templateCode}`, `{text}` (500 characters) or the truck's position `{latitude, longitude}` (messages then carry `point`: [longitude, latitude]) |
 | `GET` | `/api/terminals/{id}/messages` | Control room (any staff of the terminal): visits with messages from the last two days, unread first |
 | `GET` | `/api/terminals/{id}/messages/templates` | Ready-made messages to drivers, in the reader's language |
 | `GET` / `POST` | `/api/terminals/{id}/messages/{no}` | One visit's messages (reading marks the driver's read); a message to the driver also goes to their phone (`CONTROL_ROOM_MESSAGE`: push, else SMS / WhatsApp) in their language |

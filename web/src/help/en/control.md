@@ -37,5 +37,6 @@ driver** next to a truck on the control room map.
 - Or type in **Write to the driver** and press **Send**: the text arrives as written.
 - Each message also goes to the driver's phone as a notification (or by SMS / WhatsApp if the app isn't installed).
 - When a driver asks to be called, **Call …** shows their number.
+- When a driver shares where the truck is, **Open on the map** shows the place.
 
 A visit can be written about while it is live and for a day after its slot.

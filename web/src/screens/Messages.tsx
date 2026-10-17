@@ -126,6 +126,10 @@ function Thread({ base, appointmentNo, conversation, onSent }: {
               {m.type === 'CallRequest' && <strong className="msg-call-text"> · {t('msg.callRequest')}</strong>}
             </span>
             <span className="msg-bubble-text" dir="auto">{m.text}</span>
+            {m.point && (
+              <a className="msg-map-link" href={`https://www.openstreetmap.org/?mlat=${m.point[1]}&mlon=${m.point[0]}#map=18/${m.point[1]}/${m.point[0]}`}
+                target="_blank" rel="noreferrer">{t('msg.onMap')}</a>
+            )}
             <span className="msg-bubble-when num">{stamp(m.sentAt, terminal.timeZone, lang)}</span>
           </li>
         ))}

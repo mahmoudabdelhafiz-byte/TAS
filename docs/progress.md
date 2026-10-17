@@ -572,7 +572,8 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Portal **Messages** (any staff of the terminal): visits with messages, unread first and counted on the menu; open any visit by its number or from the control room map; the driver's number when they ask to be called |
 | ✅ | Driver app: **Messages** on the appointment, unread count on the list; a message from the control room arrives as a push (else SMS / WhatsApp) and opens the conversation |
 | ✅ | Open while the visit is live and for a day after its slot; reading marks the other side's messages read; the driver sees "Control room", not a person's name |
-| ⬜ | Voice notes and sharing a location (`appointment_message` has the columns); ready-made messages in language packs |
+| ✅ | The driver shares where the truck is (**Share where I am**); the control room opens it on the map (PR after section 61) |
+| ⬜ | Voice notes (`appointment_message.media_url`); ready-made messages in language packs |
 
 ### 61. Turn-by-turn inside the terminal (2026-10-17)
 | | Item |
@@ -626,7 +627,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Turn-by-turn prompts at junctions ("in 50 metres, turn left at block A1"), on screen and spoken (section 61) | |
 | ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
 | ⬜ | N4 write-back of arrival at block (instead of / besides the webhook) | ❓ customer's N4 |
-| ✅ | Messages between the driver and the control room: ready-made ones (in each reader's language) or text, call request; push / SMS to the driver (section 60) | Voice notes and sharing a location still to come |
+| ✅ | Messages between the driver and the control room: ready-made ones (in each reader's language) or text, call request, the truck's location; push / SMS to the driver (section 60) | Voice notes still to come |
 
 ### Phase F — Production readiness
 | | Item |

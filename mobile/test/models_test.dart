@@ -77,5 +77,6 @@ void main() {
     expect(m.callRequest, isTrue);
     expect(m.sentAt.isUtc, isTrue);
     expect(ChatMessage.fromJson({'messageId': 8, 'direction': 'ToDriver', 'type': 'Template', 'text': 'x', 'sentAt': '2026-10-20T07:06:00Z'}).fromDriver, isFalse);
+    expect(ChatMessage.fromJson({'messageId': 9, 'direction': 'FromDriver', 'type': 'Location', 'text': 'x', 'sentAt': '2026-10-20T07:07:00Z'}).location, isTrue);
   });
 }

@@ -119,4 +119,25 @@ public sealed class MessageApiTests(YardsyncsApiFactory factory) : ApiTestBase(f
         var room = await As(DemoDataSeeder.PlannerEmail);
         Assert.Equal(HttpStatusCode.Conflict, (await room.PostAsJsonAsync($"{Terminal}/messages/{other}", new { text = "Where are you?" })).StatusCode);
     }
+
+    [Fact]
+    public async Task The_driver_shares_the_trucks_location_and_the_control_room_sees_it()
+    {
+        if (!Enabled) return;
+
+        var number = await BookWithDriverAsync();
+        var driver = await DriverAsync("en");
+        var shared = await driver.PostAsJsonAsync($"/api/driver/appointments/{number}/messages", new { latitude = 21.4858, longitude = 39.1925 });
+        Assert.Equal(HttpStatusCode.Created, shared.StatusCode);
+        Assert.Equal(MessageType.Location, (await Read<AdminResponse<MessageView>>(shared)).Data.Type);
+
+        var room = await As(DemoDataSeeder.TerminalAdminEmail);
+        room.DefaultRequestHeaders.AcceptLanguage.ParseAdd("ar");
+        var seen = Assert.Single((await Read<AdminResponse<List<MessageView>>>(await room.GetAsync($"{Terminal}/messages/{number}"))).Data);
+        Assert.Equal(new[] { 39.1925, 21.4858 }, seen.Point);
+        Assert.Equal("شارك موقع الشاحنة.", seen.Text);
+
+        // The control room has no location to share.
+        Assert.Equal(HttpStatusCode.BadRequest, (await room.PostAsJsonAsync($"{Terminal}/messages/{number}", new { latitude = 21.4, longitude = 39.1 })).StatusCode);
+    }
 }

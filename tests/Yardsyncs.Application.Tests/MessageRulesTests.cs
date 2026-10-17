@@ -56,4 +56,20 @@ public class MessageRulesTests
         Assert.False(MessageRules.IsOpen(AppointmentStatus.Completed, Now.AddHours(-30), Now));
         Assert.False(MessageRules.IsOpen(AppointmentStatus.Draft, Now.AddHours(1), Now));
     }
+
+    [Fact]
+    public void The_driver_shares_where_the_truck_is()
+    {
+        var (error, type, code, body) = MessageRules.Check(MessageDirection.FromDriver, new MessageInput(Latitude: 21.4858123456, Longitude: 39.1925));
+        Assert.Null(error);
+        Assert.Equal((MessageType.Location, (string?)null, "21.485812,39.1925"), (type, code, body));
+        Assert.Equal(new[] { 39.1925, 21.485812 }, MessageRules.PointOf(type, body));
+        Assert.Equal("شارك موقع الشاحنة.", MessageRules.TextFor(type, null, body, "ar"));
+        Assert.Null(MessageRules.PointOf(MessageType.Text, body));
+
+        Assert.NotNull(MessageRules.Check(MessageDirection.ToDriver, new MessageInput(Latitude: 21.4, Longitude: 39.1)).Error);
+        Assert.NotNull(MessageRules.Check(MessageDirection.FromDriver, new MessageInput(Latitude: 95, Longitude: 39.1)).Error);
+        Assert.NotNull(MessageRules.Check(MessageDirection.FromDriver, new MessageInput(Latitude: 21.4)).Error);
+        Assert.NotNull(MessageRules.Check(MessageDirection.FromDriver, new MessageInput(Text: "here", Latitude: 21.4, Longitude: 39.1)).Error);
+    }
 }

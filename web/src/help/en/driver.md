@@ -60,5 +60,6 @@ the truck first); the app then shows the next stop, and finally **Drive to the e
 - **You were signed out** — you signed in on another phone, or your company changed your number: sign in again.
 
 To reach the control room, open the appointment and press **Messages**: choose one of the **Quick messages** (running
-late, waiting in the parking, truck broken down, container not found, please call me) or write a text. Answers from the
+late, waiting in the parking, truck broken down, container not found, please call me) or write a text. **Share where I am**
+sends the truck's position, so the control room can find you. Answers from the
 control room arrive as a notification and in **Messages**.
