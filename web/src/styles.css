@@ -849,6 +849,12 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .attention ul { display: flex; flex-wrap: wrap; gap: 4px 18px; list-style: none; margin: 0; padding: 0; }
 .attention .link-btn { font-weight: 600; }
 .kpi-yard { margin-top: 8px; }
+.kpi-lanes { margin-top: 8px; }
+.kpi-lanes > .table-wrap { margin-bottom: 16px; }
+.kpi-reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.kpi-reasons li { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 3ch; align-items: center; gap: 10px; }
+.kpi-bar { block-size: 10px; background: var(--line-soft); border-radius: 2px; overflow: hidden; }
+.kpi-bar > span { display: block; block-size: 100%; background: var(--tone-1); }
 .table-wrap.flat { border: 0; }
 
 /* Set-password page: the sign-in layout without the yard picture. */

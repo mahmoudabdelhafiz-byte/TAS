@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { addDays, dayLabel, duration } from '../lib/time.ts';
 import { useApp } from '../ui/context.tsx';
 import { LoadError, useLoad } from '../ui/kit.tsx';
+import { reasonName } from './Clerk.tsx';
 
 interface KpiDay {
   date: string;
@@ -158,6 +159,7 @@ export function Kpi() {
           </div>
 
           {r.yard && <YardSection yard={r.yard} />}
+          {terminal.autogate && <LaneSection from={range.from} to={range.to} />}
 
           <button type="button" className="link-btn" onClick={() => setTable(x => !x)}>{table ? t('kpi.hideTable') : t('kpi.showTable')}</button>
           {table && (
@@ -243,6 +245,110 @@ function YardSection({ yard }: { yard: KpiYard }) {
           )}
         </figure>
       </div>
+    </section>
+  );
+}
+
+interface LaneKpis {
+  trucks: number;
+  abandoned: number;
+  straightThroughRate: number | null;
+  exceptionRate: number | null;
+  medianDecisionSeconds: number | null;
+  medianLaneSeconds: number | null;
+  p90LaneSeconds: number | null;
+  plateReadRate: number | null;
+  containerReadRate: number | null;
+}
+
+interface LaneKpiReport {
+  totals: LaneKpis;
+  lanes: { laneId: number; laneCode: string; direction: 'In' | 'Out'; mode: 'Manual' | 'Automatic'; kpis: LaneKpis }[];
+  days: { date: string; trucks: number; exceptionRate: number | null; medianLaneSeconds: number | null }[];
+  reasons: { reason: string; count: number; share: number }[];
+}
+
+/**
+ * Yardsyncs Autogate: how the lanes handle trucks — time at the lane, trucks through without a clerk, why clerks had
+ * to help, and how well the cameras read.
+ */
+function LaneSection({ from, to }: { from: string; to: string }) {
+  const { api, t, tx, lang, terminal } = useApp();
+  const report = useLoad(
+    () => api.get<LaneKpiReport>(`/api/terminals/${terminal.terminalId}/gate/lane-kpis?from=${from}&to=${to}`),
+    [terminal.terminalId, from, to]);
+  const min = t('unit.min');
+  const hour = t('unit.h');
+  const time = (s: number | null) => (s === null ? '—' : s < 90 ? t('kpi.seconds', { n: Math.round(s) }) : duration(s / 60, min, hour));
+  const r = report.data;
+  if (report.error) return <LoadError error={report.error} retry={report.reload} />;
+  if (!r) return null;
+  const k = r.totals;
+  return (
+    <section className="kpi-lanes">
+      <h2 className="section-title">{t('kpi.lanesTitle')}</h2>
+      {k.trucks === 0 && r.lanes.length === 0 ? <p className="muted">{t('kpi.lanesNone')}</p> : (
+        <>
+          <dl className="tiles">
+            <Tile label={t('kpi.laneTime')} value={time(k.medianLaneSeconds)} note={t('kpi.laneTimeNote', { p90: time(k.p90LaneSeconds) })} />
+            <Tile label={t('kpi.straight')} value={pct(k.straightThroughRate)} note={t('kpi.straightNote', { n: k.trucks })} />
+            <Tile label={t('kpi.exceptions')} value={pct(k.exceptionRate)} note={t('kpi.exceptionsNote', { n: k.abandoned })} />
+            <Tile label={t('kpi.plateRead')} value={pct(k.plateReadRate)} note={t('kpi.plateReadNote')} />
+            <Tile label={t('kpi.containerRead')} value={pct(k.containerReadRate)} note={t('kpi.containerReadNote')} />
+          </dl>
+          <div className="charts">
+            <figure className="chart-card">
+              <figcaption>{t('kpi.chartExceptions')}</figcaption>
+              <Columns
+                bars={r.days.map(d => ({
+                  key: d.date,
+                  label: shortDay(d.date, lang),
+                  value: d.exceptionRate,
+                  tip: `${dayLabel(d.date, lang)}: ${pct(d.exceptionRate)} (${t('kpi.trucksN', { n: d.trucks })})`,
+                }))}
+                max={1} format={v => `${Math.round(v * 100)}%`} />
+            </figure>
+            <figure className="chart-card">
+              <figcaption>{t('kpi.reasonsTitle')}</figcaption>
+              {r.reasons.length === 0 ? <p className="muted">{t('kpi.reasonsNone')}</p> : (
+                <ul className="kpi-reasons">
+                  {r.reasons.map(x => (
+                    <li key={x.reason}>
+                      <span>{tx('reason', reasonName(x.reason))}</span>
+                      <span className="kpi-bar" aria-hidden="true"><span style={{ inlineSize: `${Math.round(x.share * 100)}%` }} /></span>
+                      <span className="num">{x.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </figure>
+          </div>
+          <div className="table-wrap">
+            <table className="grid compact">
+              <thead>
+                <tr>
+                  <th>{t('kpi.lane')}</th><th>{t('kpi.trucks')}</th><th>{t('kpi.laneTime')}</th><th>{t('kpi.decision')}</th>
+                  <th>{t('kpi.straight')}</th><th>{t('kpi.exceptions')}</th><th>{t('kpi.plateRead')}</th><th>{t('kpi.containerRead')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.lanes.map(l => (
+                  <tr key={l.laneId}>
+                    <td className="nowrap"><bdi>{l.laneCode}</bdi> <span className="muted">{t(l.direction === 'In' ? 'lanes.in' : 'lanes.out')} · {t(l.mode === 'Automatic' ? 'lanes.mode.Automatic' : 'lanes.mode.Manual')}</span></td>
+                    <td className="num">{l.kpis.trucks}</td>
+                    <td className="num">{time(l.kpis.medianLaneSeconds)}</td>
+                    <td className="num">{time(l.kpis.medianDecisionSeconds)}</td>
+                    <td className="num">{pct(l.kpis.straightThroughRate)}</td>
+                    <td className="num">{pct(l.kpis.exceptionRate)}</td>
+                    <td className="num">{pct(l.kpis.plateReadRate)}</td>
+                    <td className="num">{pct(l.kpis.containerReadRate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </section>
   );
 }

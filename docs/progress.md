@@ -502,6 +502,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | The terminal's own gate system on the gate API: keys made and revoked by terminal admins (**Lanes → Gate systems**), each acting as a gate clerk of that terminal that can't sign in (`X-Api-Key`, migration 025); `POST …/gate/arrivals/check` answers what the gate would decide without recording anything |
 | ✅ | **Lanes** stays in the truck appointment system (lane codes for the terminal's own gate system); docs page "Connecting your own gate system"; `GET /api/modules?terminalId=` |
 
+### 52. Lane KPIs (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Per lane and in total, from the lane controller's transactions: time at the lane (median and 9 in 10, first read to through the barrier), time to the decision, trucks without a clerk, exceptions and why clerks helped, and abandoned reads (`GET /api/terminals/{id}/gate/lane-kpis?from=&to=`, Autogate only) |
+| ✅ | OCR read rate: plates read and not corrected by a clerk at lanes with a plate camera; containers the same, for trucks with containers |
+| ✅ | **KPIs** screen: a **Lanes** section with tiles, exceptions by day, the reasons, and one row per lane |
+
 ---
 
 ## Remaining
@@ -594,7 +601,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | TOS gate transaction: create the truck visit and gate-in / gate-out in the TOS (N4 gate API), print or send the EIR / gate ticket | Section 48; N4 documents to verify on the customer's N4 test system ❓ test access; sending the ticket to the driver app with push (Phase E) |
 | ✅ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | Section 49; holding a truck at an automatic lane for a seal mismatch is a per-terminal option still to add |
 | ✅ | Exit gate: match outbound container, check delivered against booked, close the visit, turn time | Section 50 |
-| ⬜ | Lane KPIs: transaction time, OCR read rate, exception rate per lane | |
+| ✅ | Lane KPIs: transaction time, OCR read rate, exception rate per lane | Section 52 |
 | ⬜ | Gate pass from the driver app read at the kiosk; yard position printed or pushed at gate-in | Phase E |
 
 ---
