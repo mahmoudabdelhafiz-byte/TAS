@@ -39,6 +39,7 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<GateLane> GateLanes => Set<GateLane>();
     public DbSet<GateLaneDevice> LaneDevices => Set<GateLaneDevice>();
     public DbSet<GateSystemKey> GateSystemKeys => Set<GateSystemKey>();
+    public DbSet<CompanyApiKey> CompanyApiKeys => Set<CompanyApiKey>();
     public DbSet<LaneDeviceRead> LaneDeviceReads => Set<LaneDeviceRead>();
     public DbSet<LaneDeviceCommand> LaneDeviceCommands => Set<LaneDeviceCommand>();
     public DbSet<LaneTransaction> LaneTransactions => Set<LaneTransaction>();
@@ -167,6 +168,14 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             e.Property(x => x.KeyHash).HasColumnType("char(64)");
             e.Property(x => x.ReportedStatus).HasConversion(new UpperSnakeEnumConverter<DeviceHealth>());
+        });
+
+        b.Entity<CompanyApiKey>(e =>
+        {
+            e.HasKey(x => x.KeyId);
+            e.Property(x => x.Scope).HasUpperCaseConversion();
+            e.Property(x => x.KeyHash).HasColumnType("char(64)");
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
 
         b.Entity<GateSystemKey>(e =>

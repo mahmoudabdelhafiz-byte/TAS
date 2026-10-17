@@ -532,6 +532,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Snapshot and unsent passages kept on disk; `GET /edge/status` for monitoring; CI builds and starts the agent image |
 | ⬜ | Offline: no TOS re-check, no yard position, no exit check, no trouble desk (a referred truck is handled at the lane). A trouble desk on the agent if a terminal needs it |
 
+### 56. Trucking company API keys (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | A company's own systems (TMS, dispatch) use the API with a key in `X-Api-Key` instead of a person's sign-in; each key acts as its own company user that can't sign in (migration 027) |
+| ✅ | Two scopes: **Book and change appointments**, or **Only look** (GET only, `403` otherwise); 300 calls a minute per key (`Api__KeyPerMinute`) |
+| ✅ | Made, listed (last used) and revoked by the company admin or a terminal admin in **Fleet & users → API keys**; keys can't manage keys; a suspended company's keys stop |
+
 ---
 
 ## Remaining
@@ -554,7 +561,7 @@ Details in [`releasing.md`](releasing.md).
 | ⬜ | National appointment platform | Check whether Mawani / FASAH requires integration at the customer's port ❓ |
 | ⬜ | SMS / WhatsApp provider account | Choose Unifonic / Twilio / other, register the "Yardsyncs" sender ID ❓ provider |
 | ⬜ | Native review of message texts | Arabic, Urdu and Hindi wording; translated reasons (reasons from the TOS are in English today) |
-| ⬜ | Trucking company API | Client credentials, scopes, rate limits for bookings from their own TMS |
+| ✅ | Trucking company API | Section 56: API keys per company (book, or only look), 300 calls a minute per key |
 
 ### Phase D — Operator & company portal (React)
 | | Item |

@@ -21,8 +21,9 @@ public static class GateSystemAuth
 }
 
 /// <summary>
-/// A gate system key in X-Api-Key: the request acts as the key's gate clerk account, with the same claims a sign-in
-/// token carries, so the access rules and the history treat it like a person at the gate. Checked on every request,
+/// A key in X-Api-Key: a gate system key (ysg_) acts as its gate clerk account, a company API key (ysc_) as its company
+/// user account — with the same claims a sign-in token carries, so the access rules and the history treat it like a
+/// person. A read-only company key also carries <see cref="CompanyApiKeys.ReadOnlyClaim"/>. Checked on every request,
 /// so a revoked key stops at once.
 /// </summary>
 public sealed class GateSystemAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
@@ -34,10 +35,18 @@ public sealed class GateSystemAuthHandler(IOptionsMonitor<AuthenticationSchemeOp
         if (string.IsNullOrWhiteSpace(key))
             return AuthenticateResult.NoResult();
 
-        var service = Context.RequestServices.GetRequiredService<GateSystemService>();
-        var user = await service.AuthenticateAsync(key, Context.RequestAborted);
+        Yardsyncs.Domain.Parties.AppUser? user;
+        var readOnly = false;
+        if (CompanyApiKeys.LooksLikeKey(key))
+        {
+            var found = await Context.RequestServices.GetRequiredService<CompanyApiKeyService>().AuthenticateAsync(key, Context.RequestAborted);
+            user = found?.User;
+            readOnly = found?.ReadOnly ?? false;
+        }
+        else
+            user = await Context.RequestServices.GetRequiredService<GateSystemService>().AuthenticateAsync(key, Context.RequestAborted);
         if (user is null)
-            return AuthenticateResult.Fail("Unknown or revoked gate system key.");
+            return AuthenticateResult.Fail("Unknown or revoked API key.");
 
         var claims = new List<Claim>
         {
@@ -48,6 +57,10 @@ public sealed class GateSystemAuthHandler(IOptionsMonitor<AuthenticationSchemeOp
         };
         if (user.TerminalId is { } terminalId)
             claims.Add(new Claim(YardsyncsClaims.TerminalId, terminalId.ToString(CultureInfo.InvariantCulture)));
+        if (user.CompanyId is { } companyId)
+            claims.Add(new Claim(YardsyncsClaims.CompanyId, companyId.ToString(CultureInfo.InvariantCulture)));
+        if (readOnly)
+            claims.Add(new Claim(CompanyApiKeys.ReadOnlyClaim, "true"));
         var identity = new ClaimsIdentity(claims, Scheme.Name, YardsyncsClaims.Name, YardsyncsClaims.Role);
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name));
     }

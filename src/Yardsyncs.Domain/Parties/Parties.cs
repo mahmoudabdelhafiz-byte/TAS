@@ -130,3 +130,33 @@ public sealed class Driver
     public string PreferredLanguage { get; set; } = "ar";
     public bool IsBlocked { get; set; }
 }
+
+/// <summary>What a company API key may do.</summary>
+public enum ApiKeyScope
+{
+    /// <summary>Book, change and cancel appointments, and everything a company user sees.</summary>
+    Book,
+
+    /// <summary>Only look: appointments, availability, containers.</summary>
+    Read,
+}
+
+/// <summary>
+/// A key for a trucking company's own system (TMS, dispatch) to use the API. It acts as its own company user account,
+/// which has no password and can't sign in. Only the key's SHA-256 is kept.
+/// </summary>
+public sealed class CompanyApiKey
+{
+    public int KeyId { get; set; }
+    public int CompanyId { get; set; }
+    public int UserId { get; set; }
+    public string Name { get; set; } = "";
+    public ApiKeyScope Scope { get; set; }
+    public string KeyHash { get; set; } = "";
+    public string KeyHint { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public int? CreatedBy { get; set; }
+    public DateTimeOffset? LastUsedAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public int? RevokedBy { get; set; }
+}

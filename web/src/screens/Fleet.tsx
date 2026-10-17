@@ -36,8 +36,8 @@ interface OperatorRow {
   admins: number;
 }
 
-type Tab = 'trucks' | 'drivers' | 'users' | 'companies' | 'operators';
-const tabText = { trucks: 'fleet.trucks', drivers: 'fleet.drivers', users: 'fleet.users', companies: 'fleet.companies', operators: 'fleet.operators' } as const;
+type Tab = 'trucks' | 'drivers' | 'users' | 'apikeys' | 'companies' | 'operators';
+const tabText = { trucks: 'fleet.trucks', drivers: 'fleet.drivers', users: 'fleet.users', apikeys: 'fleet.apiKeys', companies: 'fleet.companies', operators: 'fleet.operators' } as const;
 
 /** Trucks, drivers and users of a company; companies for terminal admins. */
 export function Fleet() {
@@ -45,8 +45,8 @@ export function Fleet() {
   const companyUser = isCompanyRole(user.role);
   const terminalAdmin = isAdminRole(user.role);
   const operators = user.role === 'SysAdmin' || user.role === 'OperatorAdmin';
-  const tabs: Tab[] = terminalAdmin ? ['companies', 'trucks', 'drivers', 'users', ...(operators ? ['operators' as const] : [])]
-    : user.role === 'CompanyAdmin' ? ['trucks', 'drivers', 'users'] : ['trucks', 'drivers'];
+  const tabs: Tab[] = terminalAdmin ? ['companies', 'trucks', 'drivers', 'users', 'apikeys', ...(operators ? ['operators' as const] : [])]
+    : user.role === 'CompanyAdmin' ? ['trucks', 'drivers', 'users', 'apikeys'] : ['trucks', 'drivers'];
   const tab: Tab = tabs.includes(route.params.tab as Tab) ? (route.params.tab as Tab) : tabs[0];
   const companies = useLoad(() => (companyUser ? Promise.resolve([] as CompanyRow[]) : api.get<CompanyRow[]>('/api/companies')), [companyUser]);
   const [picked, setPicked] = useState<string>('');
@@ -79,6 +79,7 @@ export function Fleet() {
       {tab === 'trucks' && companyId && companyId > 0 && <Trucks companyId={companyId} canEdit={canEdit} canBlock={terminalAdmin} />}
       {tab === 'drivers' && companyId && companyId > 0 && <Drivers companyId={companyId} canEdit={canEdit} canBlock={terminalAdmin} />}
       {tab === 'users' && companyId && <Users companyId={companyId} canEdit={canEdit} />}
+      {tab === 'apikeys' && companyId && companyId > 0 && <ApiKeys companyId={companyId} />}
       {tab !== 'companies' && tab !== 'operators' && companyId && companyId < 0 && tab !== 'users' && <p className="muted">{t('common.chooseCompany')}</p>}
     </section>
   );
@@ -665,5 +666,101 @@ function BrandingForm({ path, title, hint, domain }: { path: string; title: stri
         </>
       )}
     </form>
+  );
+}
+
+interface ApiKeyRow {
+  keyId: number;
+  name: string;
+  scope: 'Book' | 'Read';
+  keyHint: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+/** Keys for the company's own systems (TMS, dispatch) to use the API: each acts as a company user that can't sign in. */
+function ApiKeys({ companyId }: { companyId: number }) {
+  const { api, t, lang, terminal } = useApp();
+  const base = `/api/companies/${companyId}/api-keys`;
+  const list = useLoad(() => api.get<ApiKeyRow[]>(base), [base]);
+  const [form, setForm] = useState<{ name: string; scope: 'Book' | 'Read' }>({ name: '', scope: 'Book' });
+  const [issued, setIssued] = useState<{ name: string; key: string } | null>(null);
+  const [asking, setAsking] = useState<number | null>(null);
+  const m = useMessages();
+  const scopeText = { Book: 'fleet.apiScope.Book', Read: 'fleet.apiScope.Read' } as const;
+
+  return (
+    <div className="setup-two">
+      <div>
+        {m.view}
+        <p className="hint">{t('fleet.apiKeysHint')}</p>
+        {list.error && <LoadError error={list.error} retry={list.reload} />}
+        {list.data && list.data.length === 0 && <p className="muted">{t('fleet.apiKeysNone')}</p>}
+        {list.data && list.data.length > 0 && (
+          <div className="table-wrap">
+            <table className="grid compact">
+              <thead><tr><th>{t('fleet.name')}</th><th>{t('fleet.apiScope')}</th><th>{t('gatesys.key')}</th><th>{t('gatesys.lastUsed')}</th><th /></tr></thead>
+              <tbody>
+                {list.data.map(k => (
+                  <tr key={k.keyId} className={k.revokedAt ? 'inactive' : undefined}>
+                    <td dir="auto">{k.name}</td>
+                    <td>{t(scopeText[k.scope])}</td>
+                    <td className="nowrap"><bdi>{k.keyHint}</bdi></td>
+                    <td className="num">{k.lastUsedAt ? stamp(k.lastUsedAt, terminal.timeZone, lang) : t('gatesys.never')}</td>
+                    <td className="cell-action">
+                      {k.revokedAt
+                        ? <span className="muted">{t('gatesys.revoked', { when: stamp(k.revokedAt, terminal.timeZone, lang) })}</span>
+                        : asking === k.keyId
+                          ? (
+                            <span className="inline-ask">
+                              <ActionButton kind="danger" onError={m.setError} onRun={async () => {
+                                await api.del(`${base}/${k.keyId}`);
+                                setAsking(null);
+                                list.reload();
+                                m.setDone(t('gatesys.revokedDone', { name: k.name }));
+                              }}>{t('gatesys.revokeYes', { name: k.name })}</ActionButton>
+                              <button type="button" className="link-btn" onClick={() => setAsking(null)}>{t('lanes.keep')}</button>
+                            </span>
+                          )
+                          : <button type="button" className="link-btn" onClick={() => setAsking(k.keyId)}>{t('gatesys.revoke')}</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {issued && (
+          <div className="device-key" role="status">
+            <p><strong>{t('gatesys.keyFor', { name: issued.name })}</strong> {t('fleet.apiKeyOnce')}</p>
+            <code dir="ltr">{issued.key}</code>
+            <div className="actions">
+              <button type="button" className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText(issued.key)}>{t('lanes.copy')}</button>
+              <button type="button" className="link-btn" onClick={() => setIssued(null)}>{t('lanes.keyDone')}</button>
+            </div>
+          </div>
+        )}
+      </div>
+      <form className="book-side form-stack" onSubmit={e => e.preventDefault()}>
+        <h2>{t('fleet.addApiKey')}</h2>
+        <label className="field"><span>{t('fleet.name')}</span>
+          <input dir="auto" maxLength={60} value={form.name} placeholder={t('fleet.apiKeyPlaceholder')} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
+        <fieldset className="plain-fieldset">
+          <legend>{t('fleet.apiScope')}</legend>
+          {(['Book', 'Read'] as const).map(s => (
+            <label key={s} className="radio">
+              <input type="radio" name="api-scope" checked={form.scope === s} onChange={() => setForm({ ...form, scope: s })} /> {t(scopeText[s])}
+            </label>
+          ))}
+        </fieldset>
+        <ActionButton kind="primary" disabled={!form.name.trim()} onError={m.setError} onRun={async () => {
+          const result = await api.post<{ data: { apiKey: ApiKeyRow; key: string } }>(base, { name: form.name.trim(), scope: form.scope });
+          setIssued({ name: result.data.apiKey.name, key: result.data.key });
+          setForm({ name: '', scope: 'Book' });
+          list.reload();
+        }}>{t('fleet.addApiKey')}</ActionButton>
+      </form>
+    </div>
   );
 }
