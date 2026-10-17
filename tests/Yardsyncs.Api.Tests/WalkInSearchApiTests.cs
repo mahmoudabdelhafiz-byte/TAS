@@ -45,7 +45,7 @@ public sealed class WalkInSearchApiTests(YardsyncsApiFactory factory) : ApiTestB
         Assert.NotNull(trouble.AppointmentNo);
 
         var appointment = await Read<AppointmentDto>(await clerk.GetAsync($"{Appointments}/{trouble.AppointmentNo}"));
-        Assert.Equal(AppointmentStatus.Arrived, appointment.Status);
+        Assert.Equal(AppointmentStatus.GateIn, appointment.Status); // let in at once
         Assert.Equal("1234 ABJ", appointment.TruckPlate); // the plate read, matched to the company's truck
     }
 
