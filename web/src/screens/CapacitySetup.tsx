@@ -510,6 +510,7 @@ function Rules({ editable }: { editable: boolean }) {
       </div>
 
       <GateRules editable={editable} />
+      {user.role === 'SysAdmin' && <ModulesBox />}
       <Fees editable={editable && (user.role === 'TerminalAdmin' || user.role === 'OperatorAdmin' || user.role === 'SysAdmin')} />
 
       <div className="book-side form-stack">
@@ -529,6 +530,34 @@ function Rules({ editable }: { editable: boolean }) {
           }}>{t('setup.saveSettings')}</ActionButton>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * What the customer bought, for system admins: whether this terminal has Yardsyncs Autogate (installed on this
+ * installation) or runs the truck appointment system with its own gate system.
+ */
+function ModulesBox() {
+  const { api, t, terminal } = useApp();
+  const modules = useLoad(() => api.get<{ autogate: boolean; autogateAtTerminal: boolean }>(`/api/modules?terminalId=${terminal.terminalId}`), [terminal.terminalId]);
+  const [error, setError] = useState<string | null>(null);
+  const m = modules.data;
+  return (
+    <div className="book-side form-stack">
+      <h2>{t('setup.modules')}</h2>
+      {error && <Notice kind="error" onClose={() => setError(null)}>{error}</Notice>}
+      {m && !m.autogate && <p className="hint">{t('setup.modulesTasOnly')}</p>}
+      {m && m.autogate && (
+        <>
+          <p>{t(m.autogateAtTerminal ? 'setup.autogateOn' : 'setup.autogateOff')}</p>
+          <ActionButton kind="secondary" onError={setError} onRun={async () => {
+            await api.put(`/api/terminals/${terminal.terminalId}/settings`, { values: { module_autogate: m.autogateAtTerminal ? 0 : 1 }, reason: null });
+            window.location.reload(); // the menu and screens follow the module
+          }}>{t(m.autogateAtTerminal ? 'setup.autogateSwitchOff' : 'setup.autogateSwitchOn')}</ActionButton>
+          <p className="hint">{t('setup.modulesHint')}</p>
+        </>
+      )}
     </div>
   );
 }
@@ -574,6 +603,7 @@ function GateRules({ editable }: { editable: boolean }) {
             ))}
           </fieldset>
           <p className="hint">{t('setup.identityHint')}</p>
+          {terminal.autogate && (
           <fieldset className="plain-fieldset">
             <legend>{t('setup.tosGate')}</legend>
             <label className="radio">
@@ -582,6 +612,7 @@ function GateRules({ editable }: { editable: boolean }) {
             </label>
             <p className="hint">{t('setup.tosGateHint')}</p>
           </fieldset>
+          )}
           {editable && (
             <ActionButton kind="primary" disabled={values === null} onError={setError} onRun={async () => {
               await api.put(base, { values: Object.fromEntries([...gateKeys, 'driver_identity', 'tos_gate_write'].map(k => [k, current[k] ?? 0])), reason: null });

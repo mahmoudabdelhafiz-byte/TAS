@@ -2,7 +2,9 @@
 
 Truck appointment and landside management for **container and multipurpose terminals** — the first module of **Yardsyncs**.
 A generic product: one deployment serves many terminals and operators, hosted by us or installed on-premise; each terminal's choices (TOS, gate identification, driver identity, fees…) are settings, not code.
-Next module: **Yardsyncs Autogate**, built on the same gate API.
+Second module: **Yardsyncs Autogate** (`src/Yardsyncs.Autogate`), built on the same gate API. The two are sold
+separately or together: a terminal can run the truck appointment system with its existing gate system (it connects
+through the gate API with a key — docs page "Connecting your own gate system"), or with Autogate as one ecosystem.
 
 ## Scope
 
@@ -32,6 +34,7 @@ src/Yardsyncs.Domain                entities
 src/Yardsyncs.Application           capacity engine (pure logic: planning, availability, reconciliation)
 src/Yardsyncs.Infrastructure        EF Core + Npgsql, slot generation, availability queries, booking counters
 src/Yardsyncs.Api                   ASP.NET Core minimal API
+src/Yardsyncs.Autogate              Yardsyncs Autogate module: lane devices, automatic lanes, remote clerk, inspection, exit check, TOS gate records
 tests/Yardsyncs.Application.Tests   unit tests for the capacity rules
 tests/Yardsyncs.Infrastructure.Tests integration tests against PostgreSQL (run when TAS_TEST_DB is set)
 tests/Yardsyncs.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)
@@ -80,6 +83,10 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
 - Operators: a system admin groups the terminals one company runs (`/api/operators`,
   `PUT /api/terminals/{id}/operator`); the operator's admins (role `OperatorAdmin`) manage all of them. Competing
   companies get separate installations.
+- Modules: `Modules__Autogate=false` installs the truck appointment system alone (default `true`). With Autogate
+  installed, a system admin switches it off for a terminal that hasn't bought it with the terminal setting
+  `module_autogate` = 0 (`PUT /api/terminals/{id}/settings`; terminal admins can't change it). `GET /api/modules`
+  says what is on. A terminal's own gate system gets its key in **Lanes → Gate systems** and sends it as `X-Api-Key`.
 - Load test of the peak booking hour: [`loadtest/`](loadtest/README.md) (k6; runs in CI on every pull request).
 - Personal data is cleaned up daily (`Privacy:LocationDays` 30, `Privacy:MessageDays` 180, `Privacy:EventDays` 90,
   `Privacy:TokenDays` 30). Drivers: `GET /api/companies/{c}/drivers/{d}/personal-data` (copy) and

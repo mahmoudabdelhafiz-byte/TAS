@@ -36,6 +36,8 @@ export interface Terminal {
   /** ISO code of the terminal's country pack (holidays, currency). */
   country?: string;
   currency?: string;
+  /** The terminal has the Yardsyncs Autogate module (lane devices, automatic lanes, remote clerk, inspection). */
+  autogate?: boolean;
 }
 
 /** The installation's country pack: how mobiles are typed and the drivers' ID document. */

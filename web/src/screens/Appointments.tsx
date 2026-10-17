@@ -200,7 +200,7 @@ function AppointmentPanel({ number, byCode, onClose, onChanged }: {
                   <span dir="ltr" className="item-ref">{itemLabel(item)}</span>
                   <span className="muted">{categoryName(byCode.get(item.category), item.category, lang)}</span>
                 </div>
-                {item.containerNo && (
+                {item.containerNo && terminal.autogate && (
                   <SealField path={`${path}/items/${i + 1}/seal`} seal={item.sealNo ?? null} editable={active(a)}
                     onSaved={() => { detail.reload(); }} onError={setError} />
                 )}
@@ -216,7 +216,7 @@ function AppointmentPanel({ number, byCode, onClose, onChanged }: {
             ))}
           </ul>
 
-          {(a.status === 'Arrived' || a.status === 'GateIn' || a.status === 'Completed') && (
+          {terminal.autogate && (a.status === 'Arrived' || a.status === 'GateIn' || a.status === 'Completed') && (
             <>
               <h3>{t('insp.title')}</h3>
               <InspectionSummary appointmentNo={a.appointmentNo} />

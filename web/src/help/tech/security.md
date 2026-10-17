@@ -7,6 +7,9 @@
 - Passwords are stored hashed (PBKDF2); links to set a password work once and expire; five wrong passwords lock the
   account for a few minutes; sign-in is limited per client address. Deactivating a user ends their access at once.
 - Drivers sign in with a code by SMS: 6 digits, five tries, a few codes an hour and per day; one phone at a time.
+- Lane devices (Autogate) and the terminal's own gate system use keys instead of passwords: 256-bit random, shown
+  once, kept only as a SHA-256 fingerprint, revoked by a terminal admin with immediate effect. A gate system key acts
+  as a gate clerk of its terminal and can't sign in to the portal.
 - The gate code in the app changes every 30 seconds, so a photo of it can't be reused later.
 
 ## Data protection

@@ -20,6 +20,11 @@ test('each role gets its own menu', () => {
   assert.ok(!screensFor('CompanyAdmin').includes('gate'));
   assert.ok(screensFor('TerminalAdmin').includes('lanes') && !screensFor('GateClerk').includes('lanes'));
   assert.equal(parseHash('#/lanes').screen, 'lanes');
+  // The truck appointment system alone: no Autogate screens.
+  assert.deepEqual(screensFor('GateClerk', false), ['gate', 'control', 'appointments', 'help']);
+  assert.ok(!screensFor('TerminalAdmin', false).some(s => s === 'clerk' || s === 'inspections'));
+  // Lanes stay: the terminal's own gate system needs lane codes and its key.
+  assert.ok(screensFor('TerminalAdmin', false).includes('gate') && screensFor('TerminalAdmin', false).includes('lanes'));
   assert.ok(screensFor('TerminalAdmin').includes('map') && screensFor('Planner').includes('map'));
   assert.ok(!screensFor('CompanyAdmin').includes('map') && !screensFor('GateClerk').includes('map'));
   assert.deepEqual(screensFor('OperatorAdmin'), screensFor('TerminalAdmin'));

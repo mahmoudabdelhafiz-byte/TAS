@@ -147,7 +147,8 @@ function SignedIn({ user, lang, setLang, t, route, onSignOut, brand, setBrand }:
     api.get<Brand>(`/api/terminals/${brandTerminal}/branding`).then(b => { if (live) setBrand(b); }).catch(() => { /* keep */ });
     return () => { live = false; };
   }, [brandTerminal, setBrand]);
-  const screens = useMemo(() => screensFor(user.role), [user.role]);
+  const autogate = terminal?.autogate ?? false;
+  const screens = useMemo(() => screensFor(user.role, autogate), [user.role, autogate]);
 
   const go = useCallback((screen: Screen, params?: Record<string, string | undefined>) => {
     window.location.hash = buildHash(screen, params);

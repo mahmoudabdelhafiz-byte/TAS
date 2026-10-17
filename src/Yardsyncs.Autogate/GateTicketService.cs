@@ -4,7 +4,7 @@ using Yardsyncs.Domain.Booking;
 using Yardsyncs.Domain.Gate;
 using Yardsyncs.Infrastructure.Persistence;
 
-namespace Yardsyncs.Infrastructure.Gate;
+namespace Yardsyncs.Autogate;
 
 public sealed record GateTicketMove(string Category, string CategoryAr, string? ContainerNo, string? IsoType, string? Reference, IReadOnlyList<string> Seals,
     SealStatus SealStatus = SealStatus.NotChecked);

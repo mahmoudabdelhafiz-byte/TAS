@@ -9,7 +9,7 @@ using Yardsyncs.Domain.Booking;
 using Yardsyncs.Domain.Gate;
 using Yardsyncs.Infrastructure.Persistence;
 
-namespace Yardsyncs.Infrastructure.Gate;
+namespace Yardsyncs.Autogate;
 
 /// <summary>
 /// Inspection at the gate: per container and passage, the seal against the one the company declared and the damage

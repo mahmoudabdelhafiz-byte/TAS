@@ -13,7 +13,7 @@ public sealed record ActiveBody(bool Active, string? Reason);
 
 public sealed record TerminalView(
     int TerminalId, string Code, string Name, Yardsyncs.Domain.TerminalType TerminalType, string TimeZone, int SlotMinutes, int BookingHorizonDays,
-    int? OperatorId = null, string Country = "SA", string Currency = "SAR");
+    int? OperatorId = null, string Country = "SA", string Currency = "SAR", bool Autogate = false);
 
 public sealed record TerminalOperatorBody(int? OperatorId);
 
@@ -152,7 +152,8 @@ public static class MasterDataEndpoints
             return Results.Ok(profiles.CountryFor(code).Holidays(y));
         }).RequireAuthorization();
 
-        app.MapGet("/api/terminals", async (HttpContext http, YardsyncsDbContext db, Yardsyncs.Infrastructure.TerminalProfiles profiles, CancellationToken ct) =>
+        app.MapGet("/api/terminals", async (HttpContext http, YardsyncsDbContext db, Yardsyncs.Infrastructure.TerminalProfiles profiles,
+            Yardsyncs.Infrastructure.Gate.Modules modules, CancellationToken ct) =>
         {
             var user = YardsyncsApi.User(http)!;
             var query = db.Terminals.AsNoTracking().Where(t => t.IsActive);
@@ -168,10 +169,11 @@ public static class MasterDataEndpoints
                 .OrderBy(t => t.Code)
                 .Select(t => new TerminalView(t.TerminalId, t.Code, t.Name, t.TerminalType, t.TimeZone, t.SlotMinutes, t.BookingHorizonDays, t.OperatorId, "SA", "SAR"))
                 .ToListAsync(ct);
+            var autogate = await modules.AutogateTerminalsAsync(db, terminals.Select(t => t.TerminalId).ToList(), ct);
             return Results.Ok(terminals.Select(t =>
             {
                 var country = profiles.CountryFor(t.Code);
-                return t with { Country = country.Code, Currency = country.Currency };
+                return t with { Country = country.Code, Currency = country.Currency, Autogate = autogate.Contains(t.TerminalId) };
             }));
         }).RequireAuthorization();
 

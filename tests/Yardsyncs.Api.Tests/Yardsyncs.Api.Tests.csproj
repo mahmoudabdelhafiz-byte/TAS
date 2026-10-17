@@ -14,6 +14,9 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Yardsyncs.Autogate" />
+    <Using Include="Yardsyncs.Autogate.Endpoints" />
+    <Using Include="Yardsyncs.Autogate.Tos" />
   </ItemGroup>
 
   <!-- A language pack the API tests run with (Languages:Path). -->
@@ -23,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Yardsyncs.Api\Yardsyncs.Api.csproj" />
+    <ProjectReference Include="..\..\src\Yardsyncs.Autogate\Yardsyncs.Autogate.csproj" />
   </ItemGroup>
 
 </Project>

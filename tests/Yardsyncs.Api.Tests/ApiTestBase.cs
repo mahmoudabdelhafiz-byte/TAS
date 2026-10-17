@@ -16,12 +16,17 @@ using Yardsyncs.Infrastructure.Persistence;
 namespace Yardsyncs.Api.Tests;
 
 /// <summary>The real API in memory against PostgreSQL (TAS_API_TEST_DB), with the demo terminal seeded.</summary>
-public sealed class YardsyncsApiFactory : WebApplicationFactory<Program>
+public class YardsyncsApiFactory : WebApplicationFactory<Program>
 {
     public static readonly string? ConnectionString = Environment.GetEnvironmentVariable("TAS_API_TEST_DB");
 
     /// <summary>Stands in for the AI model: each test scripts its answers.</summary>
     public FakeAssistantModel Assistant { get; } = new();
+
+    /// <summary>Settings a derived factory adds (another edition, say).</summary>
+    protected virtual void Extra(IWebHostBuilder builder)
+    {
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -59,6 +64,7 @@ public sealed class YardsyncsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("FakeTos:BillsOfLading:MEDUJD260001:2", "MEDU2601003:45G1");
         builder.UseSetting("FakeTos:BillsOfLading:MEDUJD260001:3", "MSCU7654329:22G1");
         builder.UseSetting("FakeTos:BillsOfLading:MEDUJD260001:4", "CMAU5100028:42G1");
+        Extra(builder);
     }
 }
 

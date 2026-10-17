@@ -11,16 +11,8 @@ namespace Yardsyncs.Infrastructure.Tos;
 /// a terminal on Navis N4 next to one in a demo or on another system. Every answer is held to <see cref="TosContract"/>:
 /// one that breaks it counts as "the TOS could not be reached" (a warning and a re-check, never a pass).
 /// </summary>
-public sealed class TosRouter(IServiceProvider services, TerminalProfiles profiles, YardsyncsDbContext db, ILogger<TosRouter> logger) : ITosAdapter, ITosGateWriter
+public sealed class TosRouter(IServiceProvider services, TerminalProfiles profiles, YardsyncsDbContext db, ILogger<TosRouter> logger) : ITosAdapter
 {
-    /// <summary>Gate passages go to the terminal's TOS: N4's gate web service, or the demo TOS.</summary>
-    public async Task<TosGateResult> RecordAsync(int terminalId, TosGateRequest request, CancellationToken ct = default) =>
-        await (profiles.TosFor(await TerminalProfiles.CodeAsync(db, terminalId, ct)) switch
-        {
-            "N4" => (ITosGateWriter)services.GetRequiredService<N4GateWriter>(),
-            _ => services.GetRequiredService<FakeTosAdapter>(),
-        }).RecordAsync(terminalId, request, ct);
-
     public string Source => Adapter(profiles.DefaultTos).Source;
 
     public string SourceFor(int terminalId) => Adapter(profiles.TosFor(TerminalProfiles.CachedCode(terminalId))).Source;

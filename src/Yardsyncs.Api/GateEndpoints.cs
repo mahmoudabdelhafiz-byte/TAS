@@ -5,8 +5,9 @@ using Yardsyncs.Infrastructure.Gate;
 namespace Yardsyncs.Api;
 
 /// <summary>
-/// Gate operations under /api/terminals/{terminalId}/gate — for gate clerks, the Autogate / OCR system
-/// (as a GateClerk account) and supervisors. All terminal staff of the terminal; lanes are created by terminal admins.
+/// The truck appointment system's gate under /api/terminals/{terminalId}/gate — for gate clerks, supervisors and the
+/// terminal's own gate system (Yardsyncs Autogate or a third-party one, as a gate system account). All terminal staff
+/// of the terminal; lanes are created by terminal admins.
 /// </summary>
 public static class GateEndpoints
 {
@@ -17,6 +18,10 @@ public static class GateEndpoints
         // A truck at an entry lane: match, re-check, admit or refer to the trouble desk.
         gate.MapPost("/arrivals", async (int terminalId, ArrivalInput body, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.ArriveAsync(YardsyncsApi.User(http)!, terminalId, body, ct)));
+
+        // The same, asked only: what the gate would decide, recording nothing (for the terminal's own gate system).
+        gate.MapPost("/arrivals/check", async (int terminalId, ArrivalInput body, HttpContext http, GateService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.ArriveAsync(YardsyncsApi.User(http)!, terminalId, body, ct, record: false)));
 
         gate.MapPost("/in", async (int terminalId, GateInInput body, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.GateInAsync(YardsyncsApi.User(http)!, terminalId, body, ct)));
@@ -33,23 +38,15 @@ public static class GateEndpoints
         gate.MapGet("/troubles", async (int terminalId, bool? openOnly, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.ListTroublesAsync(terminalId, openOnly ?? true, ct)));
 
-        // At an automatic lane, letting a referred truck in opens that lane's barrier.
         gate.MapPost("/troubles/{troubleId:long}/resolve", async (
-            int terminalId, long troubleId, ResolveTroubleInput body, HttpContext http, GateService service, LaneControllerService controller, CancellationToken ct) =>
-        {
-            if (Denied(http, terminalId) is { } denied)
-                return denied;
-            var result = await service.ResolveAsync(YardsyncsApi.User(http)!, terminalId, troubleId, body, ct);
-            if (result.Value is { Resolution: { } resolution })
-                await controller.OnTroubleResolvedAsync(troubleId, resolution, ct);
-            return YardsyncsApi.Admin(result);
-        });
+            int terminalId, long troubleId, ResolveTroubleInput body, HttpContext http, GateService service, CancellationToken ct) =>
+            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.ResolveAsync(YardsyncsApi.User(http)!, terminalId, troubleId, body, ct)));
 
         gate.MapGet("/board", async (int terminalId, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.BoardAsync(terminalId, ct)));
 
-        // Lanes (Autogate lane model): gate staff list them and open / close them; terminal admins add lanes and devices
-        // and switch a lane to automatic.
+        // Lanes: gate staff list them and open / close them; terminal admins add and retire them (devices and automatic
+        // working come with the Autogate module).
         gate.MapGet("/lanes", async (int terminalId, HttpContext http, LaneService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, ct)));
 
@@ -62,64 +59,15 @@ public static class GateEndpoints
         gate.MapPost("/lanes/{laneId:int}/state", async (int terminalId, int laneId, LaneStateInput body, HttpContext http, LaneService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.SetStateAsync(YardsyncsApi.User(http)!, terminalId, laneId, body, ct)));
 
-        gate.MapPost("/lanes/{laneId:int}/devices", async (int terminalId, int laneId, LaneDeviceInput body, HttpContext http, LaneService service, CancellationToken ct) =>
-            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.AddDeviceAsync(YardsyncsApi.User(http)!, terminalId, laneId, body, ct), l => $"/api/terminals/{terminalId}/gate/lanes/{l.LaneId}"));
+        // The terminal's own gate system: keys for it to use this API (X-Api-Key), made and revoked by terminal admins.
+        gate.MapGet("/systems", async (int terminalId, HttpContext http, GateSystemService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, ct)));
 
-        gate.MapPut("/lanes/{laneId:int}/devices/{deviceId:int}", async (
-            int terminalId, int laneId, int deviceId, LaneDeviceInput body, HttpContext http, LaneService service, CancellationToken ct) =>
-            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.UpdateDeviceAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, body, ct)));
+        gate.MapPost("/systems", async (int terminalId, GateSystemInput body, HttpContext http, GateSystemService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.CreateAsync(YardsyncsApi.User(http)!, terminalId, body, ct), k => $"/api/terminals/{terminalId}/gate/systems/{k.System.KeyId}"));
 
-        gate.MapDelete("/lanes/{laneId:int}/devices/{deviceId:int}", async (
-            int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>
-            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.RemoveDeviceAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, ct)));
-
-        // Device adapters: gate staff send commands (open the barrier…) and see a lane's latest reads and commands;
-        // terminal admins issue device keys.
-        gate.MapPost("/lanes/{laneId:int}/commands", async (int terminalId, int laneId, LaneCommandInput body, HttpContext http, DeviceService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.SendAsync(YardsyncsApi.User(http)!, terminalId, laneId, body, ct)));
-
-        gate.MapGet("/lanes/{laneId:int}/activity", async (int terminalId, int laneId, int? limit, HttpContext http, DeviceService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? (await service.ActivityAsync(terminalId, laneId, limit ?? 20, ct) is { } activity
-                ? Results.Ok(activity)
-                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Lane {laneId} not found.")));
-
-        // Lane controller: each truck's passage through an automatic lane.
-        gate.MapGet("/transactions", async (int terminalId, int? laneId, int? limit, HttpContext http, LaneControllerService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, laneId, limit ?? 50, ct)));
-
-        // Remote clerk station: one truck's reads, photos, commands and case; check again after correcting misreads.
-        gate.MapGet("/transactions/{transactionId:long}", async (int terminalId, long transactionId, HttpContext http, LaneControllerService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? (await service.DetailAsync(terminalId, transactionId, ct) is { } detail
-                ? Results.Ok(detail)
-                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Truck transaction {transactionId} not found.")));
-
-        gate.MapPost("/transactions/{transactionId:long}/recheck", async (
-            int terminalId, long transactionId, TransactionCorrectionInput body, HttpContext http, LaneControllerService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.RecheckAsync(YardsyncsApi.User(http)!, terminalId, transactionId, body, ct)));
-
-        // The gate ticket (equipment interchange receipt) of a visit.
-        gate.MapGet("/tickets/{appointmentNo}", async (int terminalId, string appointmentNo, HttpContext http, GateTicketService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? (await service.TicketAsync(terminalId, appointmentNo, ct) is { } ticket
-                ? Results.Ok(ticket)
-                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Appointment {appointmentNo} not found.")));
-
-        // Gate passages recorded in the TOS (terminals with tos_gate_write): what is waiting or failed; admins send now / again.
-        gate.MapGet("/tos-records", async (int terminalId, bool? problemsOnly, HttpContext http, Yardsyncs.Infrastructure.Tos.TosGateService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, problemsOnly ?? false, ct)));
-
-        gate.MapPost("/tos-records/send", async (int terminalId, HttpContext http, Yardsyncs.Infrastructure.Tos.TosGateService service, CancellationToken ct) =>
-            NotAdmin(http, terminalId) ?? Results.Ok(new { tried = await service.SendDueAsync(terminalId, ct) }));
-
-        gate.MapPost("/tos-records/{messageId:long}/retry", async (int terminalId, long messageId, HttpContext http, Yardsyncs.Infrastructure.Tos.TosGateService service, CancellationToken ct) =>
-            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.RetryAsync(terminalId, messageId, ct)));
-
-        gate.MapPost("/transactions/{transactionId:long}/let-out", async (
-            int terminalId, long transactionId, LetOutInput body, HttpContext http, LaneControllerService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.LetOutAsync(YardsyncsApi.User(http)!, terminalId, transactionId, body.Note, ct)));
-
-        gate.MapPost("/lanes/{laneId:int}/devices/{deviceId:int}/key", async (
-            int terminalId, int laneId, int deviceId, HttpContext http, LaneService service, CancellationToken ct) =>
-            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.IssueKeyAsync(YardsyncsApi.User(http)!, terminalId, laneId, deviceId, ct)));
+        gate.MapDelete("/systems/{keyId:int}", async (int terminalId, int keyId, HttpContext http, GateSystemService service, CancellationToken ct) =>
+            NotAdmin(http, terminalId) ?? YardsyncsApi.Admin(await service.RevokeAsync(YardsyncsApi.User(http)!, terminalId, keyId, ct)));
 
         return app;
     }
@@ -132,5 +80,5 @@ public static class GateEndpoints
     private static IResult? NotAdmin(HttpContext http, int terminalId) =>
         AccessRules.CanManageCategories(YardsyncsApi.User(http)!, terminalId)
             ? null
-            : YardsyncsApi.Forbidden("Only terminal admins of this terminal can set up lanes and their devices.");
+            : YardsyncsApi.Forbidden("Only terminal admins of this terminal can set up lanes, their devices and gate systems.");
 }

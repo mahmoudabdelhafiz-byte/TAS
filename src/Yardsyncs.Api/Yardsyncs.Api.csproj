@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Yardsyncs.Infrastructure\Yardsyncs.Infrastructure.csproj" />
+    <ProjectReference Include="..\Yardsyncs.Autogate\Yardsyncs.Autogate.csproj" />
   </ItemGroup>
 
 </Project>

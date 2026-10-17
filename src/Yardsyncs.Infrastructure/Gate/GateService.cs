@@ -29,11 +29,17 @@ public sealed class GateService(
     ILogger<GateService> logger,
     Yardsyncs.Infrastructure.DriverApp.GatePassService? gatePasses = null,
     Yardsyncs.Infrastructure.DriverApp.YardGuidanceService? yard = null,
-    Microsoft.Extensions.Configuration.IConfiguration? config = null)
+    Microsoft.Extensions.Configuration.IConfiguration? config = null,
+    IEnumerable<IGateHook>? hooks = null,
+    IExitCheck? exitCheck = null)
 {
     // ================================================================ arrival
 
-    public async Task<AdminResult<ArrivalResult>> ArriveAsync(CurrentUser? clerk, int terminalId, ArrivalInput input, CancellationToken ct = default)
+    /// <param name="record">
+    /// False: only say what the gate would decide (the terminal's own gate system asking before it acts) — no arrival,
+    /// no trouble-desk case, no gate event.
+    /// </param>
+    public async Task<AdminResult<ArrivalResult>> ArriveAsync(CurrentUser? clerk, int terminalId, ArrivalInput input, CancellationToken ct = default, bool record = true)
     {
         var lane = await LaneAsync(terminalId, input.LaneCode, LaneDirection.In, ct);
         if (lane is null)
@@ -136,6 +142,15 @@ public sealed class GateService(
             decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.NotCleared,
                 "The terminal system could not be reached to re-check this truck — verify in the TOS and admit from the trouble desk.");
 
+        if (!record)
+        {
+            var seen = match.Appointment is null ? null : await queries.GetAsync(terminalId, match.Appointment.AppointmentNo, ct);
+            return AdminResult<ArrivalResult>.Ok(new ArrivalResult(
+                decision.Kind, decision.Message, match.Appointment?.AppointmentNo, match.Method,
+                match.Appointment is null ? null : seen?.TrafficLight ?? light,
+                null, decision.Reason, match.Warnings, seen));
+        }
+
         AddEvent(terminalId, lane.LaneId, null, string.IsNullOrEmpty(qr) && !passScanned ? GateEventType.OcrRead : GateEventType.PassScan,
             input.PlateRead, containerReads, number is null ? null : $"Appointment no. {number}", now);
 
@@ -225,8 +240,8 @@ public sealed class GateService(
 
         AddHistory(appointment.AppointmentId, AppointmentStatus.Arrived, AppointmentStatus.GateIn, clerk?.UserId, "Gate in", now);
         AddEvent(terminalId, laneId, appointment.AppointmentId, GateEventType.GateIn, null, [], null, now);
-        await Yardsyncs.Infrastructure.Tos.TosGateService.QueueAsync(db, terminalId, appointment.AppointmentId, TosGateStage.GateIn,
-            input.LaneCode?.Trim().ToUpperInvariant(), now, ct);
+        foreach (var hook in hooks ?? [])
+            await hook.GateInAsync(new GatePassage(terminalId, appointment.AppointmentId, input.LaneCode?.Trim().ToUpperInvariant(), now, clerk?.UserId), ct);
         await db.SaveChangesAsync(ct);
         await AfterGateInAsync(appointment.AppointmentId, ct);
         return AdminResult<AppointmentDto>.Ok((await queries.GetAsync(terminalId, number, ct))!);
@@ -259,15 +274,15 @@ public sealed class GateService(
         if (appointment is null)
             return AdminResult<GateOutResult>.NotFound("No truck inside the terminal matches.");
 
-        // The exit check: what is on the truck against what should leave.
+        // The exit check (an add-on such as Autogate): what is on the truck against what should leave.
         var now = clock.GetUtcNow();
         var items = await db.AppointmentItems.AsNoTracking().Where(i => i.AppointmentId == appointment.AppointmentId)
             .Select(i => new ExitItem(i.Category.Code, i.Category.Mode, i.Category.Flow, i.ContainerNo)).ToListAsync(ct);
-        // Only a lane with a camera reading container numbers can tell what is on the truck.
-        var readsContainers = (await db.LaneDevices.AsNoTracking().Where(d => d.LaneId == lane.LaneId && d.IsActive).Select(d => d.Reads).ToListAsync(ct))
-            .Any(r => LaneRules.ParseReads(r).Contains(LaneRead.Container));
-        var seen = readsContainers ? input.ContainerReads ?? await SeenAtExitAsync(lane, appointment.TruckId, input.PlateRead, now, ct) : null;
-        var check = ExitRules.Check(items, seen);
+        var exitContext = new ExitContext(terminalId, lane, appointment.AppointmentId, appointment.TruckId, input.PlateRead,
+            input.ContainerReads, input.WeightKg, items, now);
+        var check = exitCheck is null
+            ? new ExitCheckResult(ExitCheckStatus.NotChecked, [], null)
+            : await exitCheck.CheckAsync(exitContext, ct);
         var note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim();
         if (check.Status == ExitCheckStatus.Problem)
         {
@@ -278,11 +293,6 @@ public sealed class GateService(
             if (note is null || note.Length > 300)
                 return AdminResult<GateOutResult>.Invalid("Say why the truck may leave anyway (at most 300 characters).");
         }
-        var weightIn = await db.LaneTransactions.AsNoTracking()
-            .Where(t => t.AppointmentId == appointment.AppointmentId && t.WeightKg != null
-                        && db.GateLanes.Any(l => l.LaneId == t.LaneId && l.Direction == LaneDirection.In))
-            .OrderByDescending(t => t.LastReadAt).Select(t => t.WeightKg).FirstOrDefaultAsync(ct);
-        var net = ExitRules.NetKg(weightIn, input.WeightKg);
         var done = await db.Appointments
             .Where(a => a.AppointmentId == appointment.AppointmentId && a.Status == AppointmentStatus.GateIn)
             .ExecuteUpdateAsync(s => s
@@ -296,28 +306,11 @@ public sealed class GateService(
         AddHistory(appointment.AppointmentId, AppointmentStatus.GateIn, AppointmentStatus.Completed, clerk?.UserId, $"Gate out at lane {lane.LaneCode}", now);
         AddEvent(terminalId, lane.LaneId, appointment.AppointmentId, GateEventType.GateOut, input.PlateRead, check.Seen ?? [],
             check.Status == ExitCheckStatus.Problem ? $"Let out despite: {string.Join(" ", check.Problems.Select(p => p.Message))} Note: {note}" : null, now);
-        await Yardsyncs.Infrastructure.Tos.TosGateService.QueueAsync(db, terminalId, appointment.AppointmentId, TosGateStage.GateOut, lane.LaneCode, now, ct);
-
-        var exit = await db.GateExitChecks.SingleOrDefaultAsync(e => e.AppointmentId == appointment.AppointmentId, ct);
-        if (exit is null)
-        {
-            exit = new GateExitCheck { AppointmentId = appointment.AppointmentId, TerminalId = terminalId };
-            db.GateExitChecks.Add(exit);
-        }
-        exit.CheckedAt = now;
-        exit.LaneCode = lane.LaneCode;
-        exit.ContainersSeen = check.Seen is null ? null : Truncate(string.Join(",", check.Seen), 60);
-        exit.Status = check.Status;
-        exit.Problems = check.Problems.Count == 0 ? null : Truncate(string.Join(" ", check.Problems.Select(p => p.Message)), 600);
-        exit.LetOutBy = check.Status == ExitCheckStatus.Problem ? clerk?.UserId : null;
-        exit.Note = note;
-        exit.WeightInKg = weightIn;
-        exit.WeightOutKg = input.WeightKg;
-
-        // A single cargo move weighed in and out: its tonnage is the difference.
-        if (net is { } kg && items.Count == 1 && items[0].Mode == CategoryMode.Cargo)
-            await db.AppointmentItems.Where(i => i.AppointmentId == appointment.AppointmentId)
-                .ExecuteUpdateAsync(s => s.SetProperty(i => i.ActualTonnage, Math.Round(kg / 1000m, 2)), ct);
+        foreach (var hook in hooks ?? [])
+            await hook.GateOutAsync(new GatePassage(terminalId, appointment.AppointmentId, lane.LaneCode, now, clerk?.UserId), ct);
+        var net = exitCheck is null
+            ? null
+            : await exitCheck.RecordAsync(exitContext, check, check.Status == ExitCheckStatus.Problem ? clerk?.UserId : null, note, ct);
         await db.SaveChangesAsync(ct);
 
         return AdminResult<GateOutResult>.Ok(new GateOutResult(
@@ -461,6 +454,8 @@ public sealed class GateService(
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Trouble {TroubleId} resolved as {Resolution} by user {UserId}", troubleId, resolution, clerk.UserId);
+        foreach (var hook in hooks ?? [])
+            await hook.TroubleResolvedAsync(terminalId, troubleId, resolution, ct);
         return AdminResult<TroubleView>.Ok((await ViewsAsync([trouble], ct)).Single());
     }
 
@@ -523,7 +518,8 @@ public sealed class GateService(
         AddHistory(appointmentId, current, AppointmentStatus.GateIn, clerk.UserId, reason, now);
         AddEvent(terminalId, laneId, appointmentId, GateEventType.GateIn, null, [], reason, now);
         var laneCode = laneId is null ? null : await db.GateLanes.AsNoTracking().Where(l => l.LaneId == laneId).Select(l => l.LaneCode).SingleOrDefaultAsync(ct);
-        await Yardsyncs.Infrastructure.Tos.TosGateService.QueueAsync(db, terminalId, appointmentId, TosGateStage.GateIn, laneCode, now, ct);
+        foreach (var hook in hooks ?? [])
+            await hook.GateInAsync(new GatePassage(terminalId, appointmentId, laneCode, now, clerk.UserId), ct);
         await db.SaveChangesAsync(ct);
         await AfterGateInAsync(appointmentId, ct);
         return null;
@@ -589,27 +585,6 @@ public sealed class GateService(
             t.AppointmentId is { } id ? numbers.GetValueOrDefault(id) : null,
             t.PlateRead, t.ContainerReads, t.ReasonCode, t.ReasonText, t.Status, t.Resolution, t.ResolutionNote,
             t.CreatedAt, t.ResolvedAt, t.ResolvedBy)).ToList();
-    }
-
-    /// <summary>The containers the exit lane's cameras last saw on this truck (by plate, in the last 3 minutes), or null.</summary>
-    private async Task<IReadOnlyList<string>?> SeenAtExitAsync(GateLane lane, int? truckId, string? plateRead, DateTimeOffset now, CancellationToken ct)
-    {
-        var plate = PlateNumber.Normalize(plateRead);
-        if (plate.Length == 0 && truckId is not null)
-            plate = await db.Trucks.AsNoTracking().Where(t => t.TruckId == truckId).Select(t => t.PlateNormalized).SingleOrDefaultAsync(ct) ?? "";
-        if (plate.Length == 0)
-            return null;
-        // The truck's plate read, then every read at the lane within a minute of it (the rear camera reads the containers).
-        var since = now.AddMinutes(-3);
-        var at = await db.LaneDeviceReads.AsNoTracking()
-            .Where(r => r.LaneId == lane.LaneId && r.ReceivedAt >= since && r.Plate == plate)
-            .OrderByDescending(r => r.ReceivedAt).Select(r => (DateTimeOffset?)r.ReceivedAt).FirstOrDefaultAsync(ct);
-        if (at is not { } t)
-            return null;
-        var reads = await db.LaneDeviceReads.AsNoTracking()
-            .Where(r => r.LaneId == lane.LaneId && r.ReceivedAt >= t.AddMinutes(-1) && r.ReceivedAt <= t.AddMinutes(1))
-            .ToListAsync(ct);
-        return reads.SelectMany(r => DeviceService.Normalized(r).Containers.Select(c => c.Number)).Distinct().ToList();
     }
 
     private Task<GateLane?> LaneAsync(int terminalId, string? laneCode, LaneDirection direction, CancellationToken ct)

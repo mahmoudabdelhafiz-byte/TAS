@@ -10,6 +10,7 @@ import { InspectionEditor } from '../ui/Inspection.tsx';
 
 export function GateScreen() {
   const { api, t, terminal } = useApp();
+  const autogate = terminal.autogate ?? false;
   const base = `/api/terminals/${terminal.terminalId}/gate`;
   const board = useLoad(() => api.get<GateBoard>(`${base}/board`), [base], 15_000);
   const troubles = useLoad(() => api.get<Trouble[]>(`${base}/troubles`), [base], 15_000);
@@ -79,7 +80,7 @@ export function GateScreen() {
             minutes={x => x.minutesSinceArrival}
             action={x => (
               <span className="row-actions">
-                <button type="button" className="link-btn" onClick={() => setInspect({ no: x.appointmentNo, stage: 'In' })}>{t('insp.inspect')}</button>
+                {autogate && <button type="button" className="link-btn" onClick={() => setInspect({ no: x.appointmentNo, stage: 'In' })}>{t('insp.inspect')}</button>}
                 <ActionButton kind="primary" onError={setError}
                   onRun={async () => { await api.post(`${base}/in`, { appointmentNo: x.appointmentNo }); refresh(); }}>
                   {t('gate.gateIn')}
@@ -102,8 +103,8 @@ export function GateScreen() {
             minutes={x => (x.gateInAt ? (Date.now() - new Date(x.gateInAt).getTime()) / 60_000 : x.minutesSinceArrival)}
             action={x => (
               <span className="row-actions">
-                <button type="button" className="link-btn" onClick={() => setInspect({ no: x.appointmentNo, stage: 'Out' })}>{t('insp.inspect')}</button>
-                <button type="button" className="link-btn" onClick={() => setTicket(x.appointmentNo)}>{t('ticket.open')}</button>
+                {autogate && <button type="button" className="link-btn" onClick={() => setInspect({ no: x.appointmentNo, stage: 'Out' })}>{t('insp.inspect')}</button>}
+                {autogate && <button type="button" className="link-btn" onClick={() => setTicket(x.appointmentNo)}>{t('ticket.open')}</button>}
                 <ActionButton onError={setError} disabled={!exit}
                   onRun={async () => {
                     try {
@@ -139,7 +140,7 @@ export function GateScreen() {
               </div>
             </div>
           )}
-          {lastOut && <p className="hint"><button type="button" className="link-btn" onClick={() => setTicket(lastOut)}>{t('ticket.openLast', { no: lastOut })}</button></p>}
+          {lastOut && autogate && <p className="hint"><button type="button" className="link-btn" onClick={() => setTicket(lastOut)}>{t('ticket.openLast', { no: lastOut })}</button></p>}
         </div>
       </div>
       {ticket && <GateTicket appointmentNo={ticket} onClose={() => setTicket(null)} />}

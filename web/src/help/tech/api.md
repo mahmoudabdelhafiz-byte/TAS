@@ -59,8 +59,9 @@ POST /api/terminals/{id}/gate/arrivals   {"laneCode": "IN-1", "plateRead": "1234
 POST /api/terminals/{id}/gate/in    and    POST /api/terminals/{id}/gate/out
 ```
 
-Lane devices themselves (cameras, OCR, barriers, lights, kiosks…) use the device API with their own keys: see
-*Connecting lane devices*.
+A terminal's own gate system (without Yardsyncs Autogate) uses these calls with a gate system key in `X-Api-Key`
+instead of signing in: see *Connecting your own gate system*. With Autogate, the lane devices themselves (cameras,
+OCR, barriers, lights, kiosks…) use the device API with their own keys: see *Connecting lane devices*.
 
 ## Health
 

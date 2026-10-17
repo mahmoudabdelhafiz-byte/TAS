@@ -494,6 +494,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | A problem holds the truck: the clerk sees why and lets it out with a note; automatic exit lanes hold it on red and the remote clerk lets it out; every exit recorded with what was seen, the problems, who let it out, and the truck's weight in and out (actual tonnage of a cargo move) |
 | ✅ | Gate ticket shows the exit check and the cargo weight; turn time as before |
 
+### 51. Two modules: truck appointment system and Autogate (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Autogate is its own project (`src/Yardsyncs.Autogate`): devices, automatic lanes, lane controller, remote clerk, inspection, gate tickets, the exit check and TOS gate records. The truck appointment system never references it; it plugs into the gate through extension points (gate passages, exit check, lane equipment) |
+| ✅ | Installed or not per installation (`Modules__Autogate`, default on); per terminal, a system admin can switch it off (setting `module_autogate`), so one installation serves terminals with and without it. Without it: its API answers 404, its screens leave the menu, lanes can't be automatic, trucks leave unchecked, no TOS gate records |
+| ✅ | The terminal's own gate system on the gate API: keys made and revoked by terminal admins (**Lanes → Gate systems**), each acting as a gate clerk of that terminal that can't sign in (`X-Api-Key`, migration 025); `POST …/gate/arrivals/check` answers what the gate would decide without recording anything |
+| ✅ | **Lanes** stays in the truck appointment system (lane codes for the terminal's own gate system); docs page "Connecting your own gate system"; `GET /api/modules?terminalId=` |
+
 ---
 
 ## Remaining
@@ -505,7 +513,7 @@ Details in [`releasing.md`](releasing.md).
 ### Phase B — Gate
 | | Item | Notes |
 |---|---|---|
-| ⬜ | Third-party Autogate / OCR connector | For terminals that keep their existing lane system: push its reads into the gate API. Our own Autogate is Phase H |
+| ✅ | Third-party Autogate / OCR connector | Section 51: the terminal's own gate system uses the gate API with its key. A vendor's own protocol, if it can't call the API, needs a small adapter per customer |
 
 ### Phase C — Integrations
 | | Item | Notes |
@@ -599,6 +607,7 @@ Details in [`releasing.md`](releasing.md).
 | 2026-10-15 | The driver app is **Yardsyncs mobile**, on Android and iPhone, with push notifications |
 | 2026-10-15 | The phone is used up to the gate (gate pass, in-gate ticket) and inside the terminal for navigation; when the truck reaches the container's block a message goes to the terminal's systems, for terminals that want it (integration events, per-terminal webhook) |
 | 2026-10-15 | **Autogate is the next Yardsyncs module** after the TAS: our own lane application on top of the gate API, vendor-neutral towards cameras, OCR, RFID, kiosks and barriers (Phase H). Everything built for the gate now must stay usable by it |
+| 2026-10-17 | **Sold separately or together.** The truck appointment system works alone with the terminal's existing gate system (gate API with a key), or with Yardsyncs Autogate as one ecosystem. Autogate is a separate project the core never references; which terminals have it is a setting (installation and per terminal, switched by system admins) |
 
 ## Per-terminal settings (asked when a terminal is set up)
 Former open questions, now options each terminal chooses. Default in **bold**.

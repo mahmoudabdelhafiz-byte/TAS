@@ -3,7 +3,7 @@ using Yardsyncs.Application.Gate;
 using Yardsyncs.Infrastructure.Brands;
 using Yardsyncs.Infrastructure.Gate;
 
-namespace Yardsyncs.Api;
+namespace Yardsyncs.Autogate.Endpoints;
 
 /// <summary>
 /// Inspection at the gate: seals and damage per container and passage, photos, and disputes. Gate staff inspect;
@@ -13,7 +13,7 @@ public static class InspectionEndpoints
 {
     public static WebApplication MapInspections(this WebApplication app)
     {
-        var terminal = app.MapGroup("/api/terminals/{terminalId:int}").RequireAuthorization();
+        var terminal = AutogateModule.TerminalGroup(app, "/api/terminals/{terminalId:int}");
 
         terminal.MapGet("/appointments/{appointmentNo}/inspections", async (int terminalId, string appointmentNo, HttpContext http, InspectionService service, CancellationToken ct) =>
             NoAccess(http, terminalId) ?? (await service.ForAppointmentAsync(YardsyncsApi.User(http)!, terminalId, appointmentNo, ct) is { } found
