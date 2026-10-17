@@ -35,6 +35,7 @@ src/Yardsyncs.Application           capacity engine (pure logic: planning, avail
 src/Yardsyncs.Infrastructure        EF Core + Npgsql, slot generation, availability queries, booking counters
 src/Yardsyncs.Api                   ASP.NET Core minimal API
 src/Yardsyncs.Autogate              Yardsyncs Autogate module: lane devices, automatic lanes, remote clerk, inspection, exit check, TOS gate records
+src/Yardsyncs.Edge                  lane agent at the terminal (edge mode): keeps automatic lanes working when the cloud is out of reach (deploy/edge/)
 tests/Yardsyncs.Application.Tests   unit tests for the capacity rules
 tests/Yardsyncs.Infrastructure.Tests integration tests against PostgreSQL (run when TAS_TEST_DB is set)
 tests/Yardsyncs.Api.Tests           end-to-end API tests incl. auth (run when TAS_API_TEST_DB is set)

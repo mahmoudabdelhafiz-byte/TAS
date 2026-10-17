@@ -1,0 +1,22 @@
+# Yardsyncs lane agent at the terminal. Put the values in .env next to this file (never commit it):
+#   EDGE_CLOUD_URL=https://yardsyncs.example.com
+#   EDGE_API_KEY=ysg_…            (Lanes → Gate systems, in the portal)
+#   EDGE_TERMINAL_ID=1
+services:
+  edge:
+    build:
+      context: ../..
+      dockerfile: deploy/edge/Dockerfile
+    image: yardsyncs-edge:latest
+    restart: unless-stopped
+    environment:
+      Edge__CloudUrl: ${EDGE_CLOUD_URL}
+      Edge__ApiKey: ${EDGE_API_KEY}
+      Edge__TerminalId: ${EDGE_TERMINAL_ID}
+      TZ: ${TZ:-Asia/Riyadh}
+    ports:
+      - "8090:8090"   # lane devices only: keep this port inside the gate network
+    volumes:
+      - edge-data:/data
+volumes:
+  edge-data:

@@ -1,5 +1,6 @@
 using Yardsyncs.Application.Auth;
 using Yardsyncs.Application.Gate;
+using Yardsyncs.Infrastructure.Auth;
 
 namespace Yardsyncs.Autogate.Endpoints;
 
@@ -34,6 +35,22 @@ public static class AutogateGateEndpoints
             Denied(http, terminalId) ?? (await service.ActivityAsync(terminalId, laneId, limit ?? 20, ct) is { } activity
                 ? Results.Ok(activity)
                 : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Lane {laneId} not found.")));
+
+        // Edge mode: the terminal's lane agent, signed in with a gate system key, keeps a snapshot to run the automatic
+        // lanes when the cloud can't be reached, and sends back what it decided meanwhile.
+        gate.MapGet("/edge/snapshot", async (int terminalId, HttpContext http, EdgeService service, CancellationToken ct) =>
+            NotAgent(http, terminalId) ?? (await service.SnapshotAsync(terminalId, ct) is { } snapshot
+                ? Results.Ok(snapshot)
+                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Terminal {terminalId} not found.")));
+
+        gate.MapPost("/edge/passages", async (int terminalId, List<Yardsyncs.Application.Edge.EdgePassage> body, HttpContext http, EdgeService service, CancellationToken ct) =>
+        {
+            if (NotAgent(http, terminalId) is { } denied)
+                return denied;
+            if (body.Count > EdgeService.MaxPassagesPerCall)
+                return YardsyncsApi.Problem(StatusCodes.Status400BadRequest, $"At most {EdgeService.MaxPassagesPerCall} passages per call.");
+            return Results.Ok(await service.RecordAsync(YardsyncsApi.User(http)!, terminalId, body, ct));
+        });
 
         // Lane KPIs for local dates from..to (at most 92 days): terminal staff, like the terminal's other KPIs.
         gate.MapGet("/lane-kpis", async (int terminalId, DateOnly from, DateOnly to, HttpContext http, LaneKpiService service, CancellationToken ct) =>
@@ -94,6 +111,12 @@ public static class AutogateGateEndpoints
         AccessRules.CanOperateGate(YardsyncsApi.User(http)!, terminalId)
             ? null
             : YardsyncsApi.Forbidden("Only terminal staff of this terminal can work the gate.");
+
+    /// <summary>Only the terminal's own lane agent, with a gate system key: the snapshot holds device fingerprints and pass secrets.</summary>
+    private static IResult? NotAgent(HttpContext http, int terminalId) =>
+        http.User.Identity?.AuthenticationType == GateSystemAuth.Scheme && AccessRules.CanOperateGate(YardsyncsApi.User(http)!, terminalId)
+            ? null
+            : YardsyncsApi.Forbidden("Only the terminal's lane agent, with a gate system key of this terminal, can use edge mode.");
 
     private static IResult? NotAdmin(HttpContext http, int terminalId) =>
         AccessRules.CanManageCategories(YardsyncsApi.User(http)!, terminalId)

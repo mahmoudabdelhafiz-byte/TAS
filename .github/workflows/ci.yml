@@ -236,6 +236,20 @@ jobs:
             exit 1
           }
 
+      - name: Build and start the lane agent (edge mode)
+        run: |
+          set -o pipefail
+          docker build --progress=plain -f deploy/edge/Dockerfile -t yardsyncs-edge:latest . 2>&1 | tee edge.log || {
+            grep -iE "error|failed|not found|cannot" edge.log | tail -30 | while read -r line; do echo "::error title=edge image build::$line"; done
+            exit 1
+          }
+          # No cloud to reach: the agent must start, say so, and answer devices with 503 (no snapshot yet).
+          docker run -d --name edge -p 8090:8090 -e Edge__CloudUrl=http://127.0.0.1:9 -e Edge__ApiKey=ysg_ci -e Edge__TerminalId=1 yardsyncs-edge:latest
+          for i in $(seq 1 30); do curl -sf http://localhost:8090/edge/status > status.json && break; sleep 1; done
+          cat status.json; grep -q '"online":false' status.json
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8090/api/devices/reads)" = "503"
+          docker rm -f edge
+
       - name: Start database and app
         working-directory: deploy
         run: |
