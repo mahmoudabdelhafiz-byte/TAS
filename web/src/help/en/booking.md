@@ -92,3 +92,9 @@ the moment the truck reaches the gate. The gate checks the seal against it.
 At the gate the container is inspected, by the lane cameras or a clerk: the seal, and any damage with photos. You see
 the inspection in the appointment and under **Inspections**. If you disagree with one, **Dispute this inspection**, say
 why, and **Send dispute**. The terminal answers there.
+
+## Our performance
+
+**Our performance** shows how your company did at the terminal for the last 7 or 30 days or any dates: appointments,
+no-shows, arriving on time, time inside the terminal and waiting at the gate; then each truck and each driver, the
+holds that stopped your visits (customs, line release, unpaid charges…) and the charges. You see only your own company.

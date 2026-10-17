@@ -84,6 +84,14 @@ public static class KpiCalculator
         return new KpiReport(from, to, totals, days, hours);
     }
 
+    /// <summary>Totals for a set of visits without slots (a company, a truck, a driver).</summary>
+    public static KpiTotals TotalsOf(IReadOnlyList<KpiVisit> visits, int earlyGraceMinutes, int lateGraceMinutes, DateTimeOffset now)
+    {
+        var m = Measure(visits, earlyGraceMinutes, lateGraceMinutes, now);
+        return new KpiTotals(0, 0, null, m.Appointments, m.Completed, m.NoShows, m.Cancelled, m.WalkIns,
+            Ratio(m.NoShows, m.Due), Ratio(m.OnTime, m.Arrived), Ratio(m.WalkIns, m.Appointments), m.AvgTurn, m.AvgWait);
+    }
+
     private sealed record Measures(
         int Appointments, int Completed, int NoShows, int Cancelled, int WalkIns, int Arrived, int OnTime, int Due, double? AvgTurn, double? AvgWait);
 

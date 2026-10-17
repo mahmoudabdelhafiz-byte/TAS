@@ -2,7 +2,7 @@
 
 import type { UserRole } from './types.ts';
 
-export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'messages' | 'gate' | 'clerk' | 'lanes' | 'inspections' | 'kpi' | 'fleet' | 'help';
+export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'messages' | 'gate' | 'clerk' | 'lanes' | 'inspections' | 'kpi' | 'report' | 'fleet' | 'help';
 
 export interface Route {
   screen: Screen | null;
@@ -14,7 +14,7 @@ export function parseHash(hash: string): Route {
   const [path, query = ''] = clean.split('?');
   const params: Record<string, string> = {};
   for (const [key, value] of new URLSearchParams(query)) params[key] = value;
-  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'messages', 'gate', 'clerk', 'lanes', 'inspections', 'kpi', 'fleet', 'help'] as const).find(s => s === path) ?? null;
+  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'messages', 'gate', 'clerk', 'lanes', 'inspections', 'kpi', 'report', 'fleet', 'help'] as const).find(s => s === path) ?? null;
   return { screen, params };
 }
 
@@ -39,9 +39,9 @@ export function screensFor(role: UserRole, autogate = true): Screen[] {
 function workScreens(role: UserRole): Screen[] {
   switch (role) {
     case 'CompanyAdmin':
-      return ['book', 'track', 'bulk', 'appointments', 'inspections', 'fleet', 'charges'];
+      return ['book', 'track', 'bulk', 'appointments', 'inspections', 'report', 'fleet', 'charges'];
     case 'CompanyUser':
-      return ['book', 'track', 'bulk', 'appointments', 'inspections', 'fleet'];
+      return ['book', 'track', 'bulk', 'appointments', 'inspections', 'report', 'fleet'];
     case 'GateClerk':
       return ['gate', 'clerk', 'inspections', 'control', 'messages', 'appointments'];
     case 'Planner':

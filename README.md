@@ -69,6 +69,8 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   lists each terminal's set-up.
 - Fees per terminal (booking, no-show, late cancellation) charged against appointments; `GET /api/terminals/{id}/fees`,
   `GET /api/terminals/{id}/charges?from=&to=[&format=csv]`, `POST …/charges/{id}/waive`.
+- Company reports: `GET /api/terminals/{id}/company-report?from=&to=[&companyId=]` (a company sees only its own: totals,
+  days, trucks, drivers, holds by check, charges) and `GET …/company-report/companies?from=&to=` (terminal staff).
 - New terminals: **Terminal set-up** in the portal (`POST /api/terminals`, `GET /api/terminals/{id}/setup`): the usual
   move types, lanes and rules, then a checklist until trucks can book.
 - Another TOS: the TOS adapter kit (`TosContract`, conformance tests in `tests/Yardsyncs.Infrastructure.Tests/TosKit/`,

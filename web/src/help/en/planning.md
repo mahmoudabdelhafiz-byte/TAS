@@ -62,3 +62,8 @@ announcement.
   right (**Plates read**, **Containers read**: read and not corrected by a clerk).
 
 **Show the numbers as a table** gives the figures behind each chart.
+
+## Companies
+
+At the bottom of **KPIs**, **Companies** lists every trucking company of the period, the most no-shows first. Open one
+to see its trucks, drivers, holds and charges, the same report the company sees for itself.

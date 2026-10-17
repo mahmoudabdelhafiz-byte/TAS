@@ -677,6 +677,20 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Lane KPIs: transaction time, OCR read rate, exception rate per lane | Section 52 |
 | ✅ | Gate pass from the driver app read at the kiosk; yard position printed or pushed at gate-in | Section 53 |
 
+### Phase I — Next package (agreed with Mahmoud 2026-10-17, in this order)
+| | Item | Notes |
+|---|---|---|
+| ✅ | **Reports 1 — company dashboard**: trucking companies see their own no-shows, on-time rate, time inside per truck and driver, holds and why, charges (**Our performance**); the terminal sees every company side by side under **KPIs → Companies** | Company users only see their company |
+| 🔜 | **Reports 2 — Excel export**: KPIs, appointments of a period, gate passages, lane passages, charges | |
+| ⬜ | **Reports 3 — emailed reports**: daily (yesterday + today's bookings) and weekly summary to a list of people | Per-terminal setting: on / off, recipients, hour |
+| ⬜ | **Driver record**: terminal staff record a penalty or misbehaviour against a driver (speeding, unsafe driving, no PPE, wrong area, damage, abusive conduct, repeated no-show, other), with severity points, date, the visit, a note and a photo | Points expire after N days (per-terminal setting) |
+| ⬜ | Driver record warnings: past a threshold of points the control room, the gate and the trouble desk see a warning when the driver's truck comes; optional automatic block past a second threshold | Thresholds and auto-block per terminal; the company sees its own drivers' records (per-terminal setting) |
+| ⬜ | **Safety in the app**: safety campaigns (message, picture, period, which drivers / companies, read receipt or "I agree") shown in the driver's language | |
+| ⬜ | **Safety induction**: short course with pages and a few questions, required before the first visit and renewed every N months; the gate warns or refers a driver without a valid induction | Per-terminal setting: off / warn / refer; renewal months |
+| ⬜ | **AI-optimised slots 1**: suggestions the planner approves — overbooking per hour from real no-shows, trucks per slot from measured gate and yard throughput against a target waiting time, demand forecast against capacity; each with its reason | Needs 4–8 weeks of a terminal's history; per-terminal setting off / suggest / adjust within limits |
+| ⬜ | AI-optimised slots 2: slots ranked by expected waiting time when booking ("fast gate" hours) | |
+| ⬜ | AI-optimised slots 3: on the day — release no-show capacity to later hours, slow bookings for a congested block | Only with real data; block-level needs N4 equipment data |
+
 ---
 
 ## Decided
