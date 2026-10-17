@@ -35,6 +35,20 @@ public static class AutogateGateEndpoints
                 ? Results.Ok(activity)
                 : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Lane {laneId} not found.")));
 
+        // Lane KPIs for local dates from..to (at most 92 days): terminal staff, like the terminal's other KPIs.
+        gate.MapGet("/lane-kpis", async (int terminalId, DateOnly from, DateOnly to, HttpContext http, LaneKpiService service, CancellationToken ct) =>
+        {
+            if (!AccessRules.CanViewCapacity(YardsyncsApi.User(http)!, terminalId))
+                return YardsyncsApi.Forbidden("Only terminal staff of this terminal can see its KPIs.");
+            if (to < from)
+                return YardsyncsApi.Problem(StatusCodes.Status400BadRequest, "'to' must be on or after 'from'.");
+            if (to.DayNumber - from.DayNumber + 1 > Yardsyncs.Application.Reports.KpiCalculator.MaxDays)
+                return YardsyncsApi.Problem(StatusCodes.Status400BadRequest, $"The range can be at most {Yardsyncs.Application.Reports.KpiCalculator.MaxDays} days.");
+            return await service.ReportAsync(terminalId, from, to, ct) is { } report
+                ? Results.Ok(report)
+                : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Terminal {terminalId} not found.");
+        });
+
         // Lane controller: each truck's passage through an automatic lane.
         gate.MapGet("/transactions", async (int terminalId, int? laneId, int? limit, HttpContext http, LaneControllerService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? Results.Ok(await service.ListAsync(terminalId, laneId, limit ?? 50, ct)));

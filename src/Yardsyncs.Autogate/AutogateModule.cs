@@ -25,6 +25,7 @@ public static class AutogateModule
         services.AddScoped<LaneDeviceService>();
         services.AddScoped<ILaneAddOn>(sp => sp.GetRequiredService<LaneDeviceService>());
         services.AddScoped<GateTicketService>();
+        services.AddScoped<LaneKpiService>();
         services.AddScoped<InspectionService>();
         services.Configure<LaneControllerOptions>(config.GetSection("LaneController"));
         services.AddScoped<LaneControllerService>();

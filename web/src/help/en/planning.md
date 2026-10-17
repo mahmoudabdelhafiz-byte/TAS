@@ -55,5 +55,8 @@ announcement.
 - **Appointments**, **No-shows**, **On time** and **Walk-ins**.
 - **Turn time** — from arrival to gate-out, with the waiting at the gate.
 - **Inside the terminal** — gate to block, time at the block, block to gate-out, and the blocks slowest first.
+- **Lanes** (with Yardsyncs Autogate) — per automatic lane: **Time at the lane** from the first camera read to through
+  the barrier, trucks **Without a clerk**, **Exceptions** and **Why clerks helped**, and how often the cameras got it
+  right (**Plates read**, **Containers read**: read and not corrected by a clerk).
 
 **Show the numbers as a table** gives the figures behind each chart.

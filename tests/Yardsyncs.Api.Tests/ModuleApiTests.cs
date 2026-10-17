@@ -38,6 +38,7 @@ public sealed class TasOnlyApiTests(TasOnlyFactory factory) : ApiTestBase(factor
         Assert.Equal(HttpStatusCode.NotFound, (await Factory.CreateClient().GetAsync("/api/devices/me")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"{Terminal}/inspections")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"{Gate}/transactions")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"{Gate}/lane-kpis?from=2026-10-01&to=2026-10-07")).StatusCode);
 
         // Lanes are plain lanes; none can work automatically.
         var in1 = (await Read<List<LaneView>>(await admin.GetAsync($"{Gate}/lanes"))).Single(l => l.LaneCode == "IN-1");
