@@ -43,7 +43,9 @@ For a day's plan prepared in a spreadsheet:
 ## Your appointments
 
 **Appointments** lists the day's visits with their hour, truck, driver, moves, status and **Ready to go?**. Open one
-to see everything about it.
+to see everything about it. To find a visit on another day, type its appointment number, a container number, the
+truck's plate or a booking / BL reference and press **Search** (90 days back and ahead); **Back to the day** returns
+to the day's list.
 
 | Ready to go? | What to do |
 |---|---|

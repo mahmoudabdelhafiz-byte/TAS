@@ -16,7 +16,7 @@ truck and driver not blocked.
 
 | Reason | Usual action |
 |---|---|
-| **No appointment** | Walk-in: let in if there is room and the terminal allows it, or turn away |
+| **No appointment** | **Book as walk-in** if there is room and the terminal allows it: choose the company and the move, write the note, **Book and let in**. Or turn away |
 | **Too early** / **Too late** | Ask the driver to wait for the hour, or let in if the yard has room |
 | **Not cleared** | A container is on hold: turn away, or wait for the release |
 | **Truck or driver blocked** | Turn away; the terminal admin knows why |

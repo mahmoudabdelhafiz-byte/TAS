@@ -1185,3 +1185,9 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 
 /* The row being changed in the side form. */
 tr.row-editing > td { background: var(--teal-tint); }
+
+/* Search on the appointments screen (any day). */
+.appt-search { display: flex; gap: 8px; margin-inline-start: auto; }
+.appt-search input { min-width: 0; width: 18rem; max-width: 100%; }
+@media (max-width: 700px) { .appt-search { width: 100%; margin-inline-start: 0; } .appt-search input { flex: 1; width: auto; } }
+.walkin-form { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); display: grid; gap: 8px; }

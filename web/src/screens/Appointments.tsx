@@ -18,25 +18,40 @@ export function Appointments() {
   const base = `/api/terminals/${terminal.terminalId}`;
   const date = route.params.date ?? today;
   const selected = route.params.no ?? null;
+  // A search looks across days (appointment number, container, plate, booking / EDO / cargo reference).
+  const query = route.params.q ?? '';
+  const [typed, setTyped] = useState(query);
   const companyUser = isCompanyRole(user.role);
   const [companyId, setCompanyId] = useState('');
+  const companyParam = companyId ? `&companyId=${companyId}` : '';
 
   const list = useLoad(
-    () => api.get<Appointment[]>(`${base}/appointments?date=${date}${companyId ? `&companyId=${companyId}` : ''}`),
-    [base, date, companyId], 60_000);
+    () => api.get<Appointment[]>(query
+      ? `${base}/appointments/search?q=${encodeURIComponent(query)}${companyParam}`
+      : `${base}/appointments?date=${date}${companyParam}`),
+    [base, date, companyId, query], 60_000);
+  const here = (no?: string) => (query ? { q: query, no } : { date, no });
   const companies = useLoad(
     () => (companyUser ? Promise.resolve([] as Company[]) : api.get<Company[]>('/api/companies')), [companyUser]);
   const categories = useLoad(() => api.get<Category[]>(`${base}/categories`), [base]);
   const byCode = new Map((categories.data ?? []).map(c => [c.code, c]));
 
-  const rows = [...(list.data ?? [])].sort((a, b) => a.slotStart.localeCompare(b.slotStart) || a.appointmentNo.localeCompare(b.appointmentNo));
+  const rows = query ? list.data ?? [] // newest first, as found
+    : [...(list.data ?? [])].sort((a, b) => a.slotStart.localeCompare(b.slotStart) || a.appointmentNo.localeCompare(b.appointmentNo));
 
   return (
     <section className={`screen with-panel${selected ? ' panel-open' : ''}`}>
       <div className="screen-main">
         <header className="screen-head">
           <h1>{t('appt.title')}</h1>
-          <DayStepper date={date} onChange={d => go('appointments', { date: d })} />
+          {query
+            ? <button type="button" className="btn btn-secondary" onClick={() => { setTyped(''); go('appointments', { date }); }}>{t('appt.backToDay')}</button>
+            : <DayStepper date={date} onChange={d => go('appointments', { date: d })} />}
+          <form className="appt-search" role="search" onSubmit={e => { e.preventDefault(); if (typed.trim().length >= 3) go('appointments', { q: typed.trim() }); }}>
+            <label className="visually-hidden" htmlFor="appt-search">{t('appt.search')}</label>
+            <input id="appt-search" type="search" dir="auto" value={typed} placeholder={t('appt.searchPlaceholder')} onChange={e => setTyped(e.target.value)} />
+            <button type="submit" className="btn btn-secondary" disabled={typed.trim().length < 3}>{t('appt.search')}</button>
+          </form>
           {!companyUser && (
             <label className="field field-inline">
               <span className="visually-hidden">{t('common.company')}</span>
@@ -50,7 +65,8 @@ export function Appointments() {
 
         {list.error && <LoadError error={list.error} retry={list.reload} />}
 
-        {list.data && rows.length === 0 && <p className="empty">{t('appt.empty')}</p>}
+        {query && list.data && <p className="hint">{t('appt.searchResults', { q: query, n: rows.length })}</p>}
+        {list.data && rows.length === 0 && <p className="empty">{query ? t('appt.searchNone') : t('appt.empty')}</p>}
 
         {rows.length > 0 && (
           <div className="table-wrap">
@@ -70,9 +86,9 @@ export function Appointments() {
               <tbody>
                 {rows.map(a => (
                   <tr key={a.appointmentNo} className={a.appointmentNo === selected ? 'selected' : undefined}
-                    onClick={() => go('appointments', { date, no: a.appointmentNo })}>
-                    <td className="num">{clock(a.slotStart, terminal.timeZone)}</td>
-                    <td className="nowrap"><a className="row-link" href={`#/appointments?date=${date}&no=${a.appointmentNo}`} dir="ltr">{a.appointmentNo}</a></td>
+                    onClick={() => go('appointments', here(a.appointmentNo))}>
+                    <td className="num">{query ? stamp(a.slotStart, terminal.timeZone, lang) : clock(a.slotStart, terminal.timeZone)}</td>
+                    <td className="nowrap"><a className="row-link" href={query ? `#/appointments?q=${encodeURIComponent(query)}&no=${a.appointmentNo}` : `#/appointments?date=${date}&no=${a.appointmentNo}`} dir="ltr">{a.appointmentNo}</a></td>
                     {!companyUser && <td>{a.companyName}</td>}
                     <td className="plate">{a.truckPlate ? <bdi>{a.truckPlate}</bdi> : <span className="muted">{t('appt.unassigned')}</span>}</td>
                     <td>{a.driverName ?? <span className="muted">{t('appt.unassigned')}</span>}</td>
@@ -98,7 +114,7 @@ export function Appointments() {
 
       {selected && (
         <AppointmentPanel key={selected} number={selected} byCode={byCode}
-          onClose={() => go('appointments', { date })} onChanged={list.reload} />
+          onClose={() => go('appointments', here())} onChanged={list.reload} />
       )}
     </section>
   );

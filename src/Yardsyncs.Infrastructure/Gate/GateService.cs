@@ -359,8 +359,8 @@ public sealed class GateService(
             return AdminResult<TroubleView>.NotFound($"Trouble {troubleId} not found.");
         if (trouble.Status == TroubleStatus.Resolved)
             return AdminResult<TroubleView>.Conflict($"Trouble {troubleId} is already resolved ({trouble.Resolution}).");
-        if (input.Action is TroubleAction.Admit or TroubleAction.Reject && string.IsNullOrWhiteSpace(input.Note))
-            return AdminResult<TroubleView>.Invalid("A note is required to admit or reject a truck.");
+        if (input.Action is TroubleAction.Admit or TroubleAction.Reject or TroubleAction.WalkIn && string.IsNullOrWhiteSpace(input.Note))
+            return AdminResult<TroubleView>.Invalid("A note is required to admit, book or reject a truck.");
 
         var now = clock.GetUtcNow();
         var note = Truncate(input.Note?.Trim(), 300);

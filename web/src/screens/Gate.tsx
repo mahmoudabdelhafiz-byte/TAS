@@ -2,7 +2,8 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { ApiError } from '../lib/api.ts';
 import { readLookup } from '../lib/gate.ts';
 import { clock, duration, stamp } from '../lib/time.ts';
-import type { AdminResponse, ArrivalResult, GateBoard, GateBoardTruck, Lane, LaneState, Trouble } from '../lib/types.ts';
+import type { AdminResponse, ArrivalResult, Category, Company, GateBoard, GateBoardTruck, Lane, LaneState, Trouble } from '../lib/types.ts';
+import { categoryName } from './Book.tsx';
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, LoadError, Notice, TrafficLight, useLoad } from '../ui/kit.tsx';
 import { GateTicket } from '../ui/GateTicket.tsx';
@@ -242,6 +243,7 @@ function ArrivalForm({ lanes, onResult }: { lanes: Lane[]; onResult: () => void 
 function TroubleCase({ trouble, onResolved, onError }: { trouble: Trouble; onResolved: () => void; onError: (m: string) => void }) {
   const { api, t, tx, lang, terminal } = useApp();
   const [note, setNote] = useState('');
+  const [walkIn, setWalkIn] = useState(false);
   const path = `/api/terminals/${terminal.terminalId}/gate/troubles/${trouble.troubleId}/resolve`;
   const resolve = (action: 'Admit' | 'Reject' | 'Dismiss') => async () => {
     if (action !== 'Dismiss' && !note.trim()) {
@@ -270,8 +272,63 @@ function TroubleCase({ trouble, onResolved, onError }: { trouble: Trouble; onRes
         {trouble.appointmentNo && <ActionButton kind="primary" onError={onError} onRun={resolve('Admit')}>{t('gate.letIn')}</ActionButton>}
         <ActionButton kind="danger" onError={onError} onRun={resolve('Reject')}>{t('gate.turnAway')}</ActionButton>
         <ActionButton onError={onError} onRun={resolve('Dismiss')}>{t('gate.dismiss')}</ActionButton>
+        {!trouble.appointmentNo && !walkIn && <button type="button" className="btn btn-secondary" onClick={() => setWalkIn(true)}>{t('gate.walkIn')}</button>}
       </div>
+      {walkIn && (
+        <WalkInForm path={path} note={note} onError={onError} onCancel={() => setWalkIn(false)} onBooked={onResolved} />
+      )}
     </li>
+  );
+}
+
+/**
+ * A truck without an appointment the clerk lets in: booked for the company in the slot running now (if it has room)
+ * and admitted at once. The truck's plate is matched to the company's fleet.
+ */
+function WalkInForm({ path, note, onBooked, onCancel, onError }: {
+  path: string; note: string; onBooked: () => void; onCancel: () => void; onError: (m: string) => void;
+}) {
+  const { api, t, lang, terminal } = useApp();
+  const companies = useLoad(() => api.get<Company[]>('/api/companies'), []);
+  const categories = useLoad(() => api.get<Category[]>(`/api/terminals/${terminal.terminalId}/categories`), [terminal.terminalId]);
+  const active = (categories.data ?? []).filter(c => c.isActive);
+  const [form, setForm] = useState({ companyId: '', category: '', container: '', reference: '' });
+  const category = active.find(c => c.code === (form.category || active[0]?.code));
+  const cargo = category?.mode === 'Cargo';
+
+  return (
+    <div className="walkin-form" role="group" aria-label={t('gate.walkIn')}>
+      <label className="field"><span>{t('common.company')}</span>
+        <select value={form.companyId} onChange={e => setForm({ ...form, companyId: e.target.value })}>
+          <option value="">{t('gate.walkInCompany')}</option>
+          {(companies.data ?? []).map(c => <option key={c.companyId} value={c.companyId}>{c.name}</option>)}
+        </select></label>
+      <label className="field"><span>{t('gate.walkInMove')}</span>
+        <select value={category?.code ?? ''} onChange={e => setForm({ ...form, category: e.target.value })}>
+          {active.map(c => <option key={c.code} value={c.code}>{categoryName(c, c.code, lang)}</option>)}
+        </select></label>
+      {!cargo && (
+        <label className="field"><span>{t('gate.walkInContainer')}</span>
+          <input dir="ltr" value={form.container} onChange={e => setForm({ ...form, container: e.target.value.toUpperCase() })} /></label>
+      )}
+      <label className="field"><span>{cargo ? t('gate.walkInCargoRef') : t('gate.walkInBookingRef')}</span>
+        <input dir="ltr" value={form.reference} onChange={e => setForm({ ...form, reference: e.target.value.toUpperCase() })} /></label>
+      <div className="actions wrap">
+        <ActionButton kind="primary" disabled={!form.companyId || !category} onError={onError} onRun={async () => {
+          if (!note.trim()) {
+            onError(t('gate.noteNeeded'));
+            return;
+          }
+          const item = cargo
+            ? { category: category!.code, cargoRef: form.reference.trim() || null }
+            : { category: category!.code, containerNo: form.container.trim() || null, bookingRef: form.reference.trim() || null };
+          await api.post(path, { action: 'WalkIn', note: note.trim(), walkIn: { companyId: Number(form.companyId), items: [item] } });
+          onBooked();
+        }}>{t('gate.walkInBook')}</ActionButton>
+        <button type="button" className="link-btn" onClick={onCancel}>{t('fleet.cancel')}</button>
+      </div>
+      <p className="hint">{t('gate.walkInHint')}</p>
+    </div>
   );
 }
 
