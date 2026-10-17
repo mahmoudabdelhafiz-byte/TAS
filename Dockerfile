@@ -18,6 +18,7 @@ COPY Directory.Build.props Yardsyncs.slnx ./
 COPY src/Yardsyncs.Domain/Yardsyncs.Domain.csproj src/Yardsyncs.Domain/
 COPY src/Yardsyncs.Application/Yardsyncs.Application.csproj src/Yardsyncs.Application/
 COPY src/Yardsyncs.Infrastructure/Yardsyncs.Infrastructure.csproj src/Yardsyncs.Infrastructure/
+COPY src/Yardsyncs.Autogate/Yardsyncs.Autogate.csproj src/Yardsyncs.Autogate/
 COPY src/Yardsyncs.Api/Yardsyncs.Api.csproj src/Yardsyncs.Api/
 RUN dotnet restore src/Yardsyncs.Api/Yardsyncs.Api.csproj
 COPY src/ src/

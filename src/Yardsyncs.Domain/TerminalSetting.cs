@@ -38,8 +38,12 @@ public sealed record TerminalSettings(
     long FeeNoShow = 0,
     long FeeLateCancel = 0,
     int LateCancelHours = 0,
-    bool TosGateWrite = false)
+    bool TosGateWrite = false,
+    bool Autogate = true)
 {
+    /// <summary>The terminal has the Autogate module (when the installation has it). Set by system admins: it is what the customer bought.</summary>
+    public const string ModuleAutogateKey = "module_autogate";
+
     /// <summary>Record each gate-in and gate-out in the TOS (truck visit and gate transactions); off until the TOS link is tested.</summary>
     public const string TosGateWriteKey = "tos_gate_write";
 
@@ -82,6 +86,7 @@ public sealed record TerminalSettings(
             Get(FeeNoShowKey, 0),
             Get(FeeLateCancelKey, 0),
             Get(LateCancelHoursKey, 0),
-            Get(TosGateWriteKey, 0) != 0);
+            Get(TosGateWriteKey, 0) != 0,
+            Get(ModuleAutogateKey, 1) != 0);
     }
 }

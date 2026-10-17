@@ -53,7 +53,7 @@ public class AssistantModelTests
     [Fact]
     public void The_guides_are_built_into_the_server()
     {
-        Assert.Equal(9 * 2 + 8, AssistantKnowledge.PageCount); // guides in two languages, technical pages
+        Assert.Equal(9 * 2 + 9, AssistantKnowledge.PageCount); // guides in two languages, technical pages
         var company = AssistantKnowledge.For("en", staff: false);
         Assert.Contains("<guide id=\"booking\">", company);
         Assert.DoesNotContain("<technical-page", company);

@@ -8,8 +8,8 @@ import { useApp } from '../ui/context.tsx';
 
 /** The user guides for the signed-in user's role, in the portal's language; each one prints on its own. */
 export function Help() {
-  const { t, lang, user, route, go } = useApp();
-  const list = useMemo(() => guidesFor(screensFor(user.role)), [user.role]);
+  const { t, lang, user, route, go, terminal } = useApp();
+  const list = useMemo(() => guidesFor(screensFor(user.role, terminal.autogate ?? false)), [user.role, terminal.autogate]);
   const current = list.find(g => g.id === route.params.g) ?? list[0];
   const blocks = useMemo(() => parseMarkdown(guidesIn(lang)[current.id] ?? ''), [lang, current.id]);
   const titleOf = (id: string) => /^#\s+(.*)$/m.exec(guidesIn(lang)[id] ?? '')?.[1] ?? id;

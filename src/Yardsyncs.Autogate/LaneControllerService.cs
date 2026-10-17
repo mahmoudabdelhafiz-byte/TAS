@@ -9,7 +9,7 @@ using Yardsyncs.Domain;
 using Yardsyncs.Domain.Gate;
 using Yardsyncs.Infrastructure.Persistence;
 
-namespace Yardsyncs.Infrastructure.Gate;
+namespace Yardsyncs.Autogate;
 
 /// <summary>
 /// The Autogate lane controller: one transaction per truck at an automatic lane. Reads from the lane's devices are

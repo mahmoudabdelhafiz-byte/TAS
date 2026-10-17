@@ -8,9 +8,6 @@ public sealed record ReleaseRulesBody(IReadOnlyList<ReleaseRuleInput> Rules, str
 
 public sealed record SettingsBody(Dictionary<string, int> Values, string? Reason);
 
-/// <summary>Response of a configuration change: the saved item, and the slots that were regenerated (if any).</summary>
-public sealed record AdminResponse<T>(T Data, object? RegeneratedSlots);
-
 /// <summary>
 /// Planner / terminal admin configuration under /api/terminals/{terminalId}.
 /// Reading: terminal staff of the terminal. Changing: planners and terminal admins of the terminal.

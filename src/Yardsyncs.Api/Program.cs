@@ -7,6 +7,7 @@ using System.Threading.RateLimiting;
 using Yardsyncs.Api;
 using Yardsyncs.Application.Auth;
 using Yardsyncs.Application.Booking;
+using Yardsyncs.Autogate;
 using Yardsyncs.Infrastructure;
 using Yardsyncs.Infrastructure.Auth;
 using Yardsyncs.Infrastructure.Booking;
@@ -42,6 +43,8 @@ if (builder.Configuration.GetValue("Proxy:TrustForwardedHeaders", false))
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 
 builder.Services.AddYardsyncsInfrastructure(builder.Configuration);
+// Yardsyncs Autogate, an add-on module: nothing is registered when Modules:Autogate=false (the truck appointment system alone).
+builder.Services.AddYardsyncsAutogate(builder.Configuration);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -60,7 +63,7 @@ builder.Services.AddRateLimiter(o =>
     // Lane devices: calls per minute per device key (Devices:PerMinute, default 600 — a status every 30 s, commands
     // polled every second, reads as trucks pass).
     o.AddPolicy("device", ctx => RateLimitPartition.GetFixedWindowLimiter(
-        ctx.Request.Headers[DeviceEndpoints.KeyHeader].FirstOrDefault() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        ctx.Request.Headers["X-Device-Key"].FirstOrDefault() ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("Devices:PerMinute", 600),
@@ -545,8 +548,15 @@ app.MapBranding();
 app.MapOnboarding();
 app.MapCharges();
 app.MapGate();
-app.MapDevices();
-app.MapInspections();
+app.MapAutogate(); // only when the installation has the module
+
+// Which modules this installation has, and which of them a terminal has: the portal shows only what was bought.
+app.MapGet("/api/modules", async (int? terminalId, HttpContext http, Yardsyncs.Infrastructure.Gate.Modules modules, YardsyncsDbContext db, CancellationToken ct) =>
+{
+    var user = YardsyncsApi.User(http)!;
+    var at = terminalId is { } id && AccessRules.CanAccessTerminal(user, id) ? await modules.AutogateAtAsync(db, id, ct) : (bool?)null;
+    return Results.Ok(new { truckAppointments = true, autogate = modules.AutogateInstalled, autogateAtTerminal = at });
+}).RequireAuthorization();
 app.MapDriverApp();
 
 // ================================================================ development helpers

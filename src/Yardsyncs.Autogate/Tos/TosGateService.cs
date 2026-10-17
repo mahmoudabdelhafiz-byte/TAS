@@ -10,7 +10,7 @@ using Yardsyncs.Domain.Gate;
 using Yardsyncs.Infrastructure.Gate;
 using Yardsyncs.Infrastructure.Persistence;
 
-namespace Yardsyncs.Infrastructure.Tos;
+namespace Yardsyncs.Autogate.Tos;
 
 public sealed class TosGateOptions
 {

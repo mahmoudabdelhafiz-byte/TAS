@@ -344,6 +344,7 @@ public sealed class CapacityAdminService(
             [TerminalSettings.GateByContainerKey] = settings.GateByContainer ? 1 : 0,
             [TerminalSettings.DriverIdentityKey] = (int)settings.DriverIdentity,
             [TerminalSettings.TosGateWriteKey] = settings.TosGateWrite ? 1 : 0,
+            [TerminalSettings.ModuleAutogateKey] = settings.Autogate ? 1 : 0,
             [TerminalSettings.FeeBookingKey] = (int)settings.FeeBooking,
             [TerminalSettings.FeeNoShowKey] = (int)settings.FeeNoShow,
             [TerminalSettings.FeeLateCancelKey] = (int)settings.FeeLateCancel,
@@ -357,6 +358,10 @@ public sealed class CapacityAdminService(
     {
         if (await FindTerminalAsync(terminalId, ct) is null)
             return AdminResult<IReadOnlyDictionary<string, int>>.NotFound($"Terminal {terminalId} not found.");
+        // Which modules a terminal has is what the customer bought: only system admins change it.
+        if (values is not null && values.TryGetValue(TerminalSettings.ModuleAutogateKey, out var module) && !actor.IsSysAdmin
+            && module != (await GetSettingsAsync(terminalId, ct))[TerminalSettings.ModuleAutogateKey])
+            return AdminResult<IReadOnlyDictionary<string, int>>.Forbidden("Only system administrators switch modules on or off for a terminal.");
 
         var errors = CapacityConfigValidator.ValidateSettings(values);
         if (values is null || values.Count == 0)

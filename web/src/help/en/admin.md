@@ -91,6 +91,11 @@ If the terminal records gate passages in its TOS (Capacity setup → Gate), **Ga
 of **Lanes** lists what is waiting or was not taken, with the TOS's reason. **Send again** once the cause is fixed;
 **Send now** doesn't wait for the next round.
 
+Devices, automatic lanes and TOS gate records come with Yardsyncs Autogate. A terminal that keeps its own gate system
+uses **Lanes** for the lane codes that system sends, and **Gate systems** below them to connect it: enter a name and
+choose **Add gate system**, then copy the key into the gate system (it is shown only once). **Revoke key** stops a key at
+once. The technical page *Connecting your own gate system* is for the integrator.
+
 ## Personal data
 
 Drivers' **Copy of data** and **Erase personal data** are in **Fleet & users** → **Drivers** (see the guide Your

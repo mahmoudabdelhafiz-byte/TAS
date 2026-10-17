@@ -2,7 +2,7 @@ using Yardsyncs.Application.Gate;
 using Yardsyncs.Domain.Gate;
 using Yardsyncs.Infrastructure.Gate;
 
-namespace Yardsyncs.Api;
+namespace Yardsyncs.Autogate.Endpoints;
 
 /// <summary>
 /// The device API under /api/devices, for lane devices and the vendor adapters speaking for them. Each device signs in

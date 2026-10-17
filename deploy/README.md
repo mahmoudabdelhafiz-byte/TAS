@@ -34,6 +34,12 @@ the test switches (`*ExposeCodeForTesting`, `*ExposeTokenForTesting`) on, sends 
 `https://$TAS_DOMAIN`, and keeps sign-in codes and links out of the logs. `/api/ops/status` lists `warnings` for
 settings still to look at (demo TOS, messages not sent, bootstrap password). See `docs/security.md`.
 
+**Modules.** The image holds the truck appointment system and Yardsyncs Autogate. For a customer who bought the truck
+appointment system alone, set `Modules__Autogate=false` in `.env`: Autogate's screens and API are then not there, and
+the terminal's own gate system connects through the gate API with a key a terminal admin makes in **Lanes → Gate
+systems** (docs page "Connecting your own gate system"). On an installation serving several terminals, a system admin
+can switch Autogate off for one terminal with its setting `module_autogate` = 0.
+
 **Personal data.** Positions, message addresses and old sessions are cleaned up daily; the periods are in `.env`
 (`Privacy__*`). Drivers' copy of data and erasure are in the portal (Fleet & users → Drivers).
 

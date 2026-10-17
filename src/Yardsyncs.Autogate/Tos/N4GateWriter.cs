@@ -5,7 +5,7 @@ using Yardsyncs.Application.Tos;
 using Yardsyncs.Application.Tos.N4;
 using Yardsyncs.Infrastructure.Persistence;
 
-namespace Yardsyncs.Infrastructure.Tos.N4;
+namespace Yardsyncs.Autogate.Tos;
 
 /// <summary>
 /// Gate passages written to Navis N4 through its gate web service (ArgoService genericInvoke with a &lt;gate&gt;

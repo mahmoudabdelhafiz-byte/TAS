@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Yardsyncs Autogate: lanes with their devices, the device API, the lane controller, the remote clerk station,
+    inspection, the exit check, gate records in the TOS and the gate ticket. An add-on to the truck appointment system:
+    core Yardsyncs never references this project; it plugs into the gate's extension points (IGateHook, IExitCheck,
+    ILaneAddOn). Switched on per installation (Modules:Autogate) and per terminal (setting module_autogate).
+  -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Yardsyncs.Infrastructure\Yardsyncs.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.AspNetCore.Builder" />
+    <Using Include="Microsoft.AspNetCore.Http" />
+    <Using Include="Microsoft.AspNetCore.Routing" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Yardsyncs.Api" />
+    <Using Include="Yardsyncs.Infrastructure" />
+    <Using Include="Yardsyncs.Infrastructure.Gate" />
+    <Using Include="Yardsyncs.Infrastructure.Persistence" />
+    <Using Include="Yardsyncs.Infrastructure.Tos" />
+    <Using Include="Yardsyncs.Infrastructure.Tos.N4" />
+    <Using Include="Yardsyncs.Autogate" />
+    <Using Include="Yardsyncs.Autogate.Tos" />
+  </ItemGroup>
+
+</Project>

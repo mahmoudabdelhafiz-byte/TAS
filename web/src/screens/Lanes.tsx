@@ -36,12 +36,13 @@ export function readsFor(kind: LaneDeviceKind): LaneRead[] {
 }
 
 /**
- * The Autogate lane model for terminal admins: every lane with its way of working (manual or automatic), how it can
- * identify trucks, what it still needs to run automatically, and the devices at it. Opening and closing lanes is on
- * the gate screen.
+ * The gate's lanes for terminal admins, and the keys for the terminal's own gate system. With Yardsyncs Autogate, each
+ * lane also has its way of working (manual or automatic), how it identifies trucks, what it still needs to run
+ * automatically, and the devices at it. Opening and closing lanes is on the gate screen.
  */
 export function Lanes() {
   const { api, t, terminal } = useApp();
+  const autogate = terminal.autogate ?? false;
   const base = `/api/terminals/${terminal.terminalId}/gate/lanes`;
   const list = useLoad(() => api.get<Lane[]>(base), [base]);
   const [error, setError] = useState<string | null>(null);
@@ -54,24 +55,25 @@ export function Lanes() {
   return (
     <section className="screen lanes">
       <header className="screen-head">
-        <h1>{t('lanes.title')}</h1>
-        <p className="hint">{t('lanes.hint')}</p>
+        <h1>{t(autogate ? 'lanes.title' : 'lanes.titleTas')}</h1>
+        <p className="hint">{t(autogate ? 'lanes.hint' : 'lanes.hintTas')}</p>
       </header>
       {done && <Notice kind="ok" onClose={() => setDone(null)}>{done}</Notice>}
       {error && <Notice kind="error" onClose={() => setError(null)}>{error}</Notice>}
       {list.error && <LoadError error={list.error} retry={list.reload} />}
       {list.data && list.data.length === 0 && <p className="empty">{t('lanes.none')}</p>}
       <div className="lane-cards">
-        {(list.data ?? []).map(l => <LaneCard key={l.laneId} lane={l} base={`${base}/${l.laneId}`} onChanged={changed} onError={setError} />)}
+        {(list.data ?? []).map(l => <LaneCard key={l.laneId} lane={l} autogate={autogate} base={`${base}/${l.laneId}`} onChanged={changed} onError={setError} />)}
       </div>
       <AddLane base={base} onChanged={changed} onError={setError} />
-      <TosRecords onDone={setDone} onError={setError} />
+      <GateSystems onDone={setDone} onError={setError} />
+      {autogate && <TosRecords onDone={setDone} onError={setError} />}
     </section>
   );
 }
 
-function LaneCard({ lane, base, onChanged, onError }: {
-  lane: Lane; base: string; onChanged: (m?: string) => void; onError: (m: string) => void;
+function LaneCard({ lane, autogate, base, onChanged, onError }: {
+  lane: Lane; autogate: boolean; base: string; onChanged: (m?: string) => void; onError: (m: string) => void;
 }) {
   const { api, t } = useApp();
   const [editing, setEditing] = useState<LaneDevice | 'new' | null>(null);
@@ -101,6 +103,7 @@ function LaneCard({ lane, base, onChanged, onError }: {
       </header>
       {lane.stateNote && <p className="lane-note" dir="auto">{lane.stateNote}</p>}
 
+      {autogate && <>
       <div className="lane-facts">
         <div className="lane-mode" role="group" aria-label={t('lanes.modeLabel')}>
           <span className="lane-fact-label">{t('lanes.modeLabel')}</span>
@@ -122,8 +125,9 @@ function LaneCard({ lane, base, onChanged, onError }: {
       {lane.mode === 'Manual' && lane.automaticProblems.length > 0 && lane.isActive && (
         <p className="lane-needs">{t('lanes.forAutomatic', { needs })}</p>
       )}
+      </>}
 
-      {lane.devices.length === 0
+      {!autogate ? null : lane.devices.length === 0
         ? <p className="muted">{t('lanes.noDevices')}</p>
         : (
           <div className="table-wrap">
@@ -169,7 +173,7 @@ function LaneCard({ lane, base, onChanged, onError }: {
             onDone={m => { setEditing(null); onChanged(m); }} onCancel={() => setEditing(null)} />
         : (
           <div className="lane-card-foot">
-            <button type="button" className="btn btn-secondary" onClick={() => setEditing('new')}>{t('lanes.addDevice')}</button>
+            {autogate && <button type="button" className="btn btn-secondary" onClick={() => setEditing('new')}>{t('lanes.addDevice')}</button>}
             <button type="button" className="link-btn" onClick={async () => {
               try {
                 await api.put(base, { isActive: !lane.isActive });
@@ -310,6 +314,92 @@ function AddLane({ base, onChanged, onError }: { base: string; onChanged: (m?: s
         onChanged(t('lanes.added', { lane: form.laneCode.trim() }));
       }}>{t('onboard.addLane')}</ActionButton>
     </form>
+  );
+}
+
+interface GateSystem {
+  keyId: number;
+  name: string;
+  keyHint: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+interface GateSystemKey { system: GateSystem; key: string }
+
+/**
+ * Keys for the terminal's own gate system (an OCR portal, kiosks, a gate operating system) to use the gate API. Each
+ * key acts as a gate clerk of this terminal; the key is shown once.
+ */
+function GateSystems({ onDone, onError }: { onDone: (m: string) => void; onError: (m: string) => void }) {
+  const { api, t, lang, terminal } = useApp();
+  const base = `/api/terminals/${terminal.terminalId}/gate/systems`;
+  const list = useLoad(() => api.get<GateSystem[]>(base), [base]);
+  const [name, setName] = useState('');
+  const [issued, setIssued] = useState<GateSystemKey | null>(null);
+  const [asking, setAsking] = useState<number | null>(null);
+  const rows = list.data ?? [];
+  return (
+    <section className="gate-systems" aria-labelledby="gate-systems">
+      <h2 className="section-title" id="gate-systems">{t('gatesys.title')}</h2>
+      <p className="hint">{t('gatesys.hint')}</p>
+      {list.error && <LoadError error={list.error} retry={list.reload} />}
+      {list.data && rows.length === 0 && <p className="muted">{t('gatesys.none')}</p>}
+      {rows.length > 0 && (
+        <div className="table-wrap">
+          <table className="grid compact">
+            <thead><tr><th>{t('gatesys.name')}</th><th>{t('gatesys.key')}</th><th>{t('gatesys.lastUsed')}</th><th /></tr></thead>
+            <tbody>
+              {rows.map(s => (
+                <tr key={s.keyId} className={s.revokedAt ? 'inactive' : undefined}>
+                  <td dir="auto">{s.name}</td>
+                  <td className="nowrap"><bdi>{s.keyHint}</bdi></td>
+                  <td className="num">{s.lastUsedAt ? stamp(s.lastUsedAt, terminal.timeZone, lang) : t('gatesys.never')}</td>
+                  <td className="cell-action">
+                    {s.revokedAt
+                      ? <span className="muted">{t('gatesys.revoked', { when: stamp(s.revokedAt, terminal.timeZone, lang) })}</span>
+                      : asking === s.keyId
+                        ? (
+                          <span className="inline-ask">
+                            <ActionButton kind="danger" onError={onError} onRun={async () => {
+                              await api.del(`${base}/${s.keyId}`);
+                              setAsking(null);
+                              list.reload();
+                              onDone(t('gatesys.revokedDone', { name: s.name }));
+                            }}>{t('gatesys.revokeYes', { name: s.name })}</ActionButton>
+                            <button type="button" className="link-btn" onClick={() => setAsking(null)}>{t('lanes.keep')}</button>
+                          </span>
+                        )
+                        : <button type="button" className="link-btn" onClick={() => setAsking(s.keyId)}>{t('gatesys.revoke')}</button>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {issued && (
+        <div className="device-key" role="status">
+          <p><strong>{t('gatesys.keyFor', { name: issued.system.name })}</strong> {t('gatesys.keyOnce')}</p>
+          <code dir="ltr">{issued.key}</code>
+          <div className="actions">
+            <button type="button" className="btn btn-secondary" onClick={() => navigator.clipboard?.writeText(issued.key)}>{t('lanes.copy')}</button>
+            <button type="button" className="link-btn" onClick={() => setIssued(null)}>{t('lanes.keyDone')}</button>
+          </div>
+        </div>
+      )}
+      <form className="inline-form" onSubmit={e => e.preventDefault()}>
+        <label className="field"><span>{t('gatesys.name')}</span>
+          <input dir="auto" maxLength={60} value={name} placeholder={t('gatesys.namePlaceholder')} onChange={e => setName(e.target.value)} /></label>
+        <ActionButton kind="secondary" disabled={!name.trim()} onError={onError} onRun={async () => {
+          const result = await api.post<AdminResponse<GateSystemKey>>(base, { name: name.trim() });
+          setIssued(result.data);
+          setName('');
+          list.reload();
+        }}>{t('gatesys.add')}</ActionButton>
+      </form>
+    </section>
   );
 }
 

@@ -8,7 +8,7 @@ using Yardsyncs.Application.Gate;
 using Yardsyncs.Domain.Gate;
 using Yardsyncs.Infrastructure.Persistence;
 
-namespace Yardsyncs.Infrastructure.Gate;
+namespace Yardsyncs.Autogate;
 
 /// <summary>
 /// Autogate device adapters, vendor-neutral. A lane device — or the vendor adapter speaking for it — signs in with its
@@ -16,7 +16,7 @@ namespace Yardsyncs.Infrastructure.Gate;
 /// light, display, printer), confirming each. Pull, not push: devices on the terminal's network call out, so nothing
 /// needs to reach into it. Gate staff send commands to a lane and see its latest reads and commands.
 /// </summary>
-public sealed class DeviceService(YardsyncsDbContext db, TimeProvider clock, ILogger<DeviceService> logger)
+public sealed class DeviceService(YardsyncsDbContext db, TimeProvider clock, ILogger<DeviceService> logger, Modules? modules = null)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -34,6 +34,8 @@ public sealed class DeviceService(YardsyncsDbContext db, TimeProvider clock, ILo
         var device = await db.LaneDevices.SingleOrDefaultAsync(d => d.KeyHash == hash && d.IsActive, ct);
         if (device is null || !await db.GateLanes.AnyAsync(l => l.LaneId == device.LaneId && l.IsActive, ct))
             return null;
+        if (modules is not null && !await modules.AutogateAtAsync(db, device.TerminalId, ct))
+            return null; // the terminal no longer has Autogate
         device.LastSeenAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);
         return device;

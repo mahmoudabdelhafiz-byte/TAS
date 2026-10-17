@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Yardsyncs.Application.Auth;
+using Yardsyncs.Application.Gate;
 using Yardsyncs.Domain.Parties;
 using Yardsyncs.Infrastructure.Persistence;
 
@@ -28,7 +30,12 @@ public static class AuthSetup
             .Validate(o => o.HasValidKey, "Jwt:SigningKey must be at least 32 bytes. Set it in configuration or the Jwt__SigningKey environment variable.")
             .ValidateOnStart();
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+        // People sign in for a token; the terminal's own gate system sends its key in X-Api-Key instead.
+        services.AddAuthentication(GateSystemAuth.Selector)
+            .AddPolicyScheme(GateSystemAuth.Selector, "Sign-in token or gate system key", o => o.ForwardDefaultSelector = context =>
+                context.Request.Headers.ContainsKey(GateSystemKeys.Header) ? GateSystemAuth.Scheme : JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer()
+            .AddScheme<AuthenticationSchemeOptions, GateSystemAuthHandler>(GateSystemAuth.Scheme, null);
 
         // Configured lazily so the key is read from the final configuration.
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)

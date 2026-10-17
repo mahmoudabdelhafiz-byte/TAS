@@ -25,9 +25,15 @@ export function buildHash(screen: Screen, params: Record<string, string | undefi
   return `#/${screen}${text ? `?${text}` : ''}`;
 }
 
-/** The menu for a role, in order; the first entry is the home screen. Help is last for everyone. */
-export function screensFor(role: UserRole): Screen[] {
-  return [...workScreens(role), 'help'];
+/** Screens that come with the Yardsyncs Autogate module. */
+export const autogateScreens: readonly Screen[] = ['clerk', 'inspections'];
+
+/**
+ * The menu for a role, in order; the first entry is the home screen. Help is last for everyone. Without the Autogate
+ * module (the truck appointment system alone) its screens are left out.
+ */
+export function screensFor(role: UserRole, autogate = true): Screen[] {
+  return [...workScreens(role).filter(s => autogate || !autogateScreens.includes(s)), 'help'];
 }
 
 function workScreens(role: UserRole): Screen[] {

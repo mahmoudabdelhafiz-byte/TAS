@@ -26,6 +26,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Yardsyncs.Infrastructure.Tests" />
+    <!-- The Autogate module shares the database plumbing (audit log, enum names). -->
+    <InternalsVisibleTo Include="Yardsyncs.Autogate" />
   </ItemGroup>
 
 </Project>
