@@ -46,8 +46,12 @@ public sealed record TerminalSettings(
     int DriverPointsDays = 180,
     int DriverWarnPoints = 6,
     int DriverLimitPoints = 0,
-    bool DriverRecordToCompany = true)
+    bool DriverRecordToCompany = true,
+    int InductionMode = 0)
 {
+    /// <summary>Drivers without a valid safety induction: 0 = nothing, 1 = the gate warns, 2 = the trouble desk.</summary>
+    public const string InductionModeKey = "induction_mode";
+
     /// <summary>Days a driver's penalty points count (1–1825).</summary>
     public const string DriverPointsDaysKey = "driver_points_days";
 
@@ -125,6 +129,7 @@ public sealed record TerminalSettings(
             Math.Clamp(Get(DriverPointsDaysKey, 180), 1, 1825),
             Get(DriverWarnPointsKey, 6),
             Get(DriverLimitPointsKey, 0),
-            Get(DriverRecordToCompanyKey, 1) != 0);
+            Get(DriverRecordToCompanyKey, 1) != 0,
+            Math.Min(Get(InductionModeKey, 0), 2));
     }
 }

@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.DriverLoginService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.DriverAppService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.DriverRecordService>();
+        services.AddScoped<Yardsyncs.Infrastructure.DriverApp.SafetyService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.GatePassService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.TripTrackingService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.YardGuidanceService>();

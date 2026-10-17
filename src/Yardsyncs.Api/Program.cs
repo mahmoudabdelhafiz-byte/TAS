@@ -662,6 +662,7 @@ app.MapDriverApp();
 app.MapMessages();
 app.MapReportExports();
 app.MapDriverRecords();
+app.MapSafety();
 
 // ================================================================ development helpers
 
