@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch: # Actions → CI → Run workflow: also builds the iPhone app
 
 jobs:
   build-and-test:
@@ -209,6 +210,8 @@ jobs:
 
   # The same app on iPhone: build without signing (signing and store upload need the Apple developer account).
   ios:
+    # Mac minutes cost ten times as much on a private repository: only when started by hand.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     defaults:
       run:
