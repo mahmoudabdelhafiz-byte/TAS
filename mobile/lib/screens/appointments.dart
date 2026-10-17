@@ -38,7 +38,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Timer? _timer;
   StreamSubscription<PushMessage>? _pushes;
 
-  String t(String key) => tr(widget.lang, key);
+  String t(String key, [Map<String, String> values = const {}]) => tr(widget.lang, key, values);
 
   @override
   void initState() {
