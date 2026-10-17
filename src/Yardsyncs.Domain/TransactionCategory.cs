@@ -9,6 +9,16 @@ public enum CategoryMode
     Cargo,
 }
 
+/// <summary>Which way a move's cargo goes through the gate.</summary>
+public enum CategoryFlow
+{
+    /// <summary>The truck brings it into the terminal (export drop-off, empty return): it leaves without it.</summary>
+    In,
+
+    /// <summary>The truck takes it out of the terminal (import pickup, empty pickup, cargo delivery): it leaves with it.</summary>
+    Out,
+}
+
 public enum UnitType
 {
     Move,
@@ -27,4 +37,16 @@ public sealed class TransactionCategory
     public UnitType UnitType { get; set; } = UnitType.Move;
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
+
+    /// <summary>Which way the cargo goes, for the exit check; null = not checked.</summary>
+    public CategoryFlow? Flow { get; set; }
+
+    /// <summary>The usual direction for a move type code: …PICKUP / …DELIVERY go out, …DROP / …RETURN / …RECEIV… come in.</summary>
+    public static CategoryFlow? GuessFlow(string code)
+    {
+        var c = code.ToUpperInvariant();
+        if (c.Contains("PICKUP") || c.Contains("DELIVERY")) return CategoryFlow.Out;
+        if (c.Contains("DROP") || c.Contains("RETURN") || c.Contains("RECEIV")) return CategoryFlow.In;
+        return null;
+    }
 }

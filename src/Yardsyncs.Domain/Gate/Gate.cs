@@ -356,3 +356,34 @@ public enum TosGateStageCode
     GateIn,
     GateOut,
 }
+
+public enum ExitCheckStatus
+{
+    Ok,
+    Problem,
+
+    /// <summary>Nothing was read on the truck at the exit.</summary>
+    NotChecked,
+}
+
+/// <summary>The exit of a visit: what was seen on the truck, against what should leave, and the truck's weight.</summary>
+public sealed class GateExitCheck
+{
+    public long AppointmentId { get; set; }
+    public int TerminalId { get; set; }
+    public DateTimeOffset CheckedAt { get; set; }
+    public string? LaneCode { get; set; }
+
+    /// <summary>Comma-separated container numbers seen on the truck; null when nothing was read.</summary>
+    public string? ContainersSeen { get; set; }
+
+    public ExitCheckStatus Status { get; set; }
+    public string? Problems { get; set; }
+
+    /// <summary>The clerk who let the truck out despite a problem.</summary>
+    public int? LetOutBy { get; set; }
+
+    public string? Note { get; set; }
+    public decimal? WeightInKg { get; set; }
+    public decimal? WeightOutKg { get; set; }
+}

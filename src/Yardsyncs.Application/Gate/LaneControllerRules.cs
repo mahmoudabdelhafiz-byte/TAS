@@ -54,6 +54,9 @@ public sealed record LaneTransactionView(
         t.PlateCorrected || t.ContainersCorrected);
 }
 
+/// <summary>Let a truck the exit lane held leave, with why.</summary>
+public sealed record LetOutInput(string Note);
+
 /// <summary>
 /// What the cameras should have read, from the clerk. Leave a field out to keep it; an empty container list clears
 /// them. The lane then checks the truck again.

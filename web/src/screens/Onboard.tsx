@@ -135,11 +135,13 @@ function MoveTypes({ onChanged, onError }: { onChanged: (m?: string) => void; on
   const { api, t, lang, terminal } = useApp();
   const base = `/api/terminals/${terminal.terminalId}`;
   const list = useLoad(() => api.get<Category[]>(`${base}/categories`), [base]);
-  const [form, setForm] = useState({ code: '', nameEn: '', nameAr: '', mode: 'Container' as 'Container' | 'Cargo' });
+  const [form, setForm] = useState({ code: '', nameEn: '', nameAr: '', mode: 'Container' as 'Container' | 'Cargo', flow: '' as '' | 'In' | 'Out' });
   return (
     <>
       {list.data && list.data.length > 0 && (
-        <ul className="chips">{list.data.map(c => <li key={c.code}><bdi>{c.code}</bdi> {lang === 'ar' ? c.nameAr : c.nameEn}</li>)}</ul>
+        <ul className="chips">{list.data.map(c => (
+          <li key={c.code}><bdi>{c.code}</bdi> {lang === 'ar' ? c.nameAr : c.nameEn}{c.flow && <span className="muted"> · {t(c.flow === 'In' ? 'onboard.flow.In' : 'onboard.flow.Out')}</span>}</li>
+        ))}</ul>
       )}
       <div className="actions wrap">
         <ActionButton kind="primary" onError={onError} onRun={async () => {
@@ -158,12 +160,18 @@ function MoveTypes({ onChanged, onError }: { onChanged: (m?: string) => void; on
             <option value="Container">{t('onboard.mode.Container')}</option>
             <option value="Cargo">{t('onboard.mode.Cargo')}</option>
           </select></label>
+        <label className="field field-short"><span>{t('onboard.flow')}</span>
+          <select value={form.flow} onChange={e => setForm({ ...form, flow: e.target.value as '' | 'In' | 'Out' })}>
+            <option value="">{t('onboard.flow.auto')}</option>
+            <option value="In">{t('onboard.flow.In')}</option>
+            <option value="Out">{t('onboard.flow.Out')}</option>
+          </select></label>
         <ActionButton kind="secondary" disabled={!form.code.trim() || !form.nameEn.trim() || !form.nameAr.trim()} onError={onError} onRun={async () => {
           await api.post(`${base}/categories`, {
             code: form.code.trim(), nameEn: form.nameEn.trim(), nameAr: form.nameAr.trim(), mode: form.mode,
-            unitType: form.mode === 'Cargo' ? 'Trip' : 'Move', sortOrder: (list.data?.length ?? 0) + 1,
+            unitType: form.mode === 'Cargo' ? 'Trip' : 'Move', sortOrder: (list.data?.length ?? 0) + 1, flow: form.flow || null,
           });
-          setForm({ code: '', nameEn: '', nameAr: '', mode: 'Container' });
+          setForm({ code: '', nameEn: '', nameAr: '', mode: 'Container', flow: '' });
           list.reload();
           onChanged();
         }}>{t('onboard.addMoveType')}</ActionButton>

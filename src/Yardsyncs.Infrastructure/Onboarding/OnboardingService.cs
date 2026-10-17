@@ -161,6 +161,7 @@ public sealed partial class OnboardingService(
             db.TransactionCategories.Add(new TransactionCategory
             {
                 TerminalId = terminal.TerminalId, Code = code, NameEn = en, NameAr = ar, Mode = mode, UnitType = unit, SortOrder = order,
+                Flow = TransactionCategory.GuessFlow(code),
             });
             added++;
         }

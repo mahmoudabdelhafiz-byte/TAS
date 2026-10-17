@@ -150,7 +150,8 @@ CREATE TABLE transaction_category (
     unit_type    varchar(10)  NOT NULL DEFAULT 'MOVE' CHECK (unit_type IN ('MOVE','TRIP')),
     sort_order   integer      NOT NULL DEFAULT 0,
     is_active    boolean      NOT NULL DEFAULT true,
-    UNIQUE (terminal_id, code)
+    UNIQUE (terminal_id, code),
+    flow         varchar(3)   NULL CHECK (flow IN ('IN','OUT'))   -- IN: brought into the terminal; OUT: taken out (migration 024)
 );
 
 /* ---------- 2. Capacity configuration ---------- */
@@ -826,3 +827,20 @@ CREATE TABLE inspection_dispute (
     resolved_at      timestamptz  NULL
 );
 CREATE INDEX ix_dispute_open ON inspection_dispute (status) WHERE status = 'OPEN';
+
+/* ---------- Exit gate (migration 024) ---------- */
+
+CREATE TABLE gate_exit_check (
+    appointment_id   bigint        PRIMARY KEY REFERENCES appointment(appointment_id) ON DELETE CASCADE,
+    terminal_id      integer       NOT NULL REFERENCES terminal(terminal_id),
+    checked_at       timestamptz   NOT NULL,
+    lane_code        varchar(20)   NULL,
+    containers_seen  varchar(60)   NULL,   -- comma-separated; NULL = nothing read
+    status           varchar(11)   NOT NULL CHECK (status IN ('OK','PROBLEM','NOT_CHECKED')),
+    problems         varchar(600)  NULL,
+    let_out_by       integer       NULL,   -- app_user.user_id when a clerk let the truck out despite a problem
+    note             varchar(300)  NULL,
+    weight_in_kg     numeric(9,1)  NULL,
+    weight_out_kg    numeric(9,1)  NULL
+);
+CREATE INDEX ix_exit_check_time ON gate_exit_check (terminal_id, checked_at);

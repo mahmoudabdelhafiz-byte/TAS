@@ -195,6 +195,12 @@ function Case({ id, onDone, onError }: { id: number; onDone: (m?: string) => voi
             <div className="actions wrap">
               {x.troubleId !== null && x.appointmentNo && <ActionButton kind="primary" onError={onError} onRun={resolve('Admit')}>{t('gate.letIn')}</ActionButton>}
               {x.troubleId !== null && <ActionButton kind="danger" onError={onError} onRun={resolve('Reject')}>{t('gate.turnAway')}</ActionButton>}
+              {(x.reason === 'EXIT' || x.reason === 'EXIT_CHECK') && (
+                <ActionButton kind="primary" disabled={!note.trim()} onError={onError} onRun={async () => {
+                  await api.post(`${base}/transactions/${x.transactionId}/let-out`, { note: note.trim() });
+                  onDone(t('exit.letOutDone', { lane: x.laneCode }));
+                }}>{t('exit.letOut')}</ActionButton>
+              )}
             </div>
           </div>
         </>

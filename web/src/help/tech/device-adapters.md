@@ -104,7 +104,11 @@ At a lane set to **Automatic**, Yardsyncs runs the lane itself, one transaction 
      barrier confirms `Open`, the truck is gated in.
    - Referred: `Red`, and the reason on the display. The case goes to the trouble desk, and when a clerk lets the truck
      in there, the lane's barrier opens.
-   - Exit lanes gate the truck out (by plate or appointment number) and open, or call a clerk.
+   - Exit lanes gate the truck out (by plate or appointment number) and open, or call a clerk. Before that, the
+     containers the cameras saw are checked against the visit: what the truck came to collect must be on it, what it
+     came to drop must not be, nothing else may be. A problem holds the truck on red (`EXIT_CHECK`) until a clerk lets
+     it out with a note (`POST …/transactions/{id}/let-out`). With weighbridge reads at the entry and the exit, a single
+     cargo move gets its actual tonnage from the difference.
 
 A transaction with nothing to identify the truck by is given up after 2 minutes. Manual lanes and lanes that aren't
 open are left to the clerk; their reads are still stored and shown. The timings are settings: `LaneController__SettleSeconds`
