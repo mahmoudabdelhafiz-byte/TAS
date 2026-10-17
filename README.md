@@ -71,6 +71,8 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   `GET /api/terminals/{id}/charges?from=&to=[&format=csv]`, `POST …/charges/{id}/waive`.
 - Company reports: `GET /api/terminals/{id}/company-report?from=&to=[&companyId=]` (a company sees only its own: totals,
   days, trucks, drivers, holds by check, charges) and `GET …/company-report/companies?from=&to=` (terminal staff).
+- Excel: `GET /api/terminals/{id}/exports/appointments|kpis|company-report?from=&to=[&companyId=]` (headings in the
+  `Accept-Language` language; companies get their own appointments and report, KPIs are for terminal staff).
 - New terminals: **Terminal set-up** in the portal (`POST /api/terminals`, `GET /api/terminals/{id}/setup`): the usual
   move types, lanes and rules, then a checklist until trucks can book.
 - Another TOS: the TOS adapter kit (`TosContract`, conformance tests in `tests/Yardsyncs.Infrastructure.Tests/TosKit/`,

@@ -3,7 +3,7 @@ import { addDays, dayLabel, duration } from '../lib/time.ts';
 import { useApp } from '../ui/context.tsx';
 import { LoadError, useLoad } from '../ui/kit.tsx';
 import { reasonName } from './Clerk.tsx';
-import { CompaniesSection } from './CompanyReport.tsx';
+import { CompaniesSection, ExcelButtons } from './CompanyReport.tsx';
 
 export interface KpiDay {
   date: string;
@@ -91,6 +91,10 @@ export function Kpi() {
       <header className="screen-head">
         <h1>{t('kpi.title')}</h1>
         <RangePicker range={range} onChange={setRange} />
+        <ExcelButtons files={[
+          { label: t('rep.excel'), path: `kpis?from=${range.from}&to=${range.to}`, name: `kpis-${range.from}-${range.to}.xlsx` },
+          { label: t('rep.excelAppointments'), path: `appointments?from=${range.from}&to=${range.to}`, name: `appointments-${range.from}-${range.to}.xlsx` },
+        ]} />
       </header>
 
       {report.error && <LoadError error={report.error} retry={report.reload} />}

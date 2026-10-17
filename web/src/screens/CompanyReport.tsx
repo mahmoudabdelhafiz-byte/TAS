@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { money } from '../lib/money.ts';
 import { addDays, dayLabel, duration } from '../lib/time.ts';
 import { useApp } from '../ui/context.tsx';
-import { LoadError, Panel, useLoad } from '../ui/kit.tsx';
+import { LoadError, Notice, Panel, messageOf, useLoad } from '../ui/kit.tsx';
 import { Columns, RangePicker, Tile, pct, shortDay, type DateRange, type KpiDay, type KpiReport } from './Kpi.tsx';
 
 /** One truck, driver or company in a report. */
@@ -41,6 +41,39 @@ const decimalsOf = (currency: string) => {
   }
 };
 
+/** Buttons that download reports as Excel files ([files]: label and path under the terminal's /exports). */
+export function ExcelButtons({ files }: { files: { label: string; path: string; name: string }[] }) {
+  const { api, t, terminal } = useApp();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const get = async (path: string, name: string) => {
+    setBusy(path);
+    setError(null);
+    try {
+      const { blob, fileName } = await api.download(`/api/terminals/${terminal.terminalId}/exports/${path}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName ?? name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setError(messageOf(e, t('common.offline')));
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="excel-buttons">
+      {files.map(f => (
+        <button key={f.path} type="button" className="btn btn-secondary" disabled={busy !== null} aria-busy={busy === f.path}
+          onClick={() => get(f.path, f.name)}>{f.label}</button>
+      ))}
+      {error && <Notice kind="error" onClose={() => setError(null)}>{error}</Notice>}
+    </div>
+  );
+}
+
 /** A trucking company's own performance at the terminal (company users see only their company). */
 export function CompanyReportScreen() {
   const { t, today, terminal } = useApp();
@@ -50,6 +83,10 @@ export function CompanyReportScreen() {
       <header className="screen-head">
         <h1>{t('rep.title', { terminal: terminal.name })}</h1>
         <RangePicker range={range} onChange={setRange} future={false} />
+        <ExcelButtons files={[
+          { label: t('rep.excel'), path: `company-report?from=${range.from}&to=${range.to}`, name: `company-report-${range.from}-${range.to}.xlsx` },
+          { label: t('rep.excelAppointments'), path: `appointments?from=${range.from}&to=${range.to}`, name: `appointments-${range.from}-${range.to}.xlsx` },
+        ]} />
       </header>
       <CompanyReportBody range={range} />
     </section>
@@ -191,6 +228,10 @@ export function CompaniesSection({ range }: { range: DateRange }) {
       )}
       {open && (
         <Panel title={open.name} onClose={() => setOpen(null)}>
+          <ExcelButtons files={[
+            { label: t('rep.excel'), path: `company-report?companyId=${open.key}&from=${range.from}&to=${range.to}`, name: `company-report-${range.from}-${range.to}.xlsx` },
+            { label: t('rep.excelAppointments'), path: `appointments?companyId=${open.key}&from=${range.from}&to=${range.to}`, name: `appointments-${range.from}-${range.to}.xlsx` },
+          ]} />
           <CompanyReportBody range={range} companyId={Number(open.key)} />
         </Panel>
       )}

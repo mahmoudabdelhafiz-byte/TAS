@@ -67,3 +67,5 @@ announcement.
 
 At the bottom of **KPIs**, **Companies** lists every trucking company of the period, the most no-shows first. Open one
 to see its trucks, drivers, holds and charges, the same report the company sees for itself.
+**Download Excel** saves the KPIs (summary, days, hours, companies); **Appointments in Excel** every appointment of
+the period with its gate times, waiting and turn time.

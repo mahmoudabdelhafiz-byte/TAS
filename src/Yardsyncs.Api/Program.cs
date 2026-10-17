@@ -660,6 +660,7 @@ app.MapGet("/api/modules", async (int? terminalId, HttpContext http, Yardsyncs.I
 }).RequireAuthorization();
 app.MapDriverApp();
 app.MapMessages();
+app.MapReportExports();
 
 // ================================================================ development helpers
 
