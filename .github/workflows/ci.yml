@@ -130,6 +130,9 @@ jobs:
       - name: Type-check and build
         run: npm run build
 
+      - name: Demo portal (sample data, static files)
+        run: npm run build:demo
+
       - name: Known vulnerabilities in packages
         run: |
           npm audit --omit=dev --json > audit.json || true

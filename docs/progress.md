@@ -583,6 +583,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | App: **Next turn** strip with the arrow (never mirrored in Arabic / Urdu), what to do and how far; spoken once 25–80 m before and once at the turn, in the driver's language (ar, en, ur, hi) |
 | ⬜ | Lane-level prompts ("use the left lane") and speed zones (decision 10) |
 
+### 62. Demo portal for customers (2026-10-18)
+| | Item |
+|---|---|
+| ✅ | The real portal screens with sample data answered in the browser (no API, no database): `npm run build:demo` makes a folder of static files for any web host, also in a sub-folder (see [demo.md](demo.md)) |
+| ✅ | Sign-in page lists the demo roles (terminal admin, planner, gate clerk, trucking company, system admin); one click signs in; a bar says it is a demo and nothing is saved |
+| ✅ | Sample dates move to the day it is shown, so the slot board, control room and KPIs always look current; Excel downloads say they are not in the demo |
+| ⬜ | Driver app demo (an Android test build with sample data) |
+
 ---
 
 ## Remaining
