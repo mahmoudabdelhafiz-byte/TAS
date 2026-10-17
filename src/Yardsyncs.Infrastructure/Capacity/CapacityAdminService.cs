@@ -345,6 +345,7 @@ public sealed class CapacityAdminService(
             [TerminalSettings.DriverIdentityKey] = (int)settings.DriverIdentity,
             [TerminalSettings.TosGateWriteKey] = settings.TosGateWrite ? 1 : 0,
             [TerminalSettings.ModuleAutogateKey] = settings.Autogate ? 1 : 0,
+            [TerminalSettings.SealHoldKey] = settings.SealHold ? 1 : 0,
             [TerminalSettings.FeeBookingKey] = (int)settings.FeeBooking,
             [TerminalSettings.FeeNoShowKey] = (int)settings.FeeNoShow,
             [TerminalSettings.FeeLateCancelKey] = (int)settings.FeeLateCancel,

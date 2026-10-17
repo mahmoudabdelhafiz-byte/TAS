@@ -50,4 +50,21 @@ public class InspectionRulesTests
         Assert.NotEmpty(InspectionRules.Validate(new InspectionInput(InspectionStage.Out, Damage: [new(null, (DamageKind)99)])));
         Assert.NotEmpty(InspectionRules.Validate(new InspectionInput(InspectionStage.Out, Damage: Enumerable.Repeat(new DamageEntryInput(null, DamageKind.Rust), 31).ToList())));
     }
+
+    [Fact]
+    public void Seals_read_at_the_entry_are_held_only_when_they_contradict_the_declared_ones()
+    {
+        (string?, string?)[] one = [("MSCU1234566", "ML-449 120")];
+        Assert.Null(InspectionRules.SealProblem(one, ["ml449120"]));             // the same seal
+        Assert.Null(InspectionRules.SealProblem(one, []));                       // nothing read: not held
+        Assert.Null(InspectionRules.SealProblem([("MSCU1234566", null)], ["X1"])); // nothing declared
+        Assert.Equal("Seal doesn't match (MSCU1234566: declared ML449120, read ZZ0001). Check the seal before letting the truck in.",
+            InspectionRules.SealProblem(one, ["zz-0001"]));
+
+        // Two containers, one seal read: it is the first's; the second's seal may just not have been seen.
+        (string?, string?)[] two = [("MSCU1234566", "A100"), ("TGHU8812348", "B200")];
+        Assert.Null(InspectionRules.SealProblem(two, ["A100"]));
+        Assert.Null(InspectionRules.SealProblem(two, ["B200", "A100"]));
+        Assert.Contains("TGHU8812348: declared B200, read C300", InspectionRules.SealProblem(two, ["A100", "C300"]));
+    }
 }

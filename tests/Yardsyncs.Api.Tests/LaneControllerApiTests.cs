@@ -149,6 +149,48 @@ public sealed class LaneControllerApiTests(YardsyncsApiFactory factory) : ApiTes
     }
 
     [Fact]
+    public async Task A_seal_that_isnt_the_declared_one_holds_the_truck_where_the_terminal_asks_for_it()
+    {
+        if (!Enabled) return;
+        var admin = await As(DemoDataSeeder.TerminalAdminEmail);
+        var dispatcher = await As(DemoDataSeeder.DispatcherEmail);
+        var booked = await BookTruck1234();
+        await SlotIsNow();
+        Assert.Equal(HttpStatusCode.OK, (await dispatcher.PutAsJsonAsync($"{Appointments}/{booked.AppointmentNo}/items/1/seal", new { sealNo = "ML-449 120" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync($"{Terminal}/settings", new { values = new { seal_hold = 1 } })).StatusCode);
+        var (laneId, devices) = await AutomaticIn1(admin);
+
+        // The rear camera reads the container and another seal: red, and the case on the trouble desk.
+        await devices["IN1-OCR"].PostAsJsonAsync("/api/devices/reads", new { containers = new[] { new { number = "MSCU1234566" } }, seals = new[] { "zz 0001" } });
+        var tx = Assert.Single(await Read<List<LaneTransactionView>>(await admin.GetAsync($"{Gate}/transactions?laneId={laneId}")));
+        Assert.Equal((LaneTransactionStatus.Referred, "SEAL_MISMATCH"), (tx.Status, tx.Reason));
+        Assert.Contains("declared ML449120, read ZZ0001", tx.Message);
+        Assert.Empty(await Commands(devices["IN1-BARRIER"]));
+        var trouble = Assert.Single(await Read<List<TroubleView>>(await admin.GetAsync($"{Gate}/troubles")));
+        Assert.Equal(TroubleReason.SealMismatch, trouble.Reason);
+
+        // The clerk checks the seal and lets the truck in: the barrier opens.
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsJsonAsync($"{Gate}/troubles/{tx.TroubleId}/resolve",
+            new { action = "Admit", note = "Seal replaced by customs, papers checked", appointmentNo = booked.AppointmentNo })).StatusCode);
+        Assert.Equal(LaneCommand.Open, Assert.Single(await Commands(devices["IN1-BARRIER"])).Command);
+    }
+
+    [Fact]
+    public async Task Without_the_seal_hold_a_seal_mismatch_is_only_recorded()
+    {
+        if (!Enabled) return;
+        var admin = await As(DemoDataSeeder.TerminalAdminEmail);
+        var dispatcher = await As(DemoDataSeeder.DispatcherEmail);
+        var booked = await BookTruck1234();
+        await SlotIsNow();
+        Assert.Equal(HttpStatusCode.OK, (await dispatcher.PutAsJsonAsync($"{Appointments}/{booked.AppointmentNo}/items/1/seal", new { sealNo = "ML-449 120" })).StatusCode);
+        var (laneId, devices) = await AutomaticIn1(admin);
+
+        await devices["IN1-OCR"].PostAsJsonAsync("/api/devices/reads", new { containers = new[] { new { number = "MSCU1234566" } }, seals = new[] { "zz 0001" } });
+        Assert.Equal(LaneTransactionStatus.Admitted, Assert.Single(await Read<List<LaneTransactionView>>(await admin.GetAsync($"{Gate}/transactions?laneId={laneId}"))).Status);
+    }
+
+    [Fact]
     public async Task A_truck_that_is_early_waits_on_red_until_a_clerk_lets_it_in()
     {
         if (!Enabled) return;

@@ -29,7 +29,9 @@ a vessel peak) replaces it between two dates; when two seasonal plans overlap, t
   - the appointment must name its driver
   - the named driver shows the gate pass from Yardsyncs mobile
 
-  Trucks that don't meet the rules go to the trouble desk as **Driver not identified**.
+  Trucks that don't meet the rules go to the trouble desk as **Driver not identified**. With Yardsyncs Autogate,
+  **Seals at the entry** can also hold a truck whose seal, read by the lane cameras, isn't the one the company declared
+  (**Seal doesn't match**); a seal not read at all never holds a truck.
 - **Fees** (terminal admins) — booking, no-show and late-cancellation fees in the terminal's currency, and how many
   hours before the slot a cancellation counts as late. **Charges** lists what was charged per company. Download it for
   billing, or **Waive** a charge with a reason.

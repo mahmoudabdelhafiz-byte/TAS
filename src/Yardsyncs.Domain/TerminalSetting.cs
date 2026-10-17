@@ -39,8 +39,15 @@ public sealed record TerminalSettings(
     long FeeLateCancel = 0,
     int LateCancelHours = 0,
     bool TosGateWrite = false,
-    bool Autogate = true)
+    bool Autogate = true,
+    bool SealHold = false)
 {
+    /// <summary>
+    /// Hold a truck at the entry when a seal read at the gate isn't the one the company declared: the trouble desk
+    /// decides (SEAL_MISMATCH). Off: the mismatch is only recorded in the inspection.
+    /// </summary>
+    public const string SealHoldKey = "seal_hold";
+
     /// <summary>The terminal has the Autogate module (when the installation has it). Set by system admins: it is what the customer bought.</summary>
     public const string ModuleAutogateKey = "module_autogate";
 
@@ -87,6 +94,7 @@ public sealed record TerminalSettings(
             Get(FeeLateCancelKey, 0),
             Get(LateCancelHoursKey, 0),
             Get(TosGateWriteKey, 0) != 0,
-            Get(ModuleAutogateKey, 1) != 0);
+            Get(ModuleAutogateKey, 1) != 0,
+            Get(SealHoldKey, 0) != 0);
     }
 }

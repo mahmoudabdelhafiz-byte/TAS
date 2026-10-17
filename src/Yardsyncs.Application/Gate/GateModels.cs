@@ -13,7 +13,8 @@ public sealed record ArrivalInput(
     string? PlateRead = null,
     IReadOnlyList<string>? ContainerReads = null,
     string? QrToken = null,
-    string? AppointmentNo = null);
+    string? AppointmentNo = null,
+    IReadOnlyList<string>? SealReads = null);
 
 public sealed record GateInInput(string AppointmentNo, string? LaneCode = null);
 

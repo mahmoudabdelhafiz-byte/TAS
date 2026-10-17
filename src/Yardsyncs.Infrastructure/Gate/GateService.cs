@@ -142,6 +142,16 @@ public sealed class GateService(
             decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.NotCleared,
                 "The terminal system could not be reached to re-check this truck — verify in the TOS and admit from the trouble desk.");
 
+        // Seals read at the entry against the ones the company declared: held for the trouble desk where the terminal asks for it.
+        if (decision.Kind == GateDecisionKind.Admit && settings.SealHold && input.SealReads is { Count: > 0 } sealReads)
+        {
+            var appointmentId = match.Appointment!.AppointmentId;
+            var declared = await db.AppointmentItems.AsNoTracking().Where(i => i.AppointmentId == appointmentId)
+                .OrderBy(i => i.ItemId).Select(i => new { i.ContainerNo, i.SealNo }).ToListAsync(ct);
+            if (InspectionRules.SealProblem(declared.Select(i => (i.ContainerNo, i.SealNo)), sealReads) is { } sealProblem)
+                decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.SealMismatch, sealProblem);
+        }
+
         if (!record)
         {
             var seen = match.Appointment is null ? null : await queries.GetAsync(terminalId, match.Appointment.AppointmentNo, ct);

@@ -27,6 +27,7 @@ public static class CapacityConfigValidator
         [TerminalSettings.DriverIdentityKey] = (0, 2),
         [TerminalSettings.TosGateWriteKey] = (0, 1),
         [TerminalSettings.ModuleAutogateKey] = (0, 1),
+        [TerminalSettings.SealHoldKey] = (0, 1),
         [TerminalSettings.FeeBookingKey] = (0, 100_000_000),
         [TerminalSettings.FeeNoShowKey] = (0, 100_000_000),
         [TerminalSettings.FeeLateCancelKey] = (0, 100_000_000),
