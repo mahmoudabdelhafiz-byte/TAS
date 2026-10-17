@@ -681,8 +681,8 @@ Details in [`releasing.md`](releasing.md).
 | | Item | Notes |
 |---|---|---|
 | ✅ | **Reports 1 — company dashboard**: trucking companies see their own no-shows, on-time rate, time inside per truck and driver, holds and why, charges (**Our performance**); the terminal sees every company side by side under **KPIs → Companies** | Company users only see their company |
-| 🔜 | **Reports 2 — Excel export**: KPIs, appointments of a period, gate passages, lane passages, charges | |
-| ⬜ | **Reports 3 — emailed reports**: daily (yesterday + today's bookings) and weekly summary to a list of people | Per-terminal setting: on / off, recipients, hour |
+| ✅ | **Reports 2 — Excel export**: KPIs (summary, days, hours, companies), a company's report, the appointments of a period with gate times; headings in English or Arabic (right to left) | Charges stay CSV; gate and lane passages are in the appointments file and the lane KPIs |
+| 🔜 | **Reports 3 — emailed reports**: daily (yesterday + today's bookings) and weekly summary to a list of people | Per-terminal setting: on / off, recipients, hour |
 | ⬜ | **Driver record**: terminal staff record a penalty or misbehaviour against a driver (speeding, unsafe driving, no PPE, wrong area, damage, abusive conduct, repeated no-show, other), with severity points, date, the visit, a note and a photo | Points expire after N days (per-terminal setting) |
 | ⬜ | Driver record warnings: past a threshold of points the control room, the gate and the trouble desk see a warning when the driver's truck comes; optional automatic block past a second threshold | Thresholds and auto-block per terminal; the company sees its own drivers' records (per-terminal setting) |
 | ⬜ | **Safety in the app**: safety campaigns (message, picture, period, which drivers / companies, read receipt or "I agree") shown in the driver's language | |

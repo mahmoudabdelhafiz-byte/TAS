@@ -1251,3 +1251,5 @@ tr.row-editing > td { background: var(--teal-tint); }
 .rep-holds li .muted { flex-basis: 100%; font-size: 13.5px; }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--teal-tint); }
+.excel-buttons { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.panel .excel-buttons { margin-bottom: 14px; }

@@ -211,6 +211,7 @@ public static class ServerText
             (R(@"Choose the company \(companyId\)\."), "اختر الشركة."),
             (R(@"Only terminal staff of this terminal and the company itself see its report\."), "يطّلع على تقرير الشركة موظفو هذه المحطة والشركة نفسها فقط."),
             (R(@"No access to this terminal\."), "لا صلاحية لك على هذه المحطة."),
+            (R(@"Only terminal staff of this terminal see its KPIs\."), "مؤشرات أداء المحطة لموظفيها فقط."),
             (R(@"'to' must be on or after 'from'\."), "يجب أن يكون تاريخ النهاية في تاريخ البداية أو بعده."),
             (R(@"The range can be at most (\d+) days\."), "يمكن أن تكون الفترة $1 يوماً على الأكثر."),
             (R(@"You can only act for your own company\."), "يمكنك التصرف لشركتك فقط."),

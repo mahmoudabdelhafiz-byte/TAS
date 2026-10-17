@@ -98,3 +98,5 @@ why, and **Send dispute**. The terminal answers there.
 **Our performance** shows how your company did at the terminal for the last 7 or 30 days or any dates: appointments,
 no-shows, arriving on time, time inside the terminal and waiting at the gate; then each truck and each driver, the
 holds that stopped your visits (customs, line release, unpaid charges…) and the charges. You see only your own company.
+**Download Excel** saves the report as a workbook; **Appointments in Excel** lists every appointment of the period
+with its truck, driver, containers and gate times.
