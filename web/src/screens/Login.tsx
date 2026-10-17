@@ -23,6 +23,8 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn, brand }
   const [error, setError] = useState<string | null>(sessionEnded ? t('common.sessionEnded') : null);
   const [forgot, setForgot] = useState(false);
   const [sent, setSent] = useState(false);
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState('');
 
   async function askForLink(e: FormEvent) {
     e.preventDefault();
@@ -43,8 +45,20 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn, brand }
     setBusy(true);
     setError(null);
     try {
-      onSignedIn(await api.login(email.trim(), password));
+      if (challenge) {
+        onSignedIn(await api.loginCode(challenge, code));
+        return;
+      }
+      const outcome = await api.login(email.trim(), password);
+      if ('challenge' in outcome) {
+        setChallenge(outcome.challenge);
+        setPassword('');
+      } else onSignedIn(outcome.user);
     } catch (err) {
+      if (challenge && err instanceof ApiError && err.message.includes('too long')) {
+        setChallenge(null);
+        setCode('');
+      }
       setError(err instanceof ApiError ? err.message : t('common.offline'));
     } finally {
       setBusy(false);
@@ -78,6 +92,22 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn, brand }
             <button type="button" className="link-btn" onClick={() => { setForgot(false); setSent(false); setError(null); }}>{t('login.backToSignIn')}</button>
           </form>
         ) : (
+        challenge ? (
+        <form className="login-form" onSubmit={submit}>
+          <h1>{t('login.codeTitle')}</h1>
+          <p className="lead">{t('login.codeLead')}</p>
+          {error && <div className="notice notice-error" role="alert">{error}</div>}
+          <label className="field">
+            <span>{t('login.code')}</span>
+            <input inputMode="numeric" autoComplete="one-time-code" required autoFocus maxLength={7} value={code}
+              onChange={e => setCode(e.target.value.replace(/[^0-9 ]/g, ''))} dir="ltr" className="code-input" />
+          </label>
+          <button type="submit" className="btn btn-primary btn-wide" disabled={busy || code.replace(/\D/g, '').length !== 6}>
+            {busy ? t('login.busy') : t('login.submit')}
+          </button>
+          <button type="button" className="link-btn" onClick={() => { setChallenge(null); setCode(''); setError(null); }}>{t('login.backToSignIn')}</button>
+        </form>
+        ) : (
         <form className="login-form" onSubmit={submit}>
           <h1>{t('login.title')}</h1>
           <p className="lead">{t('login.lead')}</p>
@@ -95,6 +125,7 @@ export function Login({ api, lang, t, setLang, sessionEnded, onSignedIn, brand }
           </button>
           <button type="button" className="link-btn" onClick={() => { setForgot(true); setError(null); }}>{t('login.forgot')}</button>
         </form>
+        )
         )}
         <a className="login-docs" href="#/docs">{t('login.docs')}</a>
       </section>

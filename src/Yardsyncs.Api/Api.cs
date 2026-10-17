@@ -9,6 +9,11 @@ namespace Yardsyncs.Api;
 
 public sealed record LoginBody(string Email, string Password);
 
+/// <param name="Challenge">From the sign-in (second step); not needed when confirming the set-up.</param>
+public sealed record TwoStepCodeBody(string? Code, string? Challenge = null);
+
+public sealed record TwoStepDisableBody(string? Password, string? Code);
+
 /// <param name="RefreshToken">For API clients; the portal leaves it out and sends its cookie (see <see cref="PortalSession"/>).</param>
 public sealed record RefreshBody(string? RefreshToken = null);
 

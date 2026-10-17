@@ -20,6 +20,13 @@ public static class DriverAuth
     public const string Policy = "Driver";
 }
 
+/// <summary>Claims added on each request for two-step sign-in.</summary>
+public static class TwoStepClaims
+{
+    /// <summary>An admin who must set up two-step sign-in before anything else.</summary>
+    public const string SetupRequired = "two_step_setup_required";
+}
+
 public static class AuthSetup
 {
     /// <summary>JWT bearer authentication for the API, plus the auth services.</summary>
@@ -75,7 +82,7 @@ public static class AuthSetup
                         var ct = context.HttpContext.RequestAborted;
                         var actual = await db.AppUsers.AsNoTracking()
                             .Where(u => u.UserId == claimed.UserId)
-                            .Select(u => new { u.IsActive, u.Role, u.CompanyId, u.TerminalId, u.OperatorId })
+                            .Select(u => new { u.IsActive, u.Role, u.CompanyId, u.TerminalId, u.OperatorId, u.TotpEnabledAt })
                             .SingleOrDefaultAsync(ct);
 
                         if (actual is null || !actual.IsActive || actual.Role != claimed.Role
@@ -88,8 +95,11 @@ public static class AuthSetup
 
                         // An operator admin works at the operator's terminals as they are now; a stopped operator signs them out.
                         var identity = (ClaimsIdentity)context.Principal!.Identity!;
-                        foreach (var stray in identity.FindAll(YardsyncsClaims.OperatorTerminals).ToList())
+                        foreach (var stray in identity.FindAll(YardsyncsClaims.OperatorTerminals).Concat(identity.FindAll(TwoStepClaims.SetupRequired)).ToList())
                             identity.RemoveClaim(stray);
+                        // An admin who must use two-step sign-in and hasn't set it up yet may only do that (see Program).
+                        if (context.HttpContext.RequestServices.GetRequiredService<TwoStepPolicy>().SetupRequired(actual.Role, actual.TotpEnabledAt))
+                            identity.AddClaim(new Claim(TwoStepClaims.SetupRequired, "true"));
                         if (actual.Role == UserRole.OperatorAdmin)
                         {
                             if (actual.OperatorId is not { } operatorId
@@ -152,6 +162,9 @@ public static class AuthSetup
         services.AddSingleton<PasswordService>();
         services.AddSingleton<TokenService>();
         services.AddScoped<AuthService>();
+        services.AddSingleton<TwoStepCrypto>();
+        services.AddSingleton<TwoStepPolicy>();
+        services.AddScoped<TwoStepService>();
         services.AddScoped<UserAdminService>();
         services.Configure<PasswordLinkOptions>(config.GetSection("PasswordLinks"));
         services.AddScoped<PasswordLinkService>();

@@ -243,7 +243,11 @@ CREATE TABLE app_user (
     failed_login_count  integer      NOT NULL DEFAULT 0,
     locked_until        timestamptz  NULL,
     last_login_at       timestamptz  NULL,
-    created_at          timestamptz  NOT NULL DEFAULT now()
+    created_at          timestamptz  NOT NULL DEFAULT now(),
+    -- two-step sign-in (see migration 028)
+    totp_secret         bytea        NULL,
+    totp_enabled_at     timestamptz  NULL,
+    totp_last_step      bigint       NULL
 );
 
 -- Links to set a password (see migration 010).

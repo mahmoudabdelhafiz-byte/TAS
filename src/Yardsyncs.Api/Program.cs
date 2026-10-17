@@ -140,6 +140,21 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseAuthentication();
+// An admin who must use two-step sign-in and hasn't set it up may only sign in, set it up and sign out.
+app.Use(async (context, next) =>
+{
+    if (context.User.HasClaim(Yardsyncs.Infrastructure.Auth.TwoStepClaims.SetupRequired, "true")
+        && context.Request.Path.StartsWithSegments("/api")
+        && !context.Request.Path.StartsWithSegments("/api/auth")
+        && !context.Request.Path.StartsWithSegments("/api/branding")
+        && !context.Request.Path.StartsWithSegments("/api/languages"))
+    {
+        await YardsyncsApi.Problem(StatusCodes.Status403Forbidden, "Set up two-step sign-in first: admins sign in with a code from an authenticator app.",
+            new Dictionary<string, object?> { ["twoStepSetupRequired"] = true }).ExecuteAsync(context);
+        return;
+    }
+    await next();
+});
 // A read-only API key may only read.
 app.Use(async (context, next) =>
 {
@@ -208,10 +223,32 @@ auth.MapPost("/login", async (LoginBody body, AuthService service, HttpContext h
     return result.Status switch
     {
         AuthStatus.Ok => PortalSession.Issue(http, result),
+        AuthStatus.SecondStep => Results.Ok(new { secondStep = true, challenge = result.Challenge }),
         AuthStatus.LockedOut => YardsyncsApi.Problem(StatusCodes.Status423Locked, result.Error!),
         _ => YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "Wrong email or password."),
     };
 }).RequireRateLimiting("auth");
+
+// Two-step sign-in, second step: the code from the authenticator app, with the challenge the password gave.
+auth.MapPost("/login/code", async (TwoStepCodeBody body, AuthService service, HttpContext http, CancellationToken ct) =>
+{
+    var result = await service.CompleteSecondStepAsync(body.Challenge, body.Code, http.Connection.RemoteIpAddress?.ToString(), ct);
+    return result.Status switch
+    {
+        AuthStatus.Ok => PortalSession.Issue(http, result),
+        AuthStatus.LockedOut => YardsyncsApi.Problem(StatusCodes.Status423Locked, result.Error!),
+        AuthStatus.InvalidToken => YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "The sign-in took too long. Enter your password again."),
+        _ => YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "That code isn't right."),
+    };
+}).RequireRateLimiting("auth");
+
+// Setting up two-step sign-in (signed in): a secret for the app, then the first code from it turns it on.
+auth.MapPost("/two-step/setup", async (HttpContext http, TwoStepService service, CancellationToken ct) =>
+    YardsyncsApi.Admin(await service.SetupAsync(YardsyncsApi.User(http)!, ct))).RequireAuthorization();
+auth.MapPost("/two-step/confirm", async (TwoStepCodeBody body, HttpContext http, TwoStepService service, CancellationToken ct) =>
+    YardsyncsApi.Admin(await service.ConfirmAsync(YardsyncsApi.User(http)!, body.Code, ct))).RequireAuthorization();
+auth.MapPost("/two-step/disable", async (TwoStepDisableBody body, HttpContext http, TwoStepService service, CancellationToken ct) =>
+    YardsyncsApi.Admin(await service.DisableAsync(YardsyncsApi.User(http)!, body.Password, body.Code, ct))).RequireAuthorization();
 
 auth.MapPost("/refresh", async (RefreshBody? body, AuthService service, HttpContext http, CancellationToken ct) =>
 {

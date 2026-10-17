@@ -40,6 +40,11 @@ the terminal's own gate system connects through the gate API with a key a termin
 systems** (docs page "Connecting your own gate system"). On an installation serving several terminals, a system admin
 can switch Autogate off for one terminal with its setting `module_autogate` = 0.
 
+**Admins' two-step sign-in.** Terminal, operator and system admins set up an authenticator app at their first sign-in
+(the bootstrap admin too) and type a code after their password from then on. If an admin loses the phone, another admin
+resets it (Fleet & users → Users). `Auth__AdminTwoStep=Optional` turns the requirement off (demos only; listed in
+`/api/ops/status` warnings).
+
 **Personal data.** Positions, message addresses and old sessions are cleaned up daily; the periods are in `.env`
 (`Privacy__*`). Drivers' copy of data and erasure are in the portal (Fleet & users → Drivers).
 

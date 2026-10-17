@@ -1175,3 +1175,10 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .exit-held p { margin: 0 0 4px; }
 .exit-held ul { margin: 0 0 8px; padding-inline-start: 20px; }
 .ticket-exit { margin: 12px 0 0; padding: 8px 10px; background: var(--red-tint); border-radius: var(--radius); }
+
+/* Two-step sign-in */
+.code-input { font-size: 1.4rem; letter-spacing: 0.3em; text-align: center; font-variant-numeric: tabular-nums; }
+.twostep-steps { margin: 0 0 8px; padding-inline-start: 1.2em; display: grid; gap: 10px; }
+.twostep-key { display: block; margin: 6px 0; padding: 8px 10px; background: var(--page); border: 1px solid var(--line); border-radius: var(--radius);
+  font-size: 1.05rem; letter-spacing: 0.08em; word-break: normal; overflow-wrap: anywhere; }
+.twostep-actions { display: flex; gap: 16px; }

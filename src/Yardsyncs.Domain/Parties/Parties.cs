@@ -64,6 +64,15 @@ public sealed class AppUser
     public DateTimeOffset? LastLoginAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>Two-step sign-in: the authenticator secret, encrypted; set while setting up, kept once confirmed.</summary>
+    public byte[]? TotpSecret { get; set; }
+
+    /// <summary>Two-step sign-in is on (confirmed with a first code).</summary>
+    public DateTimeOffset? TotpEnabledAt { get; set; }
+
+    /// <summary>The 30-second step of the last code used: a code works once.</summary>
+    public long? TotpLastStep { get; set; }
+
     public bool IsTerminalStaff => Role is UserRole.GateClerk or UserRole.Planner or UserRole.TerminalAdmin or UserRole.OperatorAdmin or UserRole.SysAdmin;
 }
 

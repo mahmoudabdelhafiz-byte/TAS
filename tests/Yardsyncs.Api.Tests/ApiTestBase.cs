@@ -50,6 +50,7 @@ public class YardsyncsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Tracking:Enabled", "false"); // followed containers are checked by the test // events stay QUEUED; delivery is tested in Yardsyncs.Infrastructure.Tests
         builder.UseSetting("Notifications:PushProvider", "Fcm"); // push first for drivers with the app (not sent: the worker is off)
         builder.UseSetting("DriverLogin:ExposeCodeForTesting", "true");
+        builder.UseSetting("Auth:AdminTwoStep", "Optional"); // required by default; TwoStepApiTests checks it
         builder.UseSetting("PasswordLinks:ExposeTokenForTesting", "true");
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
         builder.UseSetting("FakeTos:PaymentWarning:0", "CMAU5100028");

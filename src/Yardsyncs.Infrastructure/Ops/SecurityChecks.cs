@@ -49,6 +49,8 @@ public static class SecurityChecks
             warnings.Add("Notifications:LogMessageText is on: sign-in codes and password links are written to the log. For demos only.");
         if (!string.IsNullOrWhiteSpace(config["Assistant:ApiKey"]) && config.GetValue("Assistant:LiveData", true))
             warnings.Add("The AI assistant sends questions and the data it looks up (appointments, plates, drivers' names) to Anthropic: name it in the privacy notice, or set Assistant:LiveData=false.");
+        if (string.Equals(config["Auth:AdminTwoStep"], "Optional", StringComparison.OrdinalIgnoreCase) && !IsTestHost(env))
+            warnings.Add("Auth:AdminTwoStep is Optional: admins can sign in with a password alone. Leave it unset (Required) on a real server.");
         if (!string.IsNullOrEmpty(config["Bootstrap:AdminPassword"]))
             warnings.Add("Bootstrap:AdminPassword is still set: remove it once the first administrator has signed in.");
         return warnings;

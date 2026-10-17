@@ -18,6 +18,7 @@ interface UserRow {
   preferredLanguage: string;
   isActive: boolean;
   lastLoginAt: string | null;
+  twoStepOn?: boolean;
 }
 
 interface CompanyRow extends Company {
@@ -293,7 +294,7 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
                   <tr key={x.userId} className={x.isActive ? undefined : 'inactive'}>
                     <td>{x.fullName}</td>
                     <td><bdi>{x.email}</bdi></td>
-                    <td>{tx('role', x.role)}</td>
+                    <td>{tx('role', x.role)}{x.twoStepOn && <span className="muted" title={t('fleet.twoStepOn')}> · 2FA</span>}</td>
                     <td className="num">{x.lastLoginAt ? stamp(x.lastLoginAt, terminal.timeZone, lang) : '—'}</td>
                     <td className="cell-action">
                       {canEdit && x.userId !== user.userId && x.isActive && (
@@ -301,6 +302,13 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
                           await api.post(`/api/users/${x.userId}/password-link`);
                           m.setDone(t('fleet.linkSent', { email: x.email }));
                         }}>{t('fleet.sendLink')}</ActionButton>
+                      )}{' '}
+                      {canEdit && x.userId !== user.userId && x.twoStepOn && (
+                        <ActionButton kind="secondary" onError={m.setError} onRun={async () => {
+                          await api.post(`/api/users/${x.userId}/two-step/reset`, { reason: t('fleet.resetTwoStepReason') });
+                          m.setDone(t('fleet.twoStepReset', { email: x.email }));
+                          list.reload();
+                        }}>{t('fleet.resetTwoStep')}</ActionButton>
                       )}{' '}
                       {canEdit && x.userId !== user.userId && (
                         <ActionButton kind={x.isActive ? 'secondary' : 'primary'} onError={m.setError} onRun={async () => {

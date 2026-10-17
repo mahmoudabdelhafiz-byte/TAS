@@ -15,6 +15,9 @@ public enum AuthStatus
     LockedOut,
     InvalidToken,
     Invalid,
+
+    /// <summary>The password was right; the code from the authenticator app comes next (<see cref="AuthResult.Challenge"/>).</summary>
+    SecondStep,
 }
 
 public sealed record UserProfile(
@@ -27,9 +30,11 @@ public sealed record UserProfile(
     int? TerminalId,
     string PreferredLanguage,
     int? OperatorId = null,
-    string? OperatorName = null);
+    string? OperatorName = null,
+    bool TwoStepEnabled = false,
+    bool TwoStepSetupRequired = false);
 
-public sealed record AuthResult(AuthStatus Status, IssuedTokens? Tokens = null, UserProfile? User = null, string? Error = null);
+public sealed record AuthResult(AuthStatus Status, IssuedTokens? Tokens = null, UserProfile? User = null, string? Error = null, string? Challenge = null);
 
 /// <summary>
 /// Login, token refresh, logout and password change.
@@ -45,7 +50,9 @@ public sealed class AuthService(
     TokenService tokens,
     IOptions<JwtOptions> options,
     TimeProvider clock,
-    ILogger<AuthService> logger)
+    ILogger<AuthService> logger,
+    TwoStepCrypto twoStep,
+    TwoStepPolicy twoStepPolicy)
 {
     public const int MaxFailedLogins = 5;
     public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
@@ -85,10 +92,60 @@ public sealed class AuthService(
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
             user.PasswordHash = passwords.Hash(user, password!);
 
+        // Two-step sign-in: the password alone isn't enough; the code comes next, within a few minutes.
+        if (user.TotpEnabledAt is not null)
+        {
+            await db.SaveChangesAsync(ct);
+            return new AuthResult(AuthStatus.SecondStep, Challenge: twoStep.Challenge(user.UserId, now));
+        }
+
         await db.AppUsers.Where(u => u.UserId == user.UserId)
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.FailedLoginCount, 0).SetProperty(u => u.LockedUntil, (DateTimeOffset?)null), ct);
         user.LastLoginAt = now;
 
+        var issued = await IssueAsync(user, ip, null, ct);
+        return new AuthResult(AuthStatus.Ok, issued, await ProfileAsync(user, ct));
+    }
+
+    /// <summary>
+    /// The second step: the code from the authenticator app, with the ticket the password gave. Wrong codes count
+    /// towards the lockout like wrong passwords; a code works once.
+    /// </summary>
+    public async Task<AuthResult> CompleteSecondStepAsync(string? challenge, string? code, string? ip, CancellationToken ct = default)
+    {
+        var now = clock.GetUtcNow();
+        if (twoStep.Read(challenge, now) is not { } userId)
+            return new AuthResult(AuthStatus.InvalidToken);
+        var user = await db.AppUsers.SingleOrDefaultAsync(u => u.UserId == userId && u.IsActive, ct);
+        if (user is null || user.TotpEnabledAt is null || user.TotpSecret is null)
+            return new AuthResult(AuthStatus.InvalidToken);
+        if (user.LockedUntil > now)
+            return new AuthResult(AuthStatus.LockedOut, Error: "Too many failed attempts. Try again in a few minutes.");
+
+        if (Totp.Verify(twoStep.Unprotect(user.TotpSecret), code, now, user.TotpLastStep) is not { } step)
+        {
+            await db.AppUsers.Where(u => u.UserId == user.UserId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.FailedLoginCount, u => u.FailedLoginCount + 1), ct);
+            var failed = await db.AppUsers.AsNoTracking().Where(u => u.UserId == user.UserId).Select(u => u.FailedLoginCount).SingleAsync(ct);
+            if (failed >= MaxFailedLogins)
+            {
+                await db.AppUsers.Where(u => u.UserId == user.UserId && u.FailedLoginCount >= MaxFailedLogins)
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.LockedUntil, now + LockoutDuration).SetProperty(u => u.FailedLoginCount, 0), ct);
+                logger.LogWarning("User {UserId} locked out after {Count} wrong sign-in codes from {Ip}", user.UserId, MaxFailedLogins, ip);
+            }
+            return new AuthResult(AuthStatus.InvalidCredentials);
+        }
+
+        // The step is the code's: claimed in the database, so the same code can't sign in twice.
+        var claimed = await db.AppUsers
+            .Where(u => u.UserId == user.UserId && (u.TotpLastStep == null || u.TotpLastStep < step))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(u => u.TotpLastStep, step)
+                .SetProperty(u => u.FailedLoginCount, 0)
+                .SetProperty(u => u.LockedUntil, (DateTimeOffset?)null), ct);
+        if (claimed == 0)
+            return new AuthResult(AuthStatus.InvalidCredentials);
+        user.LastLoginAt = now;
         var issued = await IssueAsync(user, ip, null, ct);
         return new AuthResult(AuthStatus.Ok, issued, await ProfileAsync(user, ct));
     }
@@ -193,7 +250,8 @@ public sealed class AuthService(
             ? null
             : await db.TerminalOperators.AsNoTracking().Where(o => o.OperatorId == user.OperatorId).Select(o => o.Name).SingleOrDefaultAsync(ct);
         return new UserProfile(user.UserId, user.Email, user.FullName, user.Role, user.CompanyId, companyName, user.TerminalId,
-            user.PreferredLanguage.Trim(), user.OperatorId, operatorName);
+            user.PreferredLanguage.Trim(), user.OperatorId, operatorName,
+            user.TotpEnabledAt is not null, twoStepPolicy.SetupRequired(user.Role, user.TotpEnabledAt));
     }
 
     private async Task<IssuedTokens> IssueAsync(AppUser user, string? ip, string? refreshToken, CancellationToken ct)
