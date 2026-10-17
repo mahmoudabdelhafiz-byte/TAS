@@ -112,4 +112,19 @@ public class SecurityTests
         var table = BulkFiles.ReadExcel(new MemoryStream(template));
         Assert.NotEmpty(table);
     }
+
+    [Fact]
+    public void Forwarded_headers_are_believed_only_from_the_proxys_network()
+    {
+        var defaults = ProxyTrust.Networks(null);
+        Assert.Contains(defaults, n => n.Contains(System.Net.IPAddress.Parse("172.18.0.5")));   // a Docker network
+        Assert.Contains(defaults, n => n.Contains(System.Net.IPAddress.Loopback));
+        Assert.DoesNotContain(defaults, n => n.Contains(System.Net.IPAddress.Parse("203.0.113.9"))); // the internet
+
+        var configured = ProxyTrust.Networks("10.20.0.0/16, 192.0.2.7");
+        Assert.Equal(2, configured.Count);
+        Assert.True(configured[1].Contains(System.Net.IPAddress.Parse("192.0.2.7")));
+        Assert.False(configured.Any(n => n.Contains(System.Net.IPAddress.Parse("172.18.0.5"))));
+        Assert.Throws<InvalidOperationException>(() => ProxyTrust.Networks("proxy.example.com"));
+    }
 }

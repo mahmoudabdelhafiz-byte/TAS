@@ -35,8 +35,12 @@ if (builder.Configuration.GetValue("Proxy:TrustForwardedHeaders", false))
     builder.Services.Configure<ForwardedHeadersOptions>(o =>
     {
         o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+        // Believed only from the proxy's network (Proxy:KnownNetworks; default: private networks), one hop.
         o.KnownIPNetworks.Clear();
         o.KnownProxies.Clear();
+        foreach (var network in Yardsyncs.Infrastructure.Ops.ProxyTrust.Networks(builder.Configuration["Proxy:KnownNetworks"]))
+            o.KnownIPNetworks.Add(network);
+        o.ForwardLimit = 1;
     });
 }
 
