@@ -73,6 +73,9 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   days, trucks, drivers, holds by check, charges) and `GET …/company-report/companies?from=&to=` (terminal staff).
 - Excel: `GET /api/terminals/{id}/exports/appointments|kpis|company-report?from=&to=[&companyId=]` (headings in the
   `Accept-Language` language; companies get their own appointments and report, KPIs are for terminal staff).
+- Reports by email: `GET` / `POST /api/terminals/{id}/report-subscriptions` (`{email, language: en|ar, daily, weekly}`),
+  `DELETE …/{sid}`; sent at the terminal settings `report_hour` / `report_weekday` (worker: `Reports__Enabled`,
+  `Reports__IntervalMinutes`).
 - New terminals: **Terminal set-up** in the portal (`POST /api/terminals`, `GET /api/terminals/{id}/setup`): the usual
   move types, lanes and rules, then a checklist until trucks can book.
 - Another TOS: the TOS adapter kit (`TosContract`, conformance tests in `tests/Yardsyncs.Infrastructure.Tests/TosKit/`,

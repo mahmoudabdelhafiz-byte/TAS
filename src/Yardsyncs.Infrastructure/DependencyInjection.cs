@@ -66,6 +66,8 @@ public static class DependencyInjection
         services.AddScoped<Yardsyncs.Infrastructure.Reports.KpiService>();
         services.AddScoped<Yardsyncs.Infrastructure.Reports.CompanyReportService>();
         services.AddScoped<Yardsyncs.Infrastructure.Reports.ReportExportService>();
+        services.AddScoped<Yardsyncs.Infrastructure.Reports.ReportMailService>();
+        services.AddHostedService<Yardsyncs.Infrastructure.Reports.ReportMailWorker>();
         services.AddScoped<NoShowService>();
         services.AddScoped<RevalidationService>();
         services.AddHostedService<RevalidationWorker>();

@@ -69,6 +69,7 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<AppointmentStatusHistory> AppointmentStatusHistory => Set<AppointmentStatusHistory>();
     public DbSet<AppointmentCharge> AppointmentCharges => Set<AppointmentCharge>();
     public DbSet<AppointmentMessage> AppointmentMessages => Set<AppointmentMessage>();
+    public DbSet<ReportSubscription> ReportSubscriptions => Set<ReportSubscription>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -257,6 +258,13 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
             e.Property(x => x.ReasonCode).HasUpperCaseConversion();
             e.Property(x => x.Status).HasUpperCaseConversion();
             e.Property(x => x.Resolution).HasConversion(new UpperSnakeEnumConverter<TroubleResolution>());
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        b.Entity<ReportSubscription>(e =>
+        {
+            e.HasKey(x => x.SubscriptionId);
+            e.Property(x => x.Language).HasColumnType("char(2)");
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
 

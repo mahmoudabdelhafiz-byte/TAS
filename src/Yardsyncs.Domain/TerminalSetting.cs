@@ -40,8 +40,16 @@ public sealed record TerminalSettings(
     int LateCancelHours = 0,
     bool TosGateWrite = false,
     bool Autogate = true,
-    bool SealHold = false)
+    bool SealHold = false,
+    int ReportHour = 7,
+    int ReportWeekday = 0)
 {
+    /// <summary>Local hour the emailed reports go out (0–23); the daily one covers yesterday.</summary>
+    public const string ReportHourKey = "report_hour";
+
+    /// <summary>Day of the week of the weekly report, 0 = Sunday … 6 = Saturday; it covers the seven days before.</summary>
+    public const string ReportWeekdayKey = "report_weekday";
+
     /// <summary>
     /// Hold a truck at the entry when a seal read at the gate isn't the one the company declared: the trouble desk
     /// decides (SEAL_MISMATCH). Off: the mismatch is only recorded in the inspection.
@@ -95,6 +103,8 @@ public sealed record TerminalSettings(
             Get(LateCancelHoursKey, 0),
             Get(TosGateWriteKey, 0) != 0,
             Get(ModuleAutogateKey, 1) != 0,
-            Get(SealHoldKey, 0) != 0);
+            Get(SealHoldKey, 0) != 0,
+            Math.Min(Get(ReportHourKey, 7), 23),
+            Math.Min(Get(ReportWeekdayKey, 0), 6));
     }
 }

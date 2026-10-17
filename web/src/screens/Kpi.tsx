@@ -4,6 +4,8 @@ import { useApp } from '../ui/context.tsx';
 import { LoadError, useLoad } from '../ui/kit.tsx';
 import { reasonName } from './Clerk.tsx';
 import { CompaniesSection, ExcelButtons } from './CompanyReport.tsx';
+import { ReportMail } from './ReportMail.tsx';
+import { canChangeCapacity } from '../lib/routes.ts';
 
 export interface KpiDay {
   date: string;
@@ -75,7 +77,7 @@ export const shortDay = (date: string, lang: string) => {
 export const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
 
 export function Kpi() {
-  const { api, t, lang, terminal, today } = useApp();
+  const { api, t, lang, terminal, today, user } = useApp();
   const [range, setRange] = useState<{ from: string; to: string }>({ from: addDays(today, -6), to: today });
   const report = useLoad(
     () => api.get<KpiReport>(`/api/terminals/${terminal.terminalId}/kpis?from=${range.from}&to=${range.to}`),
@@ -150,6 +152,7 @@ export function Kpi() {
           {r.yard && <YardSection yard={r.yard} />}
           {terminal.autogate && <LaneSection from={range.from} to={range.to} />}
           <CompaniesSection range={range} />
+          {canChangeCapacity(user.role) && <ReportMail />}
 
           <button type="button" className="link-btn" onClick={() => setTable(x => !x)}>{table ? t('kpi.hideTable') : t('kpi.showTable')}</button>
           {table && (

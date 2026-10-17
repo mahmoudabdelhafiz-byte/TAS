@@ -32,6 +32,8 @@ public static class CapacityConfigValidator
         [TerminalSettings.FeeNoShowKey] = (0, 100_000_000),
         [TerminalSettings.FeeLateCancelKey] = (0, 100_000_000),
         [TerminalSettings.LateCancelHoursKey] = (0, 168),
+        [TerminalSettings.ReportHourKey] = (0, 23),
+        [TerminalSettings.ReportWeekdayKey] = (0, 6),
     };
 
     // ------------------------------------------------------------ templates

@@ -5,8 +5,14 @@ using Yardsyncs.Domain;
 
 namespace Yardsyncs.Application.Notifications;
 
+/// <summary>A file sent with an email (e.g. a report as Excel).</summary>
+public sealed record MessageAttachment(string FileName, string ContentType, byte[] Content);
+
 public sealed record RenderedMessage(string Subject, string Body)
 {
+    /// <summary>Files for email; other channels leave them out.</summary>
+    public IReadOnlyList<MessageAttachment> Attachments { get; init; } = [];
+
     /// <summary>Extra values for app push messages (template, appointment number), so the app can react to them.</summary>
     public IReadOnlyDictionary<string, string>? Data { get; init; }
 }
