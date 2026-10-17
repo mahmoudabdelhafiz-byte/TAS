@@ -149,7 +149,7 @@ public sealed class AppointmentQueryService(YardsyncsDbContext db, TimeProvider 
                 i.ValidationStatus,
                 i.ValidationResults
                     .OrderBy(v => v.ValidationId)
-                    .Select(v => new CheckDto(n + 1, v.CheckType, v.Result, ServerText.T(v.Message), v.Source))
+                    .Select(v => new CheckDto(n + 1, v.CheckType, v.Result, ServerText.TOrNull(v.Message), v.Source))
                     .ToList(),
                 i.SealNo)).ToList(),
             a.CreatedAt,

@@ -42,8 +42,9 @@ public sealed class ServerLanguageApiTests(YardsyncsApiFactory factory) : ApiTes
         var client = await As(DemoDataSeeder.DispatcherEmail);
         var created = await client.PostAsJsonAsync(Appointments, ImportBooking());
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var number = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("appointmentNo").GetString();
-        var english = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("trafficReason").GetString();
+        var booked = await created.Content.ReadFromJsonAsync<JsonElement>();
+        var number = booked.GetProperty("appointmentNo").GetString();
+        var english = booked.GetProperty("trafficReason").GetString();
 
         client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("ar");
         var arabic = (await client.GetFromJsonAsync<JsonElement>($"{Appointments}/{number}")).GetProperty("trafficReason").GetString();
