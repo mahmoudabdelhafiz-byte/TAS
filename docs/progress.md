@@ -539,6 +539,16 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Two scopes: **Book and change appointments**, or **Only look** (GET only, `403` otherwise); 300 calls a minute per key (`Api__KeyPerMinute`) |
 | ✅ | Made, listed (last used) and revoked by the company admin or a terminal admin in **Fleet & users → API keys**; keys can't manage keys; a suspended company's keys stop |
 
+### 57. Outside review: first fixes (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Forwarded headers (client address behind the proxy) believed only from the proxy's network (`Proxy__KnownNetworks`, default the private networks), one hop |
+| ✅ | Release image scan fails when the scanner can't run (checked in CI); critical problems without a fix are listed for review |
+| ✅ | What the lanes do when the TOS, the cloud, the lane agent, a camera or the barrier fails: table in *Connecting lane devices* |
+| ⬜ | Portal session: short access token in memory and the refresh token in an HttpOnly cookie instead of browser storage |
+| ⬜ | Two-step sign-in for admins; outside penetration test; secret rotation procedure (Phase F) |
+| ⬜ | Real N4, hardware and link-failure acceptance tests on the customer's test systems; staging with monitoring and a restore drill |
+
 ---
 
 ## Remaining

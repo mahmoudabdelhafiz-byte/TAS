@@ -56,7 +56,7 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
 - Health: `GET /health/live`, `GET /health/ready` (database reachable and up to date); `GET /api/ops/status` for
   admins (version, database, message and event backlogs).
 - Production settings: `Logging__Json=true` (one JSON object per line), `Proxy__TrustForwardedHeaders=true` behind a
-  reverse proxy, HSTS and browser security headers (CSP, no framing) are on outside Development.
+  reverse proxy (believed only from `Proxy__KnownNetworks`, default the private networks), HSTS and browser security headers (CSP, no framing) are on outside Development.
 - Security and personal data: [`docs/security.md`](docs/security.md) — review findings, what each customer decides
   (data location, providers, privacy notice, breach reporting). Outside Development / Testing the app refuses to start
   with test switches on, builds password links only from `PasswordLinks:PortalUrl`, and keeps codes and links out of

@@ -144,6 +144,19 @@ referred), give a yard position, check exits against the containers, or put case
 refers is dealt with at the lane, and the referral shows in the gate log afterwards. A truck let in offline whose
 barrier never confirmed is recorded as arrived, for the gate staff to check.
 
+### When something fails
+
+The lanes fail towards a person, never towards an open barrier:
+
+| What fails | Automatic entry lanes | Exit lanes | Afterwards |
+|---|---|---|---|
+| The TOS | No truck is let in automatically: each is referred for a clerk to check in the TOS | Trucks leave as usual (the visit is closed in Yardsyncs) | Gate records for the TOS wait and are sent again |
+| The cloud (edge mode) | The lane agent decides with the last light the cloud saw: red stays referred, nothing new is cleared | Trucks known to be inside leave; others wait for a clerk | The agent sends what it decided; each passage is recorded once |
+| The lane agent itself | The devices get no answer: the lane is worked by a clerk as a manual lane | Same | Restart the agent; nothing it decided is lost |
+| A camera or OCR | Trucks are identified at the kiosk (appointment number or gate pass), or referred | Referred | The device shows **Offline** or **Fault** on the Lanes screen |
+| The barrier | A barrier that doesn't confirm the opening refers the truck: a clerk lets it through by hand | Same | The visit is gated in only when the barrier confirms |
+| A command arrives late | Barrier and light commands expire after 30 seconds and are not carried out late | Same | The clerk sees the expired command |
+
 The agent signs in to the cloud with a gate system key of the terminal (**Lanes → Gate systems**); only such a key can
 take the snapshot (`GET …/gate/edge/snapshot`) or send passages. `GET /edge/status` on the agent tells whether it is
 online, how old its snapshot is and how many passages it still has to send.

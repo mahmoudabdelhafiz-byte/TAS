@@ -299,7 +299,13 @@ jobs:
             -d '{"email":"admin@ci.example","password":"Yard-Ci-2026-pass"}' | grep -q accessToken
 
       - name: Known vulnerabilities in the image
-        run: bash .github/scan-image.sh yardsyncs:latest false
+        run: |
+          bash .github/scan-image.sh yardsyncs:latest false
+          # A release must not pass when the scan can't run (an image that doesn't exist stands in for any failure).
+          if bash .github/scan-image.sh yardsyncs:no-such-image true > scan-check.log 2>&1; then
+            echo "::error title=image scan::the release scan passed although the scanner could not run"; exit 1
+          fi
+          grep -q "did not run" scan-check.log
 
       # Peak hour on the CI runner: dispatchers booking the busy hours, trucks reporting positions, control room
       # watching (loadtest/README.md). Thresholds in loadtest/peak.js; the booking rules are checked afterwards.

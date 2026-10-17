@@ -28,7 +28,7 @@ the gate tablets. To use the company's own certificate instead, mount it into th
 **The driver app** needs the server reachable from the phones (mobile data), so on-premise installations publish
 `TAS_DOMAIN` to the internet through the terminal's firewall — only ports 80/443 of the proxy.
 
-**Security settings.** Never publish the app's own port 8080: the app trusts the client address the proxy passes on.
+**Security settings.** Never publish the app's own port 8080: the app trusts the client address the proxy passes on, and only from the proxy's network (`Proxy__KnownNetworks`, default the private networks; set it to the proxy's network, e.g. `172.18.0.0/16`, to narrow it).
 Remove `Bootstrap__AdminPassword` from `.env` after the first sign-in. On a real server the app refuses to start with
 the test switches (`*ExposeCodeForTesting`, `*ExposeTokenForTesting`) on, sends password links only to
 `https://$TAS_DOMAIN`, and keeps sign-in codes and links out of the logs. `/api/ops/status` lists `warnings` for
