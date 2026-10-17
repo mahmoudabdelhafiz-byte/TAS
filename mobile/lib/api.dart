@@ -57,6 +57,9 @@ class DriverApi {
   final String _base;
   String? _token;
 
+  /// The app's language: the server writes reasons and errors (holds from the terminal, the gate's answer) in it.
+  String language = 'ar';
+
   static const _tokenKey = 'session.token';
   static const _installKey = 'install.id';
   static const _languageKey = 'language';
@@ -73,8 +76,16 @@ class DriverApi {
     return _token != null;
   }
 
-  Future<String?> savedLanguage() => _store.read(_languageKey);
-  Future<void> saveLanguage(String lang) => _store.write(_languageKey, lang);
+  Future<String?> savedLanguage() async {
+    final lang = await _store.read(_languageKey);
+    if (lang != null) language = lang;
+    return lang;
+  }
+
+  Future<void> saveLanguage(String lang) {
+    language = lang;
+    return _store.write(_languageKey, lang);
+  }
 
   /// Spoken directions in the yard: on unless the driver turned them off.
   Future<bool> voiceOn() async => await _store.read(_voiceKey) != 'off';
@@ -205,7 +216,7 @@ class DriverApi {
   }
 
   Future<dynamic> _send(String method, String path, {Map<String, dynamic>? body, bool auth = true}) async {
-    final headers = <String, String>{'Accept': 'application/json'};
+    final headers = <String, String>{'Accept': 'application/json', 'Accept-Language': language};
     if (body != null) headers['Content-Type'] = 'application/json';
     if (auth && _token != null) headers['Authorization'] = 'Bearer $_token';
 

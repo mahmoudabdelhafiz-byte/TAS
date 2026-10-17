@@ -229,8 +229,8 @@ public sealed class NotificationDatabaseTests : IAsyncLifetime
         Assert.Equal("+966500000001", to);
         Assert.Contains(no, sms.Body);
         Assert.Contains("موقوف", sms.Body);
-        Assert.Contains("Customs hold on MSCU1234566", sms.Body);
-        Assert.Contains("Tue 20 Oct 10:00–11:00", sms.Body);
+        Assert.Contains("حجز جمركي على MSCU1234566", sms.Body); // the TOS reason in the driver's language
+        Assert.Contains("الثلاثاء 20 أكتوبر 10:00–11:00", sms.Body);
 
         var (mailTo, mail) = Assert.Single(_email.Sent);
         Assert.Equal(DemoDataSeeder.DispatcherEmail, mailTo);

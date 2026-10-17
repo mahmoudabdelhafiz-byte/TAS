@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:yardsyncs_mobile/api.dart';
 import 'package:yardsyncs_mobile/screens/login.dart';
 
@@ -47,5 +49,22 @@ void main() {
     expect(await api.locationNoticeAccepted(), isFalse);
     await api.acceptLocationNotice();
     expect(await DriverApi(store: store).locationNoticeAccepted(), isTrue);
+  });
+
+  test('requests carry the app language so reasons come back in it', () async {
+    final seen = <String?>[];
+    final store = MemoryStore()..values['language'] = 'ur';
+    final api = DriverApi(
+      store: store,
+      client: MockClient((request) async {
+        seen.add(request.headers['Accept-Language']);
+        return http.Response('{"error":"x"}', 500);
+      }),
+    );
+    expect(await api.savedLanguage(), 'ur');
+    await api.branding();
+    await api.saveLanguage('hi');
+    await api.branding();
+    expect(seen, ['ur', 'hi']);
   });
 }

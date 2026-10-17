@@ -170,8 +170,15 @@ public static partial class NotificationText
                      ?? (byLanguage.ContainsKey(lang) ? null : LanguageCatalog.Message("en", templateCode));
         var (subject, body) = packed is null ? builtIn : (packed.Subject ?? builtIn.Subject, packed.Body);
 
+        // The reason (from the TOS or the terminal, in English) and the slot's day and month in the reader's language.
+        string InLanguage(string key, string value) => key switch
+        {
+            Keys.Reason => ServerText.Translate(value, lang),
+            Keys.Slot => ServerText.Dates(value, lang),
+            _ => value,
+        };
         string Fill(string s) => Placeholder().Replace(s, m =>
-            values.TryGetValue(m.Groups[1].Value, out var v) && !string.IsNullOrWhiteSpace(v) ? v.Trim() : "-");
+            values.TryGetValue(m.Groups[1].Value, out var v) && !string.IsNullOrWhiteSpace(v) ? InLanguage(m.Groups[1].Value, v.Trim()) : "-");
 
         return new RenderedMessage($"{name} — {Fill(subject)}", Fill(body.Replace(Brand, name, StringComparison.Ordinal)));
     }

@@ -558,6 +558,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Problems the portal reacts to carry a fixed `code` (`challenge_expired` for a two-step sign-in that took too long) instead of the portal reading the English text |
 | ⬜ | Native review of the Arabic wording (with the portal's); the driver app and notifications keep their own texts |
 
+### 59. Reasons in the driver's language (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | The driver app sends its language; the ready-to-go reason, check results (holds, unpaid charges, cut-off, VGM) and the gate's late / early answer come back in Arabic, Urdu or Hindi |
+| ✅ | SMS and push messages: the reason from the terminal (e.g. a customs hold) and the slot's day and month in the driver's language, no longer English inside an Arabic message |
+| ⬜ | Native review of the Urdu and Hindi wording; portal-only sentences stay English in Urdu and Hindi |
+
 ---
 
 ## Remaining
@@ -579,7 +586,7 @@ Details in [`releasing.md`](releasing.md).
 | ⬜ | FASAH customs release | If not already reflected in N4 |
 | ⬜ | National appointment platform | Check whether Mawani / FASAH requires integration at the customer's port ❓ |
 | ⬜ | SMS / WhatsApp provider account | Choose Unifonic / Twilio / other, register the "Yardsyncs" sender ID ❓ provider |
-| ⬜ | Native review of message texts | Arabic, Urdu and Hindi wording; the Arabic server texts of section 58 (other languages still get the English reasons) |
+| ⬜ | Native review of message texts | Arabic, Urdu and Hindi wording; the server texts of sections 58–59 (Arabic for the portal; Arabic, Urdu and Hindi for drivers) |
 | ✅ | Trucking company API | Section 56: API keys per company (book, or only look), 300 calls a minute per key |
 
 ### Phase D — Operator & company portal (React)
@@ -596,7 +603,7 @@ Details in [`releasing.md`](releasing.md).
 | 🔜 | Firebase project and Apple push key per installation (code ready) | Firebase / Apple developer accounts |
 | 🔜 | App identity: package name, icon, signing keys, store listings; commit the Android / iOS folders; release builds with HTTPS only | iOS Info.plist: location texts (when in use / always) and background mode "location"; Android 13+: ask for the notification permission so the tracking notice shows; Play Store background-location declaration |
 | ⬜ | National e-ID verification as a per-terminal option | Nafath in Saudi Arabia |
-| ⬜ | Reasons from the TOS in the driver's language (English today) | |
+| ✅ | Reasons from the TOS in the driver's language: in the app, SMS and push (section 59) | Urdu and Hindi cover what drivers read; native review pending |
 | ⬜ | Transfer points (lane / TP) as stops when N4 assigns them instead of a block | `yard_instruction.lane_or_tp` ready |
 | ⬜ | Speed zones and no-go lanes on the terminal roads; DXF import (GeoJSON import exists) | ❓ decision 10 |
 | ⬜ | Turn-by-turn prompts at junctions ("turn left at block A1"); spoken stops exist | |
