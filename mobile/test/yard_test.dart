@@ -80,5 +80,24 @@ void main() {
     expect(one.stops[0].arrived, isTrue);
     expect(YardGuidance.fromJson(withFlags(true, true)).firstOpen, 2); // the exit
   });
-}
 
+  test('the next turn is the first one the truck has not passed', () {
+    final leg = YardLeg.fromJson({
+      'toStop': 1,
+      'meters': 333,
+      'path': [
+        [0, 0], [0, 0.001], [0, 0.002], [0.0005, 0.002], [0.001, 0.002],
+      ],
+      'turns': [
+        {'point': [0, 0.002], 'turn': 'Right', 'atMeters': 222.4, 'near': 'A1', 'nearIsBlock': true},
+      ],
+    });
+    expect(leg.turns.single.nearIsBlock, isTrue);
+
+    final (turn, meters) = leg.nextTurn([0, 0.0016])!;
+    expect(turn.turn, 'Right');
+    expect(meters, closeTo(44.5, 2));
+    expect(leg.nextTurn([0.0008, 0.002]), isNull); // past the junction
+    expect(metersBetween([0, 0], [0, 0.001]), closeTo(111.2, 0.5));
+  });
+}

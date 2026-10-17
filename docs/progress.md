@@ -574,6 +574,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Open while the visit is live and for a day after its slot; reading marks the other side's messages read; the driver sees "Control room", not a person's name |
 | ⬜ | Voice notes and sharing a location (`appointment_message` has the columns); ready-made messages in language packs |
 
+### 61. Turn-by-turn inside the terminal (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Each drive to a stop carries its turns: at junctions only (where roads meet, so there is a choice), from the heading 15 m either side so drawn curves don't count; slight / normal / sharp left and right, U-turn |
+| ✅ | A junction is named by the block (or parking, gate, CFS…) within 60 m of it |
+| ✅ | App: **Next turn** strip with the arrow (never mirrored in Arabic / Urdu), what to do and how far; spoken once 25–80 m before and once at the turn, in the driver's language (ar, en, ur, hi) |
+| ⬜ | Lane-level prompts ("use the left lane") and speed zones (decision 10) |
+
 ---
 
 ## Remaining
@@ -615,7 +623,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Reasons from the TOS in the driver's language: in the app, SMS and push (section 59) | Urdu and Hindi cover what drivers read; native review pending |
 | ⬜ | Transfer points (lane / TP) as stops when N4 assigns them instead of a block | `yard_instruction.lane_or_tp` ready |
 | ⬜ | Speed zones and no-go lanes on the terminal roads; DXF import (GeoJSON import exists) | ❓ decision 10 |
-| ⬜ | Turn-by-turn prompts at junctions ("turn left at block A1"); spoken stops exist | |
+| ✅ | Turn-by-turn prompts at junctions ("in 50 metres, turn left at block A1"), on screen and spoken (section 61) | |
 | ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
 | ⬜ | N4 write-back of arrival at block (instead of / besides the webhook) | ❓ customer's N4 |
 | ✅ | Messages between the driver and the control room: ready-made ones (in each reader's language) or text, call request; push / SMS to the driver (section 60) | Voice notes and sharing a location still to come |

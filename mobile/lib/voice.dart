@@ -37,6 +37,26 @@ String spokenStop(String lang, YardStop stop, {double? meters}) {
   return parts.map((p) => p.trim()).join(end).trim();
 }
 
+/// What to do at a turn: "Turn left at block A1" ([speech] spells block codes for the voice).
+String turnWhat(String lang, YardTurn turn, {bool speech = false}) {
+  var what = tr(lang, 'turn.${turn.turn}');
+  final near = turn.near;
+  if (near != null) {
+    final place = turn.nearIsBlock ? tr(lang, 'nearBlock', {'block': speech ? _spell(near) : near}) : near;
+    what = tr(lang, 'turnNear', {'turn': what, 'place': place});
+  }
+  return _capital(what);
+}
+
+/// What is said for a turn: "In 50 metres, turn left at block A1" when [meters] is given, else "Now turn left at block A1".
+String turnText(String lang, YardTurn turn, {double? meters, bool speech = false}) {
+  final what = turnWhat(lang, turn, speech: speech);
+  final lower = what.isEmpty ? what : what[0].toLowerCase() + what.substring(1);
+  return _capital(meters == null ? tr(lang, 'turnNow', {'turn': lower}) : tr(lang, 'turnIn', {'m': '${spokenMeters(meters)}', 'turn': lower}));
+}
+
+String _capital(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
 /// "B2" → "B 2" so the voice says the letter, then the number.
 String _spell(String block) => block.replaceAllMapped(RegExp(r'(?<=[A-Za-z])(?=\d)|(?<=\d)(?=[A-Za-z])'), (_) => ' ');
 
@@ -63,6 +83,20 @@ class Voice {
     } catch (_) {
       // No speech engine on this phone: the directions stay on screen.
     }
+  }
+
+  /// Says a turn ahead ([meters] away) or now.
+  Future<void> sayTurn(String lang, YardTurn turn, {double? meters}) async {
+    try {
+      if (_appLang != lang) {
+        _textLang = await _pickVoice(lang);
+        _appLang = lang;
+      }
+      final textLang = _textLang;
+      if (textLang == null) return;
+      await _tts.stop();
+      await _tts.speak(turnText(textLang, turn, meters: meters, speech: true));
+    } catch (_) {}
   }
 
   /// Says one of the app's texts (by key) in the driver's language.

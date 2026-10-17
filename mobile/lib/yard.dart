@@ -52,17 +52,81 @@ class YardStop {
 }
 
 class YardLeg {
-  const YardLeg({required this.toStop, required this.path, required this.meters});
+  const YardLeg({required this.toStop, required this.path, required this.meters, this.turns = const []});
 
   final int toStop;
   final List<List<double>> path;
   final double meters;
 
+  /// Turns at junctions on the way, in order.
+  final List<YardTurn> turns;
+
   factory YardLeg.fromJson(Map<String, dynamic> json) => YardLeg(
         toStop: (json['toStop'] as num).toInt(),
         path: _points(json['path']),
         meters: (json['meters'] as num).toDouble(),
+        turns: ((json['turns'] as List?) ?? const []).map((e) => YardTurn.fromJson(e as Map<String, dynamic>)).toList(),
       );
+
+  /// How far along the drive the truck is: the distance to the route point nearest to it.
+  double progress(List<double> truck) {
+    if (path.isEmpty) return 0;
+    var best = 0;
+    var bestMeters = double.infinity;
+    for (var i = 0; i < path.length; i++) {
+      final m = metersBetween(path[i], truck);
+      if (m < bestMeters) {
+        bestMeters = m;
+        best = i;
+      }
+    }
+    var along = 0.0;
+    for (var i = 1; i <= best; i++) {
+      along += metersBetween(path[i - 1], path[i]);
+    }
+    return along;
+  }
+
+  /// The next turn ahead of the truck and how far it is (straight line), or null when no turn is left.
+  (YardTurn, double)? nextTurn(List<double> truck) {
+    final at = progress(truck);
+    for (final turn in turns) {
+      // A few metres of slack: the nearest route point may already be the junction.
+      if (turn.atMeters + 8 >= at) return (turn, metersBetween(turn.point, truck));
+    }
+    return null;
+  }
+}
+
+/// A turn at a junction: SlightLeft, Left, SharpLeft, SlightRight, Right, SharpRight or UTurn.
+class YardTurn {
+  const YardTurn({required this.point, required this.turn, required this.atMeters, this.near, this.nearIsBlock = false});
+
+  final List<double> point; // [lon, lat]
+  final String turn;
+  final double atMeters;
+
+  /// The block (or named area) beside the junction.
+  final String? near;
+  final bool nearIsBlock;
+
+  factory YardTurn.fromJson(Map<String, dynamic> json) => YardTurn(
+        point: ((json['point'] as List?) ?? const [0, 0]).map((e) => (e as num).toDouble()).toList(),
+        turn: (json['turn'] as String?) ?? 'Right',
+        atMeters: (json['atMeters'] as num?)?.toDouble() ?? 0,
+        near: json['near'] as String?,
+        nearIsBlock: json['nearIsBlock'] as bool? ?? false,
+      );
+}
+
+/// Great-circle distance in metres between two [lon, lat] points.
+double metersBetween(List<double> a, List<double> b) {
+  const r = 6371000.0;
+  final dLat = (b[1] - a[1]) * math.pi / 180;
+  final dLon = (b[0] - a[0]) * math.pi / 180;
+  final h = math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(a[1] * math.pi / 180) * math.cos(b[1] * math.pi / 180) * math.sin(dLon / 2) * math.sin(dLon / 2);
+  return 2 * r * math.asin(math.min(1, math.sqrt(h)));
 }
 
 class YardArea {
