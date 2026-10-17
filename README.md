@@ -76,6 +76,10 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
 - Reports by email: `GET` / `POST /api/terminals/{id}/report-subscriptions` (`{email, language: en|ar, daily, weekly}`),
   `DELETE …/{sid}`; sent at the terminal settings `report_hour` / `report_weekday` (worker: `Reports__Enabled`,
   `Reports__IntervalMinutes`).
+- Driver record: `GET /api/terminals/{id}/driver-records[/{driverId}]` (staff; a company its own drivers when
+  `driver_record_company` is on), `POST …/driver-records/{driverId}/incidents` (`{kind, points?, appointmentNo?, note?}`),
+  `POST …/driver-incidents/{iid}/withdraw|decision`; the app: `GET /api/driver/record`, `POST /api/driver/incidents/{iid}/dispute`.
+  Settings `driver_points_days`, `driver_warn_points`, `driver_limit_points`.
 - New terminals: **Terminal set-up** in the portal (`POST /api/terminals`, `GET /api/terminals/{id}/setup`): the usual
   move types, lanes and rules, then a checklist until trucks can book.
 - Another TOS: the TOS adapter kit (`TosContract`, conformance tests in `tests/Yardsyncs.Infrastructure.Tests/TosKit/`,

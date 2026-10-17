@@ -11,6 +11,7 @@ import '../strings.dart';
 import '../theme.dart';
 import 'common.dart';
 import 'messages.dart';
+import 'record.dart';
 import 'yard_screen.dart';
 
 /// My appointments: the next ones first, each with its traffic light.
@@ -55,6 +56,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   /// A message from the terminal: refresh; at gate-in go straight to the ticket and directions.
   Future<void> _onPush(PushMessage m) async {
     await _load();
+    if (mounted && m.isRecordEntry) {
+      if (m.opened) {
+        _openRecord();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(m.body ?? t('myRecord')),
+          duration: const Duration(seconds: 20),
+          action: SnackBarAction(label: t('myRecord'), onPressed: _openRecord),
+        ));
+      }
+      return;
+    }
     if (mounted && m.isControlRoomMessage && m.appointmentNo.isNotEmpty) {
       if (m.opened) {
         _openMessages(m.appointmentNo);
@@ -82,6 +95,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         action: SnackBarAction(label: t('whereToGo'), onPressed: () => _openYard(m.appointmentNo)),
       ));
     }
+  }
+
+  void _openRecord() {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => RecordScreen(api: widget.api, lang: widget.lang)));
   }
 
   Future<void> _openMessages(String appointmentNo) async {
@@ -138,6 +155,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       appBar: AppBar(
         title: Text(t('myTrips')),
         actions: [
+          IconButton(tooltip: t('myRecord'), icon: const Icon(Icons.assignment_ind_outlined), onPressed: _openRecord),
           LanguageButton(lang: widget.lang, onLanguage: widget.onLanguage, color: Colors.white),
           IconButton(tooltip: t('signOut'), icon: const Icon(Icons.logout), onPressed: _signOut),
         ],

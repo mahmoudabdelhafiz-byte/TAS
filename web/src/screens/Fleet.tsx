@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { contrastWithWhite, defaultBrand } from '../lib/brand.ts';
 import { languageName, messageLanguages, portalLanguages } from '../lib/languages.ts';
-import { isAdminRole, isCompanyRole } from '../lib/routes.ts';
+import { buildHash, isAdminRole, isCompanyRole } from '../lib/routes.ts';
 import { stamp } from '../lib/time.ts';
 import type { Company, Country, Driver, Terminal, Truck, UserRole } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
@@ -248,6 +248,7 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
                         setEditing(x.driverId);
                         setForm({ fullName: x.fullName, idNumber: x.idNumber, mobile: x.mobile, preferredLanguage: x.preferredLanguage.trim() });
                       }}>{t('fleet.edit')}</button>}{' '}
+                      {!erased(x) && <a className="link-btn" href={buildHash('drivers', { driver: String(x.driverId) })}>{t('drv.recordLink')}</a>}{' '}
                       {canBlock && !erased(x) && <BlockButton blocked={x.isBlocked} onError={m.setError}
                         onSet={async (blocked, reason) => { await api.post(`${base}/${x.driverId}/block`, { blocked, reason }); list.reload(); }} />}
                       {canEdit && (

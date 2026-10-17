@@ -40,3 +40,17 @@ driver** next to a truck on the control room map.
 - When a driver shares where the truck is, **Open on the map** shows the place.
 
 A visit can be written about while it is live and for a day after its slot.
+
+## Driver records
+
+**Driver records** lists the drivers with penalty points at this terminal, open disputes first. Open a driver (or use
+**Driver record** next to a truck in the control room, or on a driver in **Fleet & users**) to record what happened:
+choose it, check the points (1–10, suggested per kind), add the appointment and a note, and press **Record**. When the
+entry is on a visit the driver gets a message and sees it in the app.
+
+- Points count for a period set by the terminal. From the warning level the gate, the trouble desk and the control
+  room see the driver's points; from the trouble-desk level the gate sends the driver there instead of letting the
+  truck in (both levels are terminal settings, the second one off at first).
+- A driver can dispute an entry once. Planners and terminal admins answer with **Accept the dispute** (the points go)
+  or **Reject the dispute**; the driver sees the answer. They can also **Withdraw** an entry, saying why.
+- Trucking companies see their own drivers' records unless the terminal turns that off.

@@ -79,4 +79,23 @@ void main() {
     expect(ChatMessage.fromJson({'messageId': 8, 'direction': 'ToDriver', 'type': 'Template', 'text': 'x', 'sentAt': '2026-10-20T07:06:00Z'}).fromDriver, isFalse);
     expect(ChatMessage.fromJson({'messageId': 9, 'direction': 'FromDriver', 'type': 'Location', 'text': 'x', 'sentAt': '2026-10-20T07:07:00Z'}).location, isTrue);
   });
+
+  test('the driver record: entries and points per terminal', () {
+    final r = MyRecord.fromJson({
+      'terminals': [
+        {'terminalId': 1, 'terminalName': 'Demo Terminal', 'points': 3, 'standing': 'Clear'},
+      ],
+      'incidents': [
+        {
+          'incidentId': 5, 'terminalName': 'Demo Terminal', 'appointmentNo': 'DEMO-1', 'kind': 'Speeding', 'points': 3,
+          'occurredAt': '2026-10-18T07:00:00Z', 'note': '45 km/h', 'disputeStatus': null, 'withdrawn': false, 'counts': true,
+          'countsUntil': '2027-04-16T07:00:00Z', 'canDispute': true,
+        },
+      ],
+    });
+    expect(r.terminals.single.points, 3);
+    final e = r.entries.single;
+    expect((e.kind, e.canDispute, e.counts), ('Speeding', true, true));
+    expect(e.countsUntil.isUtc, isTrue);
+  });
 }

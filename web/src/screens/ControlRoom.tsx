@@ -135,6 +135,9 @@ function TruckRow({ truck, target, selected, onSelect }: { truck: ControlTruck; 
         <span className={truck.overdue ? 'truck-time overdue-text num' : 'truck-time num'}>
           {truck.minutesInside !== null ? duration(truck.minutesInside, t('unit.min'), t('unit.h')) : ''}
           {truck.silent && <span className="truck-silent" title={t('control.silentHint')}>{t('control.silent')}</span>}
+          {truck.driverStanding && truck.driverStanding !== 'Clear' && (
+            <span className={`standing standing-${truck.driverStanding}`}>{t('control.points', { n: truck.driverPoints ?? 0 })}</span>
+          )}
           {truck.overdue && <span className="visually-hidden">{t('control.overdue', { m: target })}</span>}
         </span>
       </button>
@@ -154,6 +157,7 @@ function TruckDetail({ truck, onClose }: { truck: ControlTruck; onClose: () => v
         </div>
         <span className="truck-detail-actions">
           {truck.driverName && <a className="link-btn" href={buildHash('messages', { no: truck.appointmentNo })}>{t('msg.writeTo')}</a>}
+          {truck.driverId && <a className="link-btn" href={buildHash('drivers', { driver: String(truck.driverId) })}>{t('drv.recordLink')}</a>}
           <button type="button" className="link-btn" onClick={onClose}>{t('common.close')}</button>
         </span>
       </header>

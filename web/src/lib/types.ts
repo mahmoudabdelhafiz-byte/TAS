@@ -426,6 +426,9 @@ export interface ControlTruck {
   currentStop: number | null;
   overdue: boolean;
   silent: boolean;
+  driverId?: number | null;
+  driverPoints?: number;
+  driverStanding?: 'Clear' | 'Warning' | 'OverLimit';
 }
 
 export interface YardMapArea {
