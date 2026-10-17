@@ -46,6 +46,9 @@ After the gate you get the **In-gate ticket**: appointment, lane, gate-in time a
 **Where to go** shows the block for each container (and row, bay and tier when the terminal gives them), with the
 route on the map. **Spoken directions on** reads them aloud, so you don't need to look at the phone while driving.
 
+At each junction where you must turn, **Next turn** shows the arrow, the block beside it and how far it is; the voice says
+it about 50 metres before ("In 50 metres, turn left at block A1") and again at the turn.
+
 When you reach the block the terminal knows it. Press **Done here** when the container is on or off the truck (stop
 the truck first); the app then shows the next stop, and finally **Drive to the exit**.
 

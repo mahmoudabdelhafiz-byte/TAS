@@ -37,6 +37,7 @@ class _YardScreenState extends State<YardScreen> {
   StreamSubscription<Position>? _positions;
   bool _started = false; // first load picks the stop to resume at
   int? _arrivedAt; // the stop whose block the terminal saw the truck reach
+  final _turnsSaid = <String>{}; // "stop|turn index|ahead" or "…|now": each prompt once
 
   String t(String key, [Map<String, String> values = const {}]) => tr(widget.lang, key, values);
 
@@ -143,9 +144,34 @@ class _YardScreenState extends State<YardScreen> {
           _position = p;
           _truck = [p.longitude, p.latitude];
         });
+        _promptTurn();
       }, onError: (Object _) {});
     } catch (_) {
       // No location: the route starts at the gate and the button stays available.
+    }
+  }
+
+  /// The next turn on the way to the current stop and how far it is, while there is a position.
+  (YardTurn, double)? get _nextTurn {
+    final g = _guidance;
+    final truck = _truck;
+    if (g == null || truck == null || g.stops.isEmpty || _arrivedAt == g.stops[_current].sequence) return null;
+    return g.legTo(g.stops[_current].sequence)?.nextTurn(truck);
+  }
+
+  /// Junction prompts: once ahead (25–80 m) and once at the turn (under 20 m).
+  void _promptTurn() {
+    final next = _nextTurn;
+    final g = _guidance;
+    if (next == null || g == null || !_voiceOn) return;
+    final (turn, meters) = next;
+    final leg = g.legTo(g.stops[_current].sequence)!;
+    final key = '${leg.toStop}|${leg.turns.indexOf(turn)}';
+    if (meters < 20 && _turnsSaid.add('$key|now')) {
+      _turnsSaid.add('$key|ahead');
+      _voice.sayTurn(widget.lang, turn);
+    } else if (meters >= 25 && meters <= 80 && _turnsSaid.add('$key|ahead')) {
+      _voice.sayTurn(widget.lang, turn, meters: meters);
     }
   }
 
@@ -259,6 +285,7 @@ class _YardScreenState extends State<YardScreen> {
                   lang: widget.lang,
                   t: t,
                 ),
+                if (_nextTurn case (final turn, final meters)) _TurnStrip(turn: turn, meters: meters, lang: widget.lang),
                 if (g.ticket != null) _TicketStrip(ticket: g.ticket!, t: t, onOpen: () => _showTicket(g)),
                 if (!g.live) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(t('yardOffline'), style: const TextStyle(color: red))),
                 Expanded(
@@ -285,6 +312,45 @@ class _YardScreenState extends State<YardScreen> {
                   ),
               ],
             ),
+    );
+  }
+}
+
+/// The next turn: arrow, what to do and where, how far.
+class _TurnStrip extends StatelessWidget {
+  const _TurnStrip({required this.turn, required this.meters, required this.lang});
+
+  final YardTurn turn;
+  final double meters;
+  final String lang;
+
+  static const _icons = {
+    'SlightLeft': Icons.turn_slight_left,
+    'Left': Icons.turn_left,
+    'SharpLeft': Icons.turn_sharp_left,
+    'SlightRight': Icons.turn_slight_right,
+    'Right': Icons.turn_right,
+    'SharpRight': Icons.turn_sharp_right,
+    'UTurn': Icons.u_turn_left,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF1A3D51),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(children: [
+        // Left is left whatever the language: the arrow is never mirrored.
+        Directionality(textDirection: TextDirection.ltr, child: Icon(_icons[turn.turn] ?? Icons.straight, color: Colors.white, size: 34)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(tr(lang, 'nextTurn'), style: const TextStyle(color: Color(0xFFB9C7D0), fontSize: 13)),
+            Text(turnWhat(lang, turn), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+        Text(tr(lang, 'meters', {'m': '${meters.round()}'}), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+      ]),
     );
   }
 }

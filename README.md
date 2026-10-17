@@ -389,7 +389,7 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `GET` / `POST` | `/api/terminals/{id}/geofences` | Terminal areas (approach, pre-gate, gate, yard zones…) as GeoJSON; terminal admins draw them as a ring of `[longitude, latitude]` points |
 | `PUT` | `/api/terminals/{id}/geofences/{gid}` | Terminal admins: change an area's name, kind, shape, block or check-in flag. Yard blocks need the TOS block name, unique among the terminal's blocks |
 | `POST` | `/api/terminals/{id}/geofences/{gid}/deactivate` | Remove an area |
-| `GET` | `/api/driver/appointments/{no}/yard?lat&lon` | After gate-in: stops in order (drops, then pickups, then exit) with block and row.bay.tier from the TOS, routes on the terminal's roads, and the yard map; `live: false` when the TOS can't be reached and the last known stops are shown |
+| `GET` | `/api/driver/appointments/{no}/yard?lat&lon` | After gate-in: stops in order (drops, then pickups, then exit) with block and row.bay.tier from the TOS, routes on the terminal's roads with their turns at junctions (`turns`: kind, point, distance along, the block beside it), and the yard map; `live: false` when the TOS can't be reached and the last known stops are shown |
 | `GET` | `/api/terminals/{id}/control-room` | Live visits (on the way, at the gate, inside) with stage, stops, last app position, time inside, overdue (terminal setting `turn_target_min`, default 60) and no-signal flags; today's averages; the yard map (terminal staff) |
 | `GET` | `/api/terminals/{id}/integration-events?limit=` | Events for the terminal's own systems, newest first, with delivery status (staff) |
 | `GET` | `/api/terminals/{id}/yard-map` | Areas and roads of the terminal (staff) |

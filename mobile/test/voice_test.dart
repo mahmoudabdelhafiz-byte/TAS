@@ -59,5 +59,14 @@ void main() {
     expect(TripTracker.insidePolicy.due(now: t0.add(const Duration(seconds: 6)), lastAt: t0, movedMeters: 40), isTrue);
     expect(TripTracker.insidePolicy.due(now: t0.add(const Duration(seconds: 6)), lastAt: t0, movedMeters: 10), isFalse);
   });
-}
 
+  test('turns are said with the distance and the block beside the junction', () {
+    const left = YardTurn(point: [0, 0.002], turn: 'Left', atMeters: 222, near: 'A1', nearIsBlock: true);
+    expect(turnWhat('en', left), 'Turn left at block A1');
+    expect(turnText('en', left, meters: 48), 'In 50 metres, turn left at block A1');
+    expect(turnText('en', left, speech: true), 'Now turn left at block A 1');
+    expect(turnText('ar', left, meters: 48), 'بعد 50 متر، انعطف يساراً عند البلوك A1');
+    expect(turnText('en', const YardTurn(point: [0, 0], turn: 'SlightRight', atMeters: 10, near: 'Truck parking')), 'Now keep right at Truck parking');
+    expect(turnText('hi', const YardTurn(point: [0, 0], turn: 'UTurn', atMeters: 10)), 'अभी यू-टर्न लें');
+  });
+}

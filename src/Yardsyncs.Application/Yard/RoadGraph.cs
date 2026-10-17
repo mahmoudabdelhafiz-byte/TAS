@@ -29,6 +29,7 @@ public sealed class RoadGraph
     private readonly List<GeoPoint> _nodes = [];
     private readonly Dictionary<(long, long), int> _index = [];
     private readonly List<List<(int To, double Meters)>> _edges = [];
+    private readonly List<HashSet<int>> _neighbours = [];
 
     public RoadGraph(IEnumerable<Road> roads)
     {
@@ -40,6 +41,8 @@ public sealed class RoadGraph
                 var b = Node(road.Points[i]);
                 if (a == b)
                     continue;
+                _neighbours[a].Add(b);
+                _neighbours[b].Add(a);
                 var meters = _nodes[a].MetersTo(_nodes[b]);
                 _edges[a].Add((b, meters));
                 if (!road.OneWay)
@@ -50,6 +53,10 @@ public sealed class RoadGraph
 
     public int NodeCount => _nodes.Count;
 
+    /// <summary>Where roads meet or branch (three or more ways to go, whatever their direction): a driver has a choice.</summary>
+    public bool IsJunction(GeoPoint p) =>
+        _index.TryGetValue(((long)Math.Round(p.Lon * 1_000_000), (long)Math.Round(p.Lat * 1_000_000)), out var id) && _neighbours[id].Count >= 3;
+
     private int Node(GeoPoint p)
     {
         var key = ((long)Math.Round(p.Lon * 1_000_000), (long)Math.Round(p.Lat * 1_000_000));
@@ -58,6 +65,7 @@ public sealed class RoadGraph
         id = _nodes.Count;
         _nodes.Add(p);
         _edges.Add([]);
+        _neighbours.Add([]);
         _index[key] = id;
         return id;
     }

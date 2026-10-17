@@ -22,8 +22,8 @@ public sealed record GuidanceStop(
     IReadOnlyList<string> CategoriesEn, IReadOnlyList<string> CategoriesAr, bool Moved, double[]? Point,
     bool Arrived = false, bool Done = false);
 
-/// <summary>The drive to a stop: points along the terminal roads, [longitude, latitude].</summary>
-public sealed record GuidanceLeg(int ToStop, IReadOnlyList<double[]> Path, double Meters);
+/// <summary>The drive to a stop: points along the terminal roads, [longitude, latitude], and the turns at junctions on the way.</summary>
+public sealed record GuidanceLeg(int ToStop, IReadOnlyList<double[]> Path, double Meters, IReadOnlyList<TurnStep>? Turns = null);
 
 /// <param name="Kind">Area type: YARD_ZONE, CFS, GATE, EXIT…</param>
 public sealed record MapArea(string Name, string Kind, string? Block, IReadOnlyList<double[]> Ring);
@@ -140,6 +140,10 @@ public sealed class YardGuidanceService(YardsyncsDbContext db, ITosAdapter tos, 
     {
         var map = await MapAsync(appointment.TerminalId, ct);
         var graph = new RoadGraph(map.Roads.Select(r => new Road(r.Points, r.OneWay)));
+        // Junctions are named by the block (or parking, CFS, gate…) beside them; the approach road outside is not a landmark.
+        var landmarks = map.Areas.Where(x => x.Kind != "APPROACH" && x.Ring.Count > 0)
+            .Select(x => new Landmark(x.Block ?? x.Name, x.Block is not null, RoadGraph.Centroid(Points(x.Ring))))
+            .ToList();
 
         // Moves in driving order: deliveries first, then pickups.
         var items = appointment.Items
@@ -215,7 +219,8 @@ public sealed class YardGuidanceService(YardsyncsDbContext db, ITosAdapter tos, 
                 var (path, meters) = graph.Route(from, to);
                 if (path.Count > 0)
                 {
-                    legs.Add(new GuidanceLeg(sequence, path.Select(x => x.ToArray()).ToList(), meters));
+                    legs.Add(new GuidanceLeg(sequence, path.Select(x => x.ToArray()).ToList(), meters,
+                        TurnByTurn.Steps(path, graph.IsJunction, landmarks)));
                     here = path[^1];
                     point = path[^1].ToArray();
                 }
@@ -237,7 +242,8 @@ public sealed class YardGuidanceService(YardsyncsDbContext db, ITosAdapter tos, 
             var (path, meters) = graph.Route(last2, RoadGraph.Centroid(Points(exit.Ring)));
             if (path.Count > 0)
             {
-                legs.Add(new GuidanceLeg(sequence, path.Select(x => x.ToArray()).ToList(), meters));
+                legs.Add(new GuidanceLeg(sequence, path.Select(x => x.ToArray()).ToList(), meters,
+                    TurnByTurn.Steps(path, graph.IsJunction, landmarks)));
                 exitPoint = path[^1].ToArray();
             }
         }
