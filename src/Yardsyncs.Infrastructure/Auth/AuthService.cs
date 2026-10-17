@@ -93,7 +93,14 @@ public sealed class AuthService(
         return new AuthResult(AuthStatus.Ok, issued, await ProfileAsync(user, ct));
     }
 
-    public async Task<AuthResult> RefreshAsync(string refreshToken, string? ip, CancellationToken ct = default)
+    /// <summary>The portal's cookie used again within this of being rotated is a race between tabs, not a stolen token.</summary>
+    public static readonly TimeSpan RotationGrace = TimeSpan.FromSeconds(30);
+
+    /// <param name="fromCookie">
+    /// The token came from the portal's HttpOnly cookie, shared by the browser's tabs (no script can read it to steal it):
+    /// a reuse right after rotation is two tabs at once. Tokens in a request body get no such grace.
+    /// </param>
+    public async Task<AuthResult> RefreshAsync(string? refreshToken, string? ip, CancellationToken ct = default, bool fromCookie = false)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
             return new AuthResult(AuthStatus.InvalidToken);
@@ -102,6 +109,11 @@ public sealed class AuthService(
         var hash = TokenService.HashRefreshToken(refreshToken);
         var stored = await db.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash, ct);
         if (stored is null)
+            return new AuthResult(AuthStatus.InvalidToken);
+
+        // Rotated a moment ago by a parallel refresh (two browser tabs opening at once): refused, but no alarm — the
+        // other tab's new token is already in the shared cookie.
+        if (fromCookie && stored.RevokedAt is { } revokedAt && stored.ReplacedByHash is not null && now - revokedAt <= RotationGrace)
             return new AuthResult(AuthStatus.InvalidToken);
 
         if (stored.RevokedAt is not null)
@@ -138,7 +150,7 @@ public sealed class AuthService(
         return new AuthResult(AuthStatus.Ok, issued, await ProfileAsync(user, ct));
     }
 
-    public async Task LogoutAsync(string refreshToken, CancellationToken ct = default)
+    public async Task LogoutAsync(string? refreshToken, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
             return;

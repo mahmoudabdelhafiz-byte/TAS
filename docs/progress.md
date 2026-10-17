@@ -545,7 +545,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Forwarded headers (client address behind the proxy) believed only from the proxy's network (`Proxy__KnownNetworks`, default the private networks), one hop |
 | ✅ | Release image scan fails when the scanner can't run (checked in CI); critical problems without a fix are listed for review |
 | ✅ | What the lanes do when the TOS, the cloud, the lane agent, a camera or the barrier fails: table in *Connecting lane devices* |
-| ⬜ | Portal session: short access token in memory and the refresh token in an HttpOnly cookie instead of browser storage |
+| ✅ | Portal session: short access token in memory and the refresh token in an HttpOnly cookie instead of browser storage (PR after section 57) |
 | ⬜ | Two-step sign-in for admins; outside penetration test; secret rotation procedure (Phase F) |
 | ⬜ | Real N4, hardware and link-failure acceptance tests on the customer's test systems; staging with monitoring and a restore drill |
 

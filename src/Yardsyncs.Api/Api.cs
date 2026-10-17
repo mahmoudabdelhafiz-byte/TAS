@@ -9,7 +9,52 @@ namespace Yardsyncs.Api;
 
 public sealed record LoginBody(string Email, string Password);
 
-public sealed record RefreshBody(string RefreshToken);
+/// <param name="RefreshToken">For API clients; the portal leaves it out and sends its cookie (see <see cref="PortalSession"/>).</param>
+public sealed record RefreshBody(string? RefreshToken = null);
+
+/// <summary>
+/// The portal's session: the refresh token lives in an HttpOnly cookie the page's scripts can't read, and the access
+/// token only in memory. A request asks for this with the X-Yardsyncs-Session: cookie header (a custom header, so other
+/// sites can't send it); API clients keep using the tokens in the body.
+/// </summary>
+public static class PortalSession
+{
+    public const string Header = "X-Yardsyncs-Session";
+    public const string Cookie = "ys_refresh";
+
+    public static bool Wanted(HttpContext http) => string.Equals(http.Request.Headers[Header], "cookie", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The refresh token: from the body, or (portal) from the cookie.</summary>
+    public static string? Token(HttpContext http, RefreshBody? body) =>
+        !string.IsNullOrWhiteSpace(body?.RefreshToken) ? body.RefreshToken
+        : Wanted(http) ? http.Request.Cookies[Cookie] : null;
+
+    /// <summary>The answer to a sign-in or refresh: for the portal the refresh token goes into the cookie, not the body.</summary>
+    public static IResult Issue(HttpContext http, AuthResult result)
+    {
+        var tokens = TokenResponse.From(result);
+        if (!Wanted(http))
+            return Results.Ok(tokens);
+        http.Response.Cookies.Append(Cookie, tokens.RefreshToken, Options(http, tokens.RefreshTokenExpiresAt));
+        return Results.Ok(tokens with { RefreshToken = "" });
+    }
+
+    public static void End(HttpContext http)
+    {
+        if (Wanted(http) || http.Request.Cookies.ContainsKey(Cookie))
+            http.Response.Cookies.Delete(Cookie, Options(http, null));
+    }
+
+    private static CookieOptions Options(HttpContext http, DateTimeOffset? expires) => new()
+    {
+        HttpOnly = true,
+        Secure = http.Request.IsHttps,
+        SameSite = SameSiteMode.Strict,
+        Path = "/api/auth",
+        Expires = expires,
+        IsEssential = true,
+    };
+}
 
 public sealed record ChangePasswordBody(string CurrentPassword, string NewPassword);
 

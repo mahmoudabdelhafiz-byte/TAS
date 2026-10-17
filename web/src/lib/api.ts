@@ -1,12 +1,25 @@
 // HTTP client for the Yardsyncs API: bearer token, one silent refresh on 401, problem-details errors.
+//
+// The portal's session: the access token lives only in this page's memory, the refresh token in an HttpOnly cookie
+// the page can't read (X-Yardsyncs-Session: cookie). Only who is signed in is kept in browser storage, so a reload
+// knows to ask the cookie for a new access token. Nothing a script on the page could steal outlives the page.
 
 import type { TokenResponse, UserProfile } from './types.ts';
 
 export interface Session {
-  accessToken: string;
-  refreshToken: string;
+  /** In memory only; null after a reload until the cookie gives a new one. */
+  accessToken: string | null;
   user: UserProfile;
 }
+
+/** What browser storage keeps: who is signed in, never a token. (Older versions kept tokens here: see load.) */
+interface Stored {
+  user: UserProfile;
+  /** A refresh token left by an older version: used once to move to the cookie, then dropped. */
+  refreshToken?: string;
+}
+
+const SESSION_HEADERS = { 'Content-Type': 'application/json', 'X-Yardsyncs-Session': 'cookie' };
 
 /** An API refusal with the server's explanation (RFC 7807 problem details). */
 export class ApiError extends Error {
@@ -24,26 +37,26 @@ export class ApiError extends Error {
 }
 
 export interface SessionStore {
-  load(): Session | null;
-  save(session: Session | null): void;
+  load(): Stored | null;
+  save(stored: Stored | null): void;
 }
 
-/** Keeps the session in localStorage so a dispatcher stays signed in across tabs and reloads. */
+/** Remembers who is signed in across tabs and reloads (the cookie does the rest). */
 export const browserStore: SessionStore = {
   load() {
     try {
       const raw = localStorage.getItem('yardsyncs.session');
-      return raw ? (JSON.parse(raw) as Session) : null;
+      return raw ? (JSON.parse(raw) as Stored) : null;
     } catch {
       return null;
     }
   },
-  save(session) {
+  save(stored) {
     try {
-      if (session) localStorage.setItem('yardsyncs.session', JSON.stringify(session));
+      if (stored) localStorage.setItem('yardsyncs.session', JSON.stringify({ user: stored.user }));
       else localStorage.removeItem('yardsyncs.session');
     } catch {
-      // Storage blocked (private mode): the session lives in memory only.
+      // Storage blocked (private mode): the session lives in memory and the cookie only.
     }
   },
 };
@@ -72,11 +85,16 @@ export class ApiClient {
   /** Called when the session ends (refresh refused or sign-out). */
   onSessionEnded: (() => void) | null = null;
 
+  private legacyRefreshToken: string | null;
+
   constructor(store: SessionStore, fetcher: Fetch = (i, init) => fetch(i, init), base = '') {
     this.store = store;
     this.fetcher = fetcher;
     this.base = base;
-    this.session = store.load();
+    const stored = store.load();
+    this.session = stored ? { accessToken: null, user: stored.user } : null;
+    this.legacyRefreshToken = stored?.refreshToken ?? null;
+    if (stored?.refreshToken) store.save({ user: stored.user }); // tokens never stay in storage
   }
 
   get user(): UserProfile | null {
@@ -86,7 +104,8 @@ export class ApiClient {
   async login(email: string, password: string): Promise<UserProfile> {
     const response = await this.fetcher(`${this.base}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: SESSION_HEADERS,
+      credentials: 'same-origin',
       body: JSON.stringify({ email, password }),
     });
     if (!response.ok) throw await readProblem(response);
@@ -95,18 +114,16 @@ export class ApiClient {
   }
 
   async logout(): Promise<void> {
-    const refreshToken = this.session?.refreshToken;
     this.end(false);
-    if (refreshToken) {
-      try {
-        await this.fetcher(`${this.base}/api/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-      } catch {
-        // Signed out locally either way.
-      }
+    try {
+      await this.fetcher(`${this.base}/api/auth/logout`, {
+        method: 'POST',
+        headers: SESSION_HEADERS,
+        credentials: 'same-origin',
+        body: JSON.stringify({}),
+      });
+    } catch {
+      // Signed out locally either way.
     }
   }
 
@@ -164,7 +181,7 @@ export class ApiClient {
     const headers: Record<string, string> = { Accept: 'application/json' };
     const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
-    if (this.session) headers.Authorization = `Bearer ${this.session.accessToken}`;
+    if (this.session?.accessToken) headers.Authorization = `Bearer ${this.session.accessToken}`;
     return this.fetcher(`${this.base}${path}`, {
       method,
       headers,
@@ -172,24 +189,33 @@ export class ApiClient {
     });
   }
 
-  /** One refresh at a time: parallel requests that hit 401 wait for the same refresh. */
+  /**
+   * One refresh at a time: parallel requests that hit 401 wait for the same refresh. Tried twice: when two tabs refresh
+   * at the same moment, the one that loses finds the winner's new cookie on the second try.
+   */
   private refresh(): Promise<boolean> {
     if (!this.refreshing) {
-      const token = this.session?.refreshToken;
       this.refreshing = (async () => {
-        if (!token) return false;
-        try {
-          const response = await this.fetcher(`${this.base}/api/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken: token }),
-          });
-          if (!response.ok) return false;
-          this.adopt((await response.json()) as TokenResponse);
-          return true;
-        } catch {
-          return false;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (attempt > 0) await new Promise(resolve => setTimeout(resolve, this.retryDelayMs));
+          try {
+            const legacy = this.legacyRefreshToken;
+            this.legacyRefreshToken = null;
+            const response = await this.fetcher(`${this.base}/api/auth/refresh`, {
+              method: 'POST',
+              headers: SESSION_HEADERS,
+              credentials: 'same-origin',
+              body: JSON.stringify(legacy ? { refreshToken: legacy } : {}),
+            });
+            if (response.ok) {
+              this.adopt((await response.json()) as TokenResponse);
+              return true;
+            }
+          } catch {
+            return false;
+          }
         }
+        return false;
       })().finally(() => {
         this.refreshing = null;
       });
@@ -197,13 +223,17 @@ export class ApiClient {
     return this.refreshing;
   }
 
+  /** Wait before the second refresh try (tests set 0). */
+  retryDelayMs = 400;
+
   private adopt(tokens: TokenResponse) {
-    this.session = { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, user: tokens.user };
-    this.store.save(this.session);
+    this.session = { accessToken: tokens.accessToken, user: tokens.user };
+    this.store.save({ user: tokens.user });
   }
 
   private end(notify: boolean) {
     this.session = null;
+    this.legacyRefreshToken = null;
     this.store.save(null);
     if (notify) this.onSessionEnded?.();
   }
