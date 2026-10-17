@@ -61,7 +61,11 @@ app.Map("/api/devices/{**rest}", async (HttpContext http, string? rest, EdgeAgen
                         return Results.Json(local.Concat(cloud), EdgeAgent.Json);
                     }
                 }
-                return Results.Bytes(answer, response.Content.Headers.ContentType?.ToString(), statusCode: (int)response.StatusCode);
+                http.Response.StatusCode = (int)response.StatusCode;
+                if (response.Content.Headers.ContentType is { } type)
+                    http.Response.ContentType = type.ToString();
+                await http.Response.Body.WriteAsync(answer, http.RequestAborted);
+                return Results.Empty;
             }
             agent.CloudUnreachable();
         }
