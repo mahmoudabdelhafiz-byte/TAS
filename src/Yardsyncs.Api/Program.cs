@@ -215,7 +215,8 @@ auth.MapPost("/login", async (LoginBody body, AuthService service, HttpContext h
 
 auth.MapPost("/refresh", async (RefreshBody? body, AuthService service, HttpContext http, CancellationToken ct) =>
 {
-    var result = await service.RefreshAsync(PortalSession.Token(http, body), http.Connection.RemoteIpAddress?.ToString(), ct);
+    var result = await service.RefreshAsync(PortalSession.Token(http, body), http.Connection.RemoteIpAddress?.ToString(), ct,
+        fromCookie: string.IsNullOrWhiteSpace(body?.RefreshToken) && PortalSession.Wanted(http));
     return result.Status == AuthStatus.Ok
         ? PortalSession.Issue(http, result)
         : YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "Session expired. Please sign in again.");

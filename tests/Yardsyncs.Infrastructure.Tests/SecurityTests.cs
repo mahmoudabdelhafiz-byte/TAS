@@ -124,7 +124,7 @@ public class SecurityTests
         var configured = ProxyTrust.Networks("10.20.0.0/16, 192.0.2.7");
         Assert.Equal(2, configured.Count);
         Assert.True(configured[1].Contains(System.Net.IPAddress.Parse("192.0.2.7")));
-        Assert.False(configured.Any(n => n.Contains(System.Net.IPAddress.Parse("172.18.0.5"))));
+        Assert.DoesNotContain(configured, n => n.Contains(System.Net.IPAddress.Parse("172.18.0.5")));
         Assert.Throws<InvalidOperationException>(() => ProxyTrust.Networks("proxy.example.com"));
     }
 }

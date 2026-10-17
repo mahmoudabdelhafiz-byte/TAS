@@ -93,10 +93,14 @@ public sealed class AuthService(
         return new AuthResult(AuthStatus.Ok, issued, await ProfileAsync(user, ct));
     }
 
-    /// <summary>A refresh token used again within this of being rotated is a race between tabs, not a stolen token.</summary>
+    /// <summary>The portal's cookie used again within this of being rotated is a race between tabs, not a stolen token.</summary>
     public static readonly TimeSpan RotationGrace = TimeSpan.FromSeconds(30);
 
-    public async Task<AuthResult> RefreshAsync(string? refreshToken, string? ip, CancellationToken ct = default)
+    /// <param name="fromCookie">
+    /// The token came from the portal's HttpOnly cookie, shared by the browser's tabs (no script can read it to steal it):
+    /// a reuse right after rotation is two tabs at once. Tokens in a request body get no such grace.
+    /// </param>
+    public async Task<AuthResult> RefreshAsync(string? refreshToken, string? ip, CancellationToken ct = default, bool fromCookie = false)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
             return new AuthResult(AuthStatus.InvalidToken);
@@ -109,7 +113,7 @@ public sealed class AuthService(
 
         // Rotated a moment ago by a parallel refresh (two browser tabs opening at once): refused, but no alarm — the
         // other tab's new token is already in the shared cookie.
-        if (stored.RevokedAt is { } revokedAt && stored.ReplacedByHash is not null && now - revokedAt <= RotationGrace)
+        if (fromCookie && stored.RevokedAt is { } revokedAt && stored.ReplacedByHash is not null && now - revokedAt <= RotationGrace)
             return new AuthResult(AuthStatus.InvalidToken);
 
         if (stored.RevokedAt is not null)
