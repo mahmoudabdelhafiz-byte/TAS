@@ -463,6 +463,8 @@ export interface ChatMessage {
   senderName: string | null;
   sentAt: string;
   readAt: string | null;
+  /** A shared location, [longitude, latitude]. */
+  point?: [number, number] | null;
 }
 
 export interface Conversation {

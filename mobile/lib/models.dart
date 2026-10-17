@@ -173,7 +173,7 @@ class TripUpdate {
 
 /// A message between the driver and the control room (ready-made ones come in the app's language).
 class ChatMessage {
-  const ChatMessage({required this.id, required this.fromDriver, required this.text, required this.sentAt, this.callRequest = false, this.senderName});
+  const ChatMessage({required this.id, required this.fromDriver, required this.text, required this.sentAt, this.callRequest = false, this.senderName, this.location = false});
 
   final int id;
   final bool fromDriver;
@@ -182,6 +182,9 @@ class ChatMessage {
   final bool callRequest;
   final String? senderName;
 
+  /// The driver shared where the truck was.
+  final bool location;
+
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
         id: (json['messageId'] as num).toInt(),
         fromDriver: json['direction'] == 'FromDriver',
@@ -189,6 +192,7 @@ class ChatMessage {
         sentAt: DateTime.parse(json['sentAt'] as String).toUtc(),
         callRequest: json['type'] == 'CallRequest',
         senderName: json['senderName'] as String?,
+        location: json['type'] == 'Location',
       );
 }
 

@@ -10,6 +10,7 @@ public sealed record ChatTemplate(string Code, MessageDirection Direction, Messa
 }
 
 /// <summary>A message as the driver or the control room sees it, in the reader's language for ready-made ones.</summary>
+/// <param name="Point">A shared location, [longitude, latitude].</param>
 public sealed record MessageView(
     long MessageId,
     MessageDirection Direction,
@@ -18,7 +19,8 @@ public sealed record MessageView(
     string Text,
     string? SenderName,
     DateTimeOffset SentAt,
-    DateTimeOffset? ReadAt);
+    DateTimeOffset? ReadAt,
+    double[]? Point = null);
 
 /// <summary>A visit with messages, for the control room's list.</summary>
 public sealed record ConversationView(
@@ -32,8 +34,8 @@ public sealed record ConversationView(
     int Unread,
     MessageView Last);
 
-/// <summary>Either a ready-made message (its code) or a text.</summary>
-public sealed record MessageInput(string? TemplateCode = null, string? Text = null);
+/// <summary>A ready-made message (its code), a text, or (from the driver) where the truck is.</summary>
+public sealed record MessageInput(string? TemplateCode = null, string? Text = null, double? Latitude = null, double? Longitude = null);
 
 /// <summary>A ready-made message to choose from, in the reader's language.</summary>
 public sealed record MessageTemplateView(string Code, MessageType Type, string Text);
@@ -116,6 +118,16 @@ public static class MessageRules
     public static (string? Error, MessageType Type, string? TemplateCode, string Body) Check(MessageDirection direction, MessageInput input)
     {
         var text = input.Text?.Trim();
+        if (input.Latitude is not null || input.Longitude is not null)
+        {
+            if (direction != MessageDirection.FromDriver)
+                return ("Only the driver shares a location.", default, null, "");
+            if (!string.IsNullOrEmpty(text) || !string.IsNullOrWhiteSpace(input.TemplateCode))
+                return ("Send a location on its own.", default, null, "");
+            if (input.Latitude is not (>= -90 and <= 90) || input.Longitude is not (>= -180 and <= 180))
+                return ("The location is not valid.", default, null, "");
+            return (null, MessageType.Location, null, FormattableString.Invariant($"{input.Latitude.Value:0.######},{input.Longitude.Value:0.######}"));
+        }
         if (!string.IsNullOrWhiteSpace(input.TemplateCode))
         {
             if (!string.IsNullOrEmpty(text))
@@ -141,4 +153,22 @@ public static class MessageRules
     /// <summary>The text shown to a reader: a ready-made message in their language, else what was written.</summary>
     public static string TextFor(string? templateCode, string? body, string? language) =>
         Template(templateCode)?.Text(language) ?? body ?? "";
+
+    /// <summary>What a message reads as: a shared location says so in the reader's language.</summary>
+    public static string TextFor(MessageType type, string? templateCode, string? body, string? language) =>
+        type == MessageType.Location ? LocationText.Text(language) : TextFor(templateCode, body, language);
+
+    private static readonly ChatTemplate LocationText = T("LOCATION", MessageDirection.FromDriver,
+        "Shared where the truck is.", "شارك موقع الشاحنة.", "ٹرک کا مقام بھیجا۔", "ट्रक का स्थान भेजा।", MessageType.Location);
+
+    /// <summary>A stored location ("lat,lon") as [longitude, latitude].</summary>
+    public static double[]? PointOf(MessageType type, string? body)
+    {
+        if (type != MessageType.Location || body?.Split(',') is not [var lat, var lon])
+            return null;
+        return double.TryParse(lat, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y)
+               && double.TryParse(lon, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x)
+            ? [x, y]
+            : null;
+    }
 }

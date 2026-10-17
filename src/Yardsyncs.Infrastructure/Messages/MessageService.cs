@@ -181,8 +181,8 @@ public sealed class MessageService(YardsyncsDbContext db, TimeProvider clock, IC
 
     /// <summary>Ready-made messages in the reader's language (the request's); the sender's name only for the control room's side.</summary>
     private static MessageView View(AppointmentMessage m, IReadOnlyDictionary<int, string> senders) =>
-        new(m.MessageId, m.Direction, m.MessageType, m.TemplateCode, MessageRules.TextFor(m.TemplateCode, m.Body, ServerText.Language),
-            m.SenderUserId is { } id ? senders.GetValueOrDefault(id) : null, m.SentAt, m.ReadAt);
+        new(m.MessageId, m.Direction, m.MessageType, m.TemplateCode, MessageRules.TextFor(m.MessageType, m.TemplateCode, m.Body, ServerText.Language),
+            m.SenderUserId is { } id ? senders.GetValueOrDefault(id) : null, m.SentAt, m.ReadAt, MessageRules.PointOf(m.MessageType, m.Body));
 
     private Task<Visit?> DriversVisitAsync(CurrentDriver driver, string appointmentNo, CancellationToken ct)
     {

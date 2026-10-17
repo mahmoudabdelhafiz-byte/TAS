@@ -176,9 +176,13 @@ class DriverApi {
   }
 
   /// Sends a ready-made message (its code) or a text.
-  Future<ChatMessage> sendMessage(String appointmentNo, {String? templateCode, String? text}) async {
-    final json = await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/messages',
-        body: {if (templateCode != null) 'templateCode': templateCode, if (text != null) 'text': text}) as Map<String, dynamic>;
+  Future<ChatMessage> sendMessage(String appointmentNo, {String? templateCode, String? text, double? latitude, double? longitude}) async {
+    final json = await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/messages', body: {
+      if (templateCode != null) 'templateCode': templateCode,
+      if (text != null) 'text': text,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+    }) as Map<String, dynamic>;
     return ChatMessage.fromJson(json['data'] as Map<String, dynamic>);
   }
 

@@ -202,6 +202,9 @@ public static class ServerText
             (R(@"Write a message or choose a ready-made one\."), "اكتب رسالة أو اختر رسالة جاهزة."),
             (R(@"A message is at most (\d+) characters\."), "الرسالة $1 حرفاً على الأكثر."),
             (R(@"Send either a ready-made message or a text, not both\."), "أرسل رسالة جاهزة أو نصاً، لا الاثنين معاً."),
+            (R(@"Only the driver shares a location\."), "السائق وحده يشارك الموقع."),
+            (R(@"Send a location on its own\."), "أرسل الموقع وحده."),
+            (R(@"The location is not valid\."), "الموقع غير صالح."),
             (R(@"Only terminal staff of this terminal can read and write drivers' messages\."), "قراءة رسائل السائقين والرد عليها لموظفي هذه المحطة فقط."),
 
             // ---- signing in
@@ -254,6 +257,7 @@ public static class ServerText
             (R(@"Appointment (\S+) is closed for messages\."), "اپوائنٹمنٹ $1 پر اب پیغام نہیں بھیجے جا سکتے۔"),
             (R(@"Write a message or choose a ready-made one\."), "پیغام لکھیں یا تیار پیغام چنیں۔"),
             (R(@"A message is at most (\d+) characters\."), "پیغام زیادہ سے زیادہ $1 حروف کا ہو سکتا ہے۔"),
+            (R(@"The location is not valid\."), "مقام درست نہیں۔"),
         ],
         ["hi"] =
         [
@@ -291,6 +295,7 @@ public static class ServerText
             (R(@"Appointment (\S+) is closed for messages\."), "अपॉइंटमेंट $1 पर अब संदेश नहीं भेजे जा सकते।"),
             (R(@"Write a message or choose a ready-made one\."), "संदेश लिखें या तैयार संदेश चुनें।"),
             (R(@"A message is at most (\d+) characters\."), "संदेश अधिकतम $1 अक्षरों का हो सकता है।"),
+            (R(@"The location is not valid\."), "स्थान मान्य नहीं है।"),
         ],
     };
 }

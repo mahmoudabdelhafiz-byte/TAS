@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../api.dart';
 import '../models.dart';
@@ -91,6 +92,32 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
+  /// Where the truck is now, sent to the control room (asks for the location permission if needed).
+  Future<void> _shareLocation() async {
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+      if (permission != LocationPermission.always && permission != LocationPermission.whileInUse) {
+        if (mounted) setState(() => _error = t('locationOff'));
+        return;
+      }
+      final p = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high))
+          .timeout(const Duration(seconds: 15));
+      await widget.api.sendMessage(widget.appointmentNo, latitude: p.latitude, longitude: p.longitude);
+      await _load();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = t('locationOff'));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final messages = _messages;
@@ -139,6 +166,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 const SizedBox(height: 10),
               ],
               Row(children: [
+                IconButton(
+                  tooltip: t('shareLocation'),
+                  onPressed: _sending ? null : _shareLocation,
+                  icon: const Icon(Icons.my_location),
+                ),
                 Expanded(
                   child: TextField(
                     controller: _text,
@@ -190,7 +222,10 @@ class _Bubble extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(tr(lang, mine ? 'you' : 'controlRoom'), style: const TextStyle(fontSize: 13, color: muted)),
           const SizedBox(height: 2),
-          Text(message.text, style: const TextStyle(fontSize: 17, color: ink, height: 1.3)),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            if (message.location) const Padding(padding: EdgeInsetsDirectional.only(end: 6), child: Icon(Icons.place, size: 18, color: teal)),
+            Flexible(child: Text(message.text, style: const TextStyle(fontSize: 17, color: ink, height: 1.3))),
+          ]),
           Align(
             alignment: AlignmentDirectional.centerEnd,
             child: Text(time, textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 12, color: muted)),
