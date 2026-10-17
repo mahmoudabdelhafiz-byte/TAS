@@ -1298,6 +1298,7 @@
     "status.RejectedAtGate": "Turned away at the gate",
     "status.Draft": "Draft",
     "whereToGo": "Where to go",
+    "demoHint": "Demo: type any mobile number, then any 6 digits as the code.",
     "safetyNotice": "Safety notice",
     "iHaveRead": "I have read it",
     "ok": "OK",
