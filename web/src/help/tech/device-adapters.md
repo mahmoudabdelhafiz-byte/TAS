@@ -103,6 +103,8 @@ At a lane set to **Automatic**, Yardsyncs runs the lane itself, one transaction 
    - Let in: `Green`, `Open` and a welcome on the display. When the barrier confirms `Open`, the truck is gated in;
      at an entry lane the TOS's yard position then goes to the display (`Go to B2 (14.03.2)`) and the gate ticket,
      with the position, to the printer. The driver app gets the same stops by push.
+   - With the terminal setting `seal_hold`, a seal read at the entry before the decision that isn't the one the company
+     declared refers the truck (`SEAL_MISMATCH`); without it, the mismatch is only recorded in the inspection.
    - Referred: `Red`, and the reason on the display. The case goes to the trouble desk, and when a clerk lets the truck
      in there, the lane's barrier opens.
    - Exit lanes gate the truck out (by plate or appointment number) and open, or call a clerk. Before that, the

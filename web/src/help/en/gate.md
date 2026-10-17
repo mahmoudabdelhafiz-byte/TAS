@@ -22,6 +22,7 @@ truck and driver not blocked.
 | **Truck or driver blocked** | Turn away; the terminal admin knows why |
 | **Already inside** | The appointment was used already: check the plate |
 | **Appointment cancelled** | Turn away; the company can book again |
+| **Seal doesn't match** | (Autogate, where the terminal holds on seals) Check the seal and the papers; let in with a note, or turn away |
 
 ## Lanes
 

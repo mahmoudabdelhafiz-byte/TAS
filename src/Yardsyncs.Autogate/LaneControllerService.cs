@@ -342,8 +342,11 @@ public sealed class LaneControllerService(
 
         if (lane.Direction == LaneDirection.In)
         {
+            // The seals the cameras read for this truck so far (the terminal may hold it when one isn't the declared seal).
+            var seals = (await db.LaneDeviceReads.AsNoTracking().Where(r => r.TransactionId == transactionId).ToListAsync(ct))
+                .SelectMany(r => DeviceService.Normalized(r).Seals).Distinct().ToList();
             var result = await gate.ArriveAsync(clerk, tx.TerminalId,
-                new ArrivalInput(lane.LaneCode, tx.Plate, containers, tx.QrToken, tx.AppointmentRead), ct);
+                new ArrivalInput(lane.LaneCode, tx.Plate, containers, tx.QrToken, tx.AppointmentRead, seals), ct);
             if (result.Value is { } arrival)
             {
                 status = arrival.Decision == GateDecisionKind.Admit ? LaneTransactionStatus.Admitted : LaneTransactionStatus.Referred;

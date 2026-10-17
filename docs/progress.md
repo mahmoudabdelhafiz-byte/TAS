@@ -516,6 +516,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | The printed gate ticket now comes when the barrier has opened (the truck is in), with the TOS's yard position ("Go to: B2 (14.03.2)"); the lane display shows where to go; the driver app gets the stops by push as before |
 | ✅ | The gate ticket on screen shows the yard position too |
 
+### 54. Seal mismatch hold (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Per-terminal setting **Seals at the entry** (`seal_hold`, off by default): a seal read at the entry that isn't the declared one holds the truck on red and puts the case on the trouble desk as **Seal doesn't match** (migration 026); the clerk lets it in with a note, and the barrier opens |
+| ✅ | Only a contradiction holds: no seal read, or fewer seals read than declared, never does; without the setting the mismatch is recorded in the inspection as before |
+| ✅ | The gate API takes `sealReads` with an arrival, so the check is the gate's own, not the lanes' |
+
 ---
 
 ## Remaining
@@ -606,7 +613,7 @@ Details in [`releasing.md`](releasing.md).
 | ⬜ | Edge mode for cloud-hosted terminals: a small lane agent at the terminal with today's appointments cached, so automatic lanes keep deciding when the link to the cloud drops, and sync back afterwards | Needed only where Yardsyncs is hosted in the cloud and the lanes run automatic |
 | ✅ | Remote clerk station: live lane view, photos, OCR corrections, intercom, admit / refer / reject — grows out of today's trouble desk | Section 47; the intercom audio itself is the intercom system's |
 | ✅ | TOS gate transaction: create the truck visit and gate-in / gate-out in the TOS (N4 gate API), print or send the EIR / gate ticket | Section 48; N4 documents to verify on the customer's N4 test system ❓ test access; sending the ticket to the driver app with push (Phase E) |
-| ✅ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | Section 49; holding a truck at an automatic lane for a seal mismatch is a per-terminal option still to add |
+| ✅ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | Section 49; holding a truck for a seal mismatch: section 54 |
 | ✅ | Exit gate: match outbound container, check delivered against booked, close the visit, turn time | Section 50 |
 | ✅ | Lane KPIs: transaction time, OCR read rate, exception rate per lane | Section 52 |
 | ✅ | Gate pass from the driver app read at the kiosk; yard position printed or pushed at gate-in | Section 53 |

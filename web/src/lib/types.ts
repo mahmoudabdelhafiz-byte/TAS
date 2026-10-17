@@ -223,7 +223,7 @@ export interface GateBoard {
   averageTurnMinutesToday: number | null;
 }
 
-export type TroubleReason = 'NoAppointment' | 'Early' | 'Late' | 'NotCleared' | 'Blocked' | 'AlreadyIn' | 'Cancelled';
+export type TroubleReason = 'NoAppointment' | 'Early' | 'Late' | 'NotCleared' | 'Blocked' | 'AlreadyIn' | 'Cancelled' | 'DriverUnknown' | 'SealMismatch';
 
 export interface Trouble {
   troubleId: number;

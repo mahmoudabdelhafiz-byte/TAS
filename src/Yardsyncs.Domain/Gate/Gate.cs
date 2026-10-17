@@ -282,6 +282,9 @@ public enum TroubleReason
 
     /// <summary>The driver is not identified as the terminal requires (no driver named, or no gate pass from the driver's app).</summary>
     DriverUnknown,
+
+    /// <summary>A seal read at the entry isn't the one the company declared (terminal setting seal_hold).</summary>
+    SealMismatch,
 }
 
 public enum TroubleStatus

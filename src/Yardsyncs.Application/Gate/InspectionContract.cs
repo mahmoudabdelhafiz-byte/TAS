@@ -112,6 +112,31 @@ public static class InspectionRules
         return e is null || e == s ? SealStatus.Ok : SealStatus.Mismatch;
     }
 
+    /// <summary>
+    /// At the entry: the declared seals that the seals read at the gate contradict, as a message for the trouble desk
+    /// (null: nothing contradicts). A declared seal among those read is fine; one left over is matched with a read seal
+    /// nobody claimed, and that is a mismatch. Nothing read, or fewer seals read than declared, is not held: the cameras
+    /// may simply not have seen it (the inspection records it).
+    /// </summary>
+    public static string? SealProblem(IEnumerable<(string? ContainerNo, string? Declared)> items, IEnumerable<string> sealsRead)
+    {
+        var seen = sealsRead.Select(NormalizeSeal).Where(s => s is not null).Select(s => s!).Distinct().ToList();
+        if (seen.Count == 0)
+            return null;
+        var declared = items.Select(i => (i.ContainerNo, Seal: NormalizeSeal(i.Declared))).Where(i => i.Seal is not null).ToList();
+        var open = new List<(string? ContainerNo, string Seal)>();
+        foreach (var item in declared)
+        {
+            if (!seen.Remove(item.Seal!))
+                open.Add((item.ContainerNo, item.Seal!));
+        }
+        var problems = open.Zip(seen, (d, read) =>
+            $"{(d.ContainerNo is null ? "" : $"{d.ContainerNo}: ")}declared {d.Seal}, read {read}").ToList();
+        return problems.Count == 0
+            ? null
+            : $"Seal doesn't match ({string.Join("; ", problems)}). Check the seal before letting the truck in.";
+    }
+
     /// <summary>Damage at gate-out not recorded at gate-in for the same container (same side and kind).</summary>
     public static IReadOnlyList<NewDamage> NewAtGateOut(IEnumerable<(string Container, InspectionStage Stage, IEnumerable<(DamageSide? Side, DamageKind Kind, DamageSeverity Severity)> Damage)> inspections)
     {

@@ -613,9 +613,19 @@ function GateRules({ editable }: { editable: boolean }) {
             <p className="hint">{t('setup.tosGateHint')}</p>
           </fieldset>
           )}
+          {terminal.autogate && (
+          <fieldset className="plain-fieldset">
+            <legend>{t('setup.sealHold')}</legend>
+            <label className="radio">
+              <input type="checkbox" checked={(current.seal_hold ?? 0) !== 0} disabled={!editable}
+                onChange={e => setValues({ ...current, seal_hold: e.target.checked ? 1 : 0 })} /> {t('setup.sealHoldOn')}
+            </label>
+            <p className="hint">{t('setup.sealHoldHint')}</p>
+          </fieldset>
+          )}
           {editable && (
             <ActionButton kind="primary" disabled={values === null} onError={setError} onRun={async () => {
-              await api.put(base, { values: Object.fromEntries([...gateKeys, 'driver_identity', 'tos_gate_write'].map(k => [k, current[k] ?? 0])), reason: null });
+              await api.put(base, { values: Object.fromEntries([...gateKeys, 'driver_identity', 'tos_gate_write', 'seal_hold'].map(k => [k, current[k] ?? 0])), reason: null });
               setValues(null);
               settings.reload();
               setDone(t('slots.applied'));
