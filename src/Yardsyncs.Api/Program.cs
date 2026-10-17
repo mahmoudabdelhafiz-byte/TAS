@@ -548,6 +548,27 @@ appointments.MapGet("/", async (
     }
 });
 
+// Search on any day: appointment number, container, plate or booking / EDO / cargo reference (companies: their own).
+appointments.MapGet("/search", async (int terminalId, string? q, int? companyId, HttpContext http, AppointmentQueryService service, CancellationToken ct) =>
+{
+    var user = YardsyncsApi.User(http)!;
+    if (!AccessRules.CanAccessTerminal(user, terminalId))
+        return YardsyncsApi.Forbidden("You have no access to this terminal.");
+    var (company, error) = AccessRules.ResolveCompany(user, companyId, required: false);
+    if (error is not null)
+        return YardsyncsApi.Forbidden(error);
+    if (string.IsNullOrWhiteSpace(q) || q.Trim().Length < 3)
+        return YardsyncsApi.Problem(StatusCodes.Status400BadRequest, "Type at least 3 characters: an appointment number, container, plate or reference.");
+    try
+    {
+        return Results.Ok(await service.SearchAsync(terminalId, q, company, ct));
+    }
+    catch (KeyNotFoundException ex)
+    {
+        return YardsyncsApi.Problem(StatusCodes.Status404NotFound, ex.Message);
+    }
+});
+
 appointments.MapPost("/{appointmentNo}/cancel", async (
     int terminalId, string appointmentNo, CancelBody? body, HttpContext http, BookingService service, CancellationToken ct) =>
     YardsyncsApi.ToResult(await service.CancelAsync(terminalId, appointmentNo, YardsyncsApi.User(http)!.UserId, body?.Reason, ct)));

@@ -47,6 +47,39 @@ public sealed class AppointmentQueryService(YardsyncsDbContext db, TimeProvider 
         return appointments.Select(a => ToDto(a, terminal, settings, now)).ToList();
     }
 
+    /// <summary>How far back and ahead a search looks, and how many it returns.</summary>
+    public static readonly TimeSpan SearchWindow = TimeSpan.FromDays(90);
+    public const int SearchLimit = 50;
+
+    /// <summary>
+    /// Appointments on any day (90 days back and ahead) by appointment number, container number, truck plate (Arabic or
+    /// Latin) or booking / EDO / cargo reference; newest slot first.
+    /// </summary>
+    public async Task<IReadOnlyList<AppointmentDto>> SearchAsync(int terminalId, string text, int? companyId, CancellationToken ct = default)
+    {
+        var q = text.Trim().ToUpperInvariant();
+        if (q.Length < 3)
+            return [];
+        var (terminal, settings) = await LoadTerminalAsync(terminalId, ct);
+        var now = clock.GetUtcNow();
+        var from = now - SearchWindow;
+        var to = now + SearchWindow;
+        var container = ContainerNumber.Normalize(q);
+        var plate = Yardsyncs.Application.MasterData.PlateNumber.Normalize(q);
+
+        var query = WithDetails().Where(a => a.TerminalId == terminalId && a.Slot.StartAt >= from && a.Slot.StartAt <= to
+            && (a.AppointmentNo == q
+                || (plate.Length > 0 && a.Truck != null && a.Truck.PlateNormalized == plate)
+                || a.Items.Any(i => (container.Length > 0 && i.ContainerNo == container)
+                                    || i.BookingRef == q || i.EdoRef == q
+                                    || (i.CargoAllocation != null && i.CargoAllocation.CargoRef == q))));
+        if (companyId is not null)
+            query = query.Where(a => a.CompanyId == companyId);
+
+        var appointments = await query.OrderByDescending(a => a.Slot.StartAt).ThenByDescending(a => a.AppointmentId).Take(SearchLimit).ToListAsync(ct);
+        return appointments.Select(a => ToDto(a, terminal, settings, now)).ToList();
+    }
+
     private IQueryable<Appointment> WithDetails() =>
         db.Appointments.AsNoTracking()
             .Include(a => a.Slot)
