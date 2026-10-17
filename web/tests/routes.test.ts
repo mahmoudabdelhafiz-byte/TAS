@@ -15,7 +15,7 @@ test('each role gets its own menu', () => {
   assert.deepEqual(screensFor('CompanyUser'), ['book', 'track', 'bulk', 'appointments', 'inspections', 'report', 'drivers', 'fleet', 'help']);
   assert.ok(screensFor('CompanyAdmin').includes('report') && !screensFor('Planner').includes('report'));
   assert.ok(!screensFor('CompanyAdmin').includes('kpi'));
-  assert.deepEqual(screensFor('GateClerk'), ['gate', 'clerk', 'inspections', 'control', 'messages', 'drivers', 'appointments', 'help']);
+  assert.deepEqual(screensFor('GateClerk'), ['gate', 'clerk', 'inspections', 'control', 'messages', 'drivers', 'safety', 'appointments', 'help']);
   assert.ok(screensFor('Planner').includes('messages') && !screensFor('CompanyAdmin').includes('messages'));
   assert.ok(screensFor('Planner').includes('control') && !screensFor('CompanyUser').includes('control'));
   assert.equal(screensFor('Planner')[0], 'slots');
@@ -23,7 +23,7 @@ test('each role gets its own menu', () => {
   assert.ok(screensFor('TerminalAdmin').includes('lanes') && !screensFor('GateClerk').includes('lanes'));
   assert.equal(parseHash('#/lanes').screen, 'lanes');
   // The truck appointment system alone: no Autogate screens.
-  assert.deepEqual(screensFor('GateClerk', false), ['gate', 'control', 'messages', 'drivers', 'appointments', 'help']);
+  assert.deepEqual(screensFor('GateClerk', false), ['gate', 'control', 'messages', 'drivers', 'safety', 'appointments', 'help']);
   assert.ok(!screensFor('TerminalAdmin', false).some(s => s === 'clerk' || s === 'inspections'));
   // Lanes stay: the terminal's own gate system needs lane codes and its key.
   assert.ok(screensFor('TerminalAdmin', false).includes('gate') && screensFor('TerminalAdmin', false).includes('lanes'));

@@ -52,6 +52,12 @@ it about 50 metres before ("In 50 metres, turn left at block A1") and again at t
 When you reach the block the terminal knows it. Press **Done here** when the container is on or off the truck (stop
 the truck first); the app then shows the next stop, and finally **Drive to the exit**.
 
+## Safety
+
+Safety notices from a terminal appear at the top of your trips: read them and press **I have read it**. If a terminal
+asks for its safety induction, press **Start**, read the pages and answer the questions; with every answer right you
+have passed for some months. Some terminals send drivers without it to the trouble desk.
+
 ## My record
 
 **My record** (top of the list of trips) shows what terminals recorded on your driving — speeding, no safety equipment
