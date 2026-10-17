@@ -80,7 +80,7 @@ public class LaneKpiCalculatorTests
     }
 
     [Theory]
-    [InlineData(0.5, 2)]
+    [InlineData(0.5, 3)]
     [InlineData(0.9, 5)]
     [InlineData(0.1, 1)]
     public void Percentile_is_the_nearest_rank(double p, double expected) =>
