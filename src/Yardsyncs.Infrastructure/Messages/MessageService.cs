@@ -30,7 +30,8 @@ public sealed class MessageService(YardsyncsDbContext db, TimeProvider clock, IC
         if (visit is null)
             return AdminResult<IReadOnlyList<MessageView>>.NotFound($"Appointment {Number(appointmentNo)} not found.");
         await MarkReadAsync(visit.AppointmentId, MessageDirection.ToDriver, ct);
-        return AdminResult<IReadOnlyList<MessageView>>.Ok(await ThreadAsync(visit.AppointmentId, ct));
+        // The driver writes to "the control room", not to a person.
+        return AdminResult<IReadOnlyList<MessageView>>.Ok((await ThreadAsync(visit.AppointmentId, ct)).Select(m => m with { SenderName = null }).ToList());
     }
 
     public async Task<AdminResult<MessageView>> FromDriverAsync(CurrentDriver driver, string appointmentNo, MessageInput input, CancellationToken ct = default)

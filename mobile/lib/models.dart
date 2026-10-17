@@ -58,6 +58,7 @@ class DriverAppointment {
     required this.moves,
     required this.gateCode,
     this.eta,
+    this.unreadMessages = 0,
   });
 
   final String appointmentNo;
@@ -74,7 +75,10 @@ class DriverAppointment {
   final String? gateCode;
   final DateTime? eta; // UTC
 
-  DriverAppointment copyWith({String? status, DateTime? eta}) => DriverAppointment(
+  /// Messages from the control room not opened yet.
+  final int unreadMessages;
+
+  DriverAppointment copyWith({String? status, DateTime? eta, int? unreadMessages}) => DriverAppointment(
         appointmentNo: appointmentNo,
         terminalName: terminalName,
         utcOffsetMinutes: utcOffsetMinutes,
@@ -88,6 +92,7 @@ class DriverAppointment {
         moves: moves,
         gateCode: gateCode,
         eta: eta,
+        unreadMessages: unreadMessages ?? this.unreadMessages,
       );
 
   bool get canStartTrip => status == 'Confirmed' || status == 'EnRoute';
@@ -111,6 +116,7 @@ class DriverAppointment {
         moves: ((json['moves'] as List?) ?? const []).map((m) => Move.fromJson(m as Map<String, dynamic>)).toList(),
         gateCode: json['gateCode'] as String?,
         eta: json['eta'] == null ? null : DateTime.parse(json['eta'] as String).toUtc(),
+        unreadMessages: (json['unreadMessages'] as num?)?.toInt() ?? 0,
       );
 
   /// "10:42" in terminal time.
@@ -163,4 +169,35 @@ class TripUpdate {
         checkedIn: json['checkedIn'] as bool? ?? false,
         atStop: (json['atStop'] as num?)?.toInt(),
       );
+}
+
+/// A message between the driver and the control room (ready-made ones come in the app's language).
+class ChatMessage {
+  const ChatMessage({required this.id, required this.fromDriver, required this.text, required this.sentAt, this.callRequest = false, this.senderName});
+
+  final int id;
+  final bool fromDriver;
+  final String text;
+  final DateTime sentAt; // UTC
+  final bool callRequest;
+  final String? senderName;
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
+        id: (json['messageId'] as num).toInt(),
+        fromDriver: json['direction'] == 'FromDriver',
+        text: (json['text'] as String?) ?? '',
+        sentAt: DateTime.parse(json['sentAt'] as String).toUtc(),
+        callRequest: json['type'] == 'CallRequest',
+        senderName: json['senderName'] as String?,
+      );
+}
+
+/// A ready-made message the driver can send with one tap.
+class QuickMessage {
+  const QuickMessage({required this.code, required this.text});
+
+  final String code;
+  final String text;
+
+  factory QuickMessage.fromJson(Map<String, dynamic> json) => QuickMessage(code: json['code'] as String, text: (json['text'] as String?) ?? '');
 }

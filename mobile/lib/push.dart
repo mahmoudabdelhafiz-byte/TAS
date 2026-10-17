@@ -73,6 +73,9 @@ class PushMessage {
       );
 
   bool get isGateIn => template == 'GATE_IN';
+
+  /// A message from the control room about a visit.
+  bool get isControlRoomMessage => template == 'CONTROL_ROOM_MESSAGE';
 }
 
 class PushService {

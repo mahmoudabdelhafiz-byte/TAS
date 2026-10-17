@@ -2,7 +2,7 @@
 
 import type { UserRole } from './types.ts';
 
-export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'gate' | 'clerk' | 'lanes' | 'inspections' | 'kpi' | 'fleet' | 'help';
+export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'messages' | 'gate' | 'clerk' | 'lanes' | 'inspections' | 'kpi' | 'fleet' | 'help';
 
 export interface Route {
   screen: Screen | null;
@@ -14,7 +14,7 @@ export function parseHash(hash: string): Route {
   const [path, query = ''] = clean.split('?');
   const params: Record<string, string> = {};
   for (const [key, value] of new URLSearchParams(query)) params[key] = value;
-  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'gate', 'clerk', 'lanes', 'inspections', 'kpi', 'fleet', 'help'] as const).find(s => s === path) ?? null;
+  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'messages', 'gate', 'clerk', 'lanes', 'inspections', 'kpi', 'fleet', 'help'] as const).find(s => s === path) ?? null;
   return { screen, params };
 }
 
@@ -43,13 +43,13 @@ function workScreens(role: UserRole): Screen[] {
     case 'CompanyUser':
       return ['book', 'track', 'bulk', 'appointments', 'inspections', 'fleet'];
     case 'GateClerk':
-      return ['gate', 'clerk', 'inspections', 'control', 'appointments'];
+      return ['gate', 'clerk', 'inspections', 'control', 'messages', 'appointments'];
     case 'Planner':
-      return ['slots', 'control', 'kpi', 'setup', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'clerk', 'inspections', 'fleet', 'charges'];
+      return ['slots', 'control', 'messages', 'kpi', 'setup', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'clerk', 'inspections', 'fleet', 'charges'];
     case 'TerminalAdmin':
     case 'OperatorAdmin':
     case 'SysAdmin':
-      return ['slots', 'control', 'kpi', 'setup', 'onboard', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'clerk', 'lanes', 'inspections', 'fleet', 'charges'];
+      return ['slots', 'control', 'messages', 'kpi', 'setup', 'onboard', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'clerk', 'lanes', 'inspections', 'fleet', 'charges'];
   }
 }
 

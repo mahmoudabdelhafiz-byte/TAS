@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { centroid, fitView, toScreen, type LonLat, type View } from '../lib/geo.ts';
 import { clock, duration } from '../lib/time.ts';
+import { buildHash } from '../lib/routes.ts';
 import type { ControlRoomBoard, ControlStage, ControlStop, ControlTruck, YardMapArea } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { LoadError, useLoad } from '../ui/kit.tsx';
@@ -151,7 +152,10 @@ function TruckDetail({ truck, onClose }: { truck: ControlTruck; onClose: () => v
           <h2><bdi>{truck.truckPlate ?? '—'}</bdi> <span className="muted">· <bdi>{truck.appointmentNo}</bdi></span></h2>
           <p className="muted" dir="auto">{truck.company}{truck.driverName ? ` · ${truck.driverName}` : ''}</p>
         </div>
-        <button type="button" className="link-btn" onClick={onClose}>{t('common.close')}</button>
+        <span className="truck-detail-actions">
+          {truck.driverName && <a className="link-btn" href={buildHash('messages', { no: truck.appointmentNo })}>{t('msg.writeTo')}</a>}
+          <button type="button" className="link-btn" onClick={onClose}>{t('common.close')}</button>
+        </span>
       </header>
       <dl className="facts">
         <dt>{t('control.moves')}</dt><dd><bdi>{truck.moves.join('  ')}</bdi></dd>

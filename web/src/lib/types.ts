@@ -451,6 +451,38 @@ export interface ControlRoomBoard {
   map: { areas: YardMapArea[]; roads: [number, number][][]; bounds: number[] };
 }
 
+export type MessageDirection = 'ToDriver' | 'FromDriver';
+export type MessageType = 'Text' | 'Voice' | 'Template' | 'CallRequest' | 'Location';
+
+export interface ChatMessage {
+  messageId: number;
+  direction: MessageDirection;
+  type: MessageType;
+  templateCode: string | null;
+  text: string;
+  senderName: string | null;
+  sentAt: string;
+  readAt: string | null;
+}
+
+export interface Conversation {
+  appointmentNo: string;
+  status: AppointmentStatus;
+  slotStart: string;
+  companyName: string;
+  truckPlate: string | null;
+  driverName: string | null;
+  driverMobile: string | null;
+  unread: number;
+  last: ChatMessage;
+}
+
+export interface QuickMessage {
+  code: string;
+  type: MessageType;
+  text: string;
+}
+
 export type InspectionStage = 'In' | 'Out';
 export type SealStatus = 'Ok' | 'Mismatch' | 'Missing' | 'Broken' | 'NotChecked';
 export type DamageSide = 'Front' | 'Rear' | 'Left' | 'Right' | 'Top' | 'Underside' | 'Inside' | 'Door';
