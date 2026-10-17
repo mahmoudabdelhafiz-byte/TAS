@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'gate_pass.dart';
 import 'brand.dart';
+import 'demo.dart';
 import 'models.dart';
 import 'strings.dart';
 import 'trip_tracker.dart';
@@ -68,7 +69,11 @@ class DriverApi {
   static const _voiceKey = 'voice';
 
   /// Shares the position while on the way (one per app).
-  late final TripTracker tracker = TripTracker(this);
+  late final TripTracker tracker = demoMode
+      // The demo truck drives fast: positions every few seconds so the screens keep up with it.
+      ? TripTracker(this, policy: const ReportPolicy(every: Duration(seconds: 4), atLeast: Duration(seconds: 2)),
+          inside: const ReportPolicy(every: Duration(seconds: 3), atLeast: Duration(seconds: 2), farMeters: 10))
+      : TripTracker(this);
 
   /// Loads a saved session; true when the app is signed in.
   Future<bool> restore() async {

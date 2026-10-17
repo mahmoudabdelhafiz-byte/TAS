@@ -188,6 +188,18 @@ jobs:
           path: mobile/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 14
 
+      # The demo app for customer presentations: sample data on the phone, no server (see docs/demo.md).
+      - name: Build demo APK (sample data, no server)
+        run: |
+          flutter build apk --release --dart-define=YARDSYNCS_DEMO=true
+          cp build/app/outputs/flutter-apk/app-release.apk build/yardsyncs-driver-demo.apk
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: yardsyncs-driver-demo-apk
+          path: mobile/build/yardsyncs-driver-demo.apk
+          retention-days: 30
+
       - name: Publish errors
         if: failure()
         run: |

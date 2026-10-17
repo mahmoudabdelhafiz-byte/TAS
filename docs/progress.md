@@ -589,7 +589,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | The real portal screens with sample data answered in the browser (no API, no database): `npm run build:demo` makes a folder of static files for any web host, also in a sub-folder (see [demo.md](demo.md)) |
 | ✅ | Sign-in page lists the demo roles (terminal admin, planner, gate clerk, trucking company, system admin); one click signs in; a bar says it is a demo and nothing is saved |
 | ✅ | Sample dates move to the day it is shown, so the slot board, control room and KPIs always look current; Excel downloads say they are not in the demo |
-| ⬜ | Driver app demo (an Android test build with sample data) |
+| ✅ | Driver app demo: an Android build with sample data on the phone (`--dart-define=YARDSYNCS_DEMO=true`, built by CI); the truck drives itself to the gate and to each stop with spoken turns; the control room answers messages |
 
 ---
 
@@ -656,7 +656,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Load test for peak booking times (CI size every pull request; `peak` profile to run on the customer's staging before go-live) |
 | ✅ | User guides (Arabic / English) and onboarding for trucking companies — **Help** in the portal |
 | ⬜ | Driver guide in Urdu and Hindi; short videos for drivers |
-| ⬜ | **Reminder for Mahmoud when development is finished:** make the GitHub repository private (Settings → Danger Zone → Change visibility) |
+| ✅ | GitHub repository made private (2026-10-18) |
 
 ### Phase G — Generic product (any terminal operator)
 | | Item | Notes |
