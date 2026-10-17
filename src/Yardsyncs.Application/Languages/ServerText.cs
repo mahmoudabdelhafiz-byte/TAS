@@ -248,6 +248,23 @@ public static class ServerText
             (R(@"Entry (\d+) not found\."), "المخالفة $1 غير موجودة."),
             (R(@"Driver (\d+) not found\."), "السائق $1 غير موجود."),
 
+            // ---- safety
+            (R(@"Driver (.+?) has no valid safety induction for this terminal\."), "ليس لدى السائق $1 تدريب سلامة ساري لهذه المحطة."),
+            (R(@"Driver (.+?) has not confirmed the safety notice ""(.+?)""\."), "لم يؤكد السائق $1 قراءة تنبيه السلامة «$2»."),
+            (R(@"Write the title and the text in English \(other languages are optional\)\."), "اكتب العنوان والنص بالإنجليزية (اللغات الأخرى اختيارية)."),
+            (R(@"The picture must be an https:// address \(at most 400 characters\)\."), "يجب أن تكون الصورة عنوان https:// (400 حرف على الأكثر)."),
+            (R(@"The campaign must end on or after the day it starts\."), "يجب أن تنتهي الحملة في يوم بدئها أو بعده."),
+            (R(@"A campaign runs at most (\d+) days\."), "مدة الحملة $1 يوماً على الأكثر."),
+            (R(@"An induction has 1 to 20 pages\."), "للتدريب من 1 إلى 20 صفحة."),
+            (R(@"An induction has 1 to 20 questions\."), "للتدريب من 1 إلى 20 سؤالاً."),
+            (R(@"An induction is valid for 1 to 60 months\."), "صلاحية التدريب من 1 إلى 60 شهراً."),
+            (R(@"Question (\d+) needs its English text\."), "يحتاج السؤال $1 إلى نصه بالإنجليزية."),
+            (R(@"Question (\d+) has 2 to 6 answers\."), "للسؤال $1 من 2 إلى 6 إجابات."),
+            (R(@"Question (\d+): choose the right answer\."), "السؤال $1: اختر الإجابة الصحيحة."),
+            (R(@"Only terminal staff of this terminal see its safety campaigns and induction\."), "حملات السلامة والتدريب لموظفي هذه المحطة فقط."),
+            (R(@"Only planners and terminal admins of this terminal set safety campaigns and the induction\."), "إعداد حملات السلامة والتدريب لمخططي المحطة ومسؤوليها فقط."),
+            (R(@"Campaign (\d+) not found\."), "الحملة $1 غير موجودة."),
+
             // ---- signing in
             (R(@"Wrong email or password\."), "البريد الإلكتروني أو كلمة المرور غير صحيحة."),
             (R(@"Too many failed attempts\. Try again in a few minutes\."), "محاولات فاشلة كثيرة. حاول مجدداً بعد دقائق."),

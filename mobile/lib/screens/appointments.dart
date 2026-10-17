@@ -12,6 +12,7 @@ import '../theme.dart';
 import 'common.dart';
 import 'messages.dart';
 import 'record.dart';
+import 'induction.dart';
 import 'yard_screen.dart';
 
 /// My appointments: the next ones first, each with its traffic light.
@@ -32,11 +33,12 @@ class AppointmentsScreen extends StatefulWidget {
 
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
   List<DriverAppointment>? _items;
+  SafetyFeed? _safety;
   String? _error;
   Timer? _timer;
   StreamSubscription<PushMessage>? _pushes;
 
-  String t(String key) => tr(widget.lang, key);
+  String t(String key, [Map<String, String> values = const {}]) => tr(widget.lang, key, values);
 
   @override
   void initState() {
@@ -114,7 +116,30 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     ));
   }
 
+  /// Safety notices and inductions (best effort: the trips show without them).
+  Future<void> _loadSafety() async {
+    try {
+      final feed = await widget.api.safety();
+      if (mounted) setState(() => _safety = feed);
+    } catch (_) {}
+  }
+
+  Future<void> _confirm(SafetyNotice notice) async {
+    try {
+      await widget.api.confirmNotice(notice.id);
+    } catch (_) {}
+    await _loadSafety();
+  }
+
+  Future<void> _takeInduction(InductionCourse course) async {
+    await Navigator.of(context).push(MaterialPageRoute<bool>(
+      builder: (_) => InductionScreen(api: widget.api, lang: widget.lang, course: course),
+    ));
+    await _loadSafety();
+  }
+
   Future<void> _load() async {
+    unawaited(_loadSafety());
     try {
       final items = await widget.api.appointments();
       // A visit on the way or inside the terminal keeps sharing its position, also after the app was reopened.
@@ -167,6 +192,24 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           children: [
             if (_error != null) ...[ErrorBox(message: _error!), const SizedBox(height: 12)],
             if (items == null && _error == null) const Padding(padding: EdgeInsets.all(48), child: Center(child: CircularProgressIndicator())),
+            for (final course in _safety?.inductions ?? const <InductionCourse>[])
+              if (course.needed)
+                _SafetyCard(
+                  title: t('inductionNeeded', {'terminal': course.terminalName}),
+                  body: t('inductionLead'),
+                  action: t('inductionStart'),
+                  onAction: () => _takeInduction(course),
+                ),
+            for (final notice in _safety?.notices ?? const <SafetyNotice>[])
+              if (!notice.confirmed)
+                _SafetyCard(
+                  title: '${t('safetyNotice')} · ${notice.terminalName}',
+                  heading: notice.title,
+                  body: notice.body,
+                  imageUrl: notice.imageUrl,
+                  action: notice.requireAck ? t('iHaveRead') : t('ok'),
+                  onAction: () => _confirm(notice),
+                ),
             if (items != null && items.isEmpty)
               Padding(padding: const EdgeInsets.symmetric(vertical: 48), child: Text(t('noTrips'), style: const TextStyle(fontSize: 17, color: muted))),
             for (final a in items ?? const <DriverAppointment>[]) ...[
@@ -461,6 +504,44 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       ),
     );
   }
+}
+
+/// A safety notice or induction to do, on top of the trips.
+class _SafetyCard extends StatelessWidget {
+  const _SafetyCard({required this.title, this.heading, required this.body, this.imageUrl, required this.action, required this.onAction});
+
+  final String title;
+  final String? heading;
+  final String body;
+  final String? imageUrl;
+  final String action;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: const Color(0xFFFBF1DC), border: const BorderDirectional(start: BorderSide(color: amber, width: 6)), borderRadius: BorderRadius.circular(4)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.health_and_safety, color: ink, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 14, color: muted, fontWeight: FontWeight.w600))),
+          ]),
+          if (heading != null) ...[const SizedBox(height: 6), Text(heading!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: ink))],
+          const SizedBox(height: 6),
+          Text(body, style: const TextStyle(fontSize: 16, color: ink, height: 1.35)),
+          if (imageUrl != null) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.network(imageUrl!, height: 160, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+            ),
+          ],
+          const SizedBox(height: 10),
+          FilledButton(onPressed: onAction, child: Text(action)),
+        ]),
+      );
 }
 
 class _Unread extends StatelessWidget {

@@ -38,6 +38,7 @@ public static class CapacityConfigValidator
         [TerminalSettings.DriverWarnPointsKey] = (0, 100),
         [TerminalSettings.DriverLimitPointsKey] = (0, 100),
         [TerminalSettings.DriverRecordToCompanyKey] = (0, 1),
+        [TerminalSettings.InductionModeKey] = (0, 2),
     };
 
     // ------------------------------------------------------------ templates

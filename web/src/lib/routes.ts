@@ -2,7 +2,7 @@
 
 import type { UserRole } from './types.ts';
 
-export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'messages' | 'gate' | 'clerk' | 'lanes' | 'inspections' | 'kpi' | 'report' | 'drivers' | 'fleet' | 'help';
+export type Screen = 'book' | 'track' | 'bulk' | 'appointments' | 'slots' | 'setup' | 'onboard' | 'charges' | 'map' | 'control' | 'messages' | 'gate' | 'clerk' | 'lanes' | 'inspections' | 'kpi' | 'report' | 'drivers' | 'safety' | 'fleet' | 'help';
 
 export interface Route {
   screen: Screen | null;
@@ -14,7 +14,7 @@ export function parseHash(hash: string): Route {
   const [path, query = ''] = clean.split('?');
   const params: Record<string, string> = {};
   for (const [key, value] of new URLSearchParams(query)) params[key] = value;
-  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'messages', 'gate', 'clerk', 'lanes', 'inspections', 'kpi', 'report', 'drivers', 'fleet', 'help'] as const).find(s => s === path) ?? null;
+  const screen = (['book', 'track', 'bulk', 'appointments', 'slots', 'setup', 'onboard', 'charges', 'map', 'control', 'messages', 'gate', 'clerk', 'lanes', 'inspections', 'kpi', 'report', 'drivers', 'safety', 'fleet', 'help'] as const).find(s => s === path) ?? null;
   return { screen, params };
 }
 
@@ -43,13 +43,13 @@ function workScreens(role: UserRole): Screen[] {
     case 'CompanyUser':
       return ['book', 'track', 'bulk', 'appointments', 'inspections', 'report', 'drivers', 'fleet'];
     case 'GateClerk':
-      return ['gate', 'clerk', 'inspections', 'control', 'messages', 'drivers', 'appointments'];
+      return ['gate', 'clerk', 'inspections', 'control', 'messages', 'drivers', 'safety', 'appointments'];
     case 'Planner':
-      return ['slots', 'control', 'messages', 'kpi', 'setup', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'clerk', 'inspections', 'drivers', 'fleet', 'charges'];
+      return ['slots', 'control', 'messages', 'kpi', 'setup', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'clerk', 'inspections', 'drivers', 'safety', 'fleet', 'charges'];
     case 'TerminalAdmin':
     case 'OperatorAdmin':
     case 'SysAdmin':
-      return ['slots', 'control', 'messages', 'kpi', 'setup', 'onboard', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'clerk', 'lanes', 'inspections', 'drivers', 'fleet', 'charges'];
+      return ['slots', 'control', 'messages', 'kpi', 'setup', 'onboard', 'map', 'appointments', 'track', 'book', 'bulk', 'gate', 'clerk', 'lanes', 'inspections', 'drivers', 'safety', 'fleet', 'charges'];
   }
 }
 

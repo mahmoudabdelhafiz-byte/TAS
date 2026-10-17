@@ -170,6 +170,19 @@ public sealed class GateService(
             }
         }
 
+        // Safety: the induction (warn or refer, per the terminal) and safety notices the driver hasn't confirmed.
+        if (found?.DriverId is { } safetyDriverId)
+        {
+            var (induction, refer, campaigns) = await Yardsyncs.Infrastructure.DriverApp.SafetyService.GateCheckAsync(
+                db, terminalId, safetyDriverId, found.DriverName ?? "?", settings, now, ct);
+            if (induction is not null && refer && decision.Kind == GateDecisionKind.Admit)
+                decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.DriverUnknown, induction);
+            else if (induction is not null)
+                match = match with { Warnings = match.Warnings.Append(induction).ToList() };
+            if (campaigns.Count > 0)
+                match = match with { Warnings = match.Warnings.Concat(campaigns).ToList() };
+        }
+
         if (!record)
         {
             var seen = match.Appointment is null ? null : await queries.GetAsync(terminalId, match.Appointment.AppointmentNo, ct);

@@ -284,3 +284,78 @@ class MyRecord {
         entries: ((json['incidents'] as List?) ?? const []).map((e) => RecordEntry.fromJson(e as Map<String, dynamic>)).toList(),
       );
 }
+
+/// A safety notice from a terminal, in the app's language.
+class SafetyNotice {
+  const SafetyNotice({required this.id, required this.terminalName, required this.title, required this.body, this.imageUrl, this.requireAck = true, this.confirmed = false});
+
+  final int id;
+  final String terminalName;
+  final String title;
+  final String body;
+  final String? imageUrl;
+  final bool requireAck;
+  final bool confirmed;
+
+  factory SafetyNotice.fromJson(Map<String, dynamic> json) => SafetyNotice(
+        id: (json['campaignId'] as num).toInt(),
+        terminalName: (json['terminalName'] as String?) ?? '',
+        title: (json['title'] as String?) ?? '',
+        body: (json['body'] as String?) ?? '',
+        imageUrl: json['imageUrl'] as String?,
+        requireAck: json['requireAck'] as bool? ?? true,
+        confirmed: json['confirmed'] as bool? ?? false,
+      );
+}
+
+/// A terminal's safety induction: pages to read, then questions (no answers), and whether the driver needs it.
+class InductionCourse {
+  const InductionCourse({required this.terminalId, required this.terminalName, required this.pages, required this.questions, this.validUntil, this.needed = true});
+
+  final int terminalId;
+  final String terminalName;
+  final List<(String, String)> pages; // title, text
+  final List<(String, List<String>)> questions; // question, answers
+  final DateTime? validUntil; // UTC
+  final bool needed;
+
+  factory InductionCourse.fromJson(Map<String, dynamic> json) => InductionCourse(
+        terminalId: (json['terminalId'] as num).toInt(),
+        terminalName: (json['terminalName'] as String?) ?? '',
+        pages: ((json['pages'] as List?) ?? const [])
+            .map((p) => ((p as Map<String, dynamic>)['title'] as String? ?? '', p['body'] as String? ?? ''))
+            .toList(),
+        questions: ((json['questions'] as List?) ?? const [])
+            .map((q) => ((q as Map<String, dynamic>)['question'] as String? ?? '', ((q['options'] as List?) ?? const []).cast<String>()))
+            .toList(),
+        validUntil: json['validUntil'] == null ? null : DateTime.parse(json['validUntil'] as String).toUtc(),
+        needed: json['needed'] as bool? ?? true,
+      );
+}
+
+class SafetyFeed {
+  const SafetyFeed({required this.notices, required this.inductions});
+
+  final List<SafetyNotice> notices;
+  final List<InductionCourse> inductions;
+
+  factory SafetyFeed.fromJson(Map<String, dynamic> json) => SafetyFeed(
+        notices: ((json['campaigns'] as List?) ?? const []).map((e) => SafetyNotice.fromJson(e as Map<String, dynamic>)).toList(),
+        inductions: ((json['inductions'] as List?) ?? const []).map((e) => InductionCourse.fromJson(e as Map<String, dynamic>)).toList(),
+      );
+}
+
+/// The marked answers: passed, or which questions to read again.
+class InductionResult {
+  const InductionResult({required this.passed, required this.wrong, this.validUntil});
+
+  final bool passed;
+  final List<int> wrong;
+  final DateTime? validUntil;
+
+  factory InductionResult.fromJson(Map<String, dynamic> json) => InductionResult(
+        passed: json['passed'] as bool? ?? false,
+        wrong: ((json['wrong'] as List?) ?? const []).map((e) => (e as num).toInt()).toList(),
+        validUntil: json['validUntil'] == null ? null : DateTime.parse(json['validUntil'] as String).toUtc(),
+      );
+}

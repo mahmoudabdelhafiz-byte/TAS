@@ -356,6 +356,7 @@ public sealed class CapacityAdminService(
             [TerminalSettings.DriverWarnPointsKey] = settings.DriverWarnPoints,
             [TerminalSettings.DriverLimitPointsKey] = settings.DriverLimitPoints,
             [TerminalSettings.DriverRecordToCompanyKey] = settings.DriverRecordToCompany ? 1 : 0,
+            [TerminalSettings.InductionModeKey] = settings.InductionMode,
         };
     }
 

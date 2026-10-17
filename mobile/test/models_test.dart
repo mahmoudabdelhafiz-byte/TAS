@@ -98,4 +98,28 @@ void main() {
     expect((e.kind, e.canDispute, e.counts), ('Speeding', true, true));
     expect(e.countsUntil.isUtc, isTrue);
   });
+
+  test('safety: notices and an induction to take', () {
+    final feed = SafetyFeed.fromJson({
+      'campaigns': [
+        {'campaignId': 4, 'terminalName': 'Demo Terminal', 'title': 'ارتدِ السترة', 'body': 'دائماً', 'imageUrl': null, 'requireAck': true, 'confirmed': false},
+      ],
+      'inductions': [
+        {
+          'terminalId': 1, 'terminalName': 'Demo Terminal', 'version': 2,
+          'pages': [{'title': 'Speed', 'body': '20 km/h'}],
+          'questions': [{'question': 'Speed limit?', 'options': ['40', '20']}],
+          'validUntil': null, 'needed': true,
+        },
+      ],
+    });
+    expect(feed.notices.single.title, 'ارتدِ السترة');
+    final course = feed.inductions.single;
+    expect(course.pages.single.$1, 'Speed');
+    expect(course.questions.single.$2, ['40', '20']);
+    expect(course.needed, isTrue);
+    final result = InductionResult.fromJson({'passed': false, 'wrong': [0], 'validUntil': null});
+    expect(result.passed, isFalse);
+    expect(result.wrong, [0]);
+  });
 }

@@ -169,6 +169,20 @@ class DriverApi {
   Future<DriverAppointment> startTrip(String appointmentNo) async => DriverAppointment.fromJson(
       await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/start-trip') as Map<String, dynamic>);
 
+  /// Safety notices to read and inductions to take, in the app's language.
+  Future<SafetyFeed> safety() async => SafetyFeed.fromJson(await _send('GET', '/api/driver/safety') as Map<String, dynamic>);
+
+  /// "I have read it" on a safety notice.
+  Future<void> confirmNotice(int campaignId) async {
+    await _send('POST', '/api/driver/safety/campaigns/$campaignId/confirm');
+  }
+
+  /// Sends the induction answers (the chosen option of each question, in order).
+  Future<InductionResult> answerInduction(int terminalId, List<int> answers) async {
+    final json = await _send('POST', '/api/driver/safety/inductions/$terminalId/answers', body: {'answers': answers}) as Map<String, dynamic>;
+    return InductionResult.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
   /// The driver's record at every terminal: entries with points, disputes.
   Future<MyRecord> myRecord() async => MyRecord.fromJson(await _send('GET', '/api/driver/record') as Map<String, dynamic>);
 

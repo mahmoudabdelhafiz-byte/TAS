@@ -71,6 +71,10 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
     public DbSet<AppointmentMessage> AppointmentMessages => Set<AppointmentMessage>();
     public DbSet<ReportSubscription> ReportSubscriptions => Set<ReportSubscription>();
     public DbSet<DriverIncident> DriverIncidents => Set<DriverIncident>();
+    public DbSet<SafetyCampaign> SafetyCampaigns => Set<SafetyCampaign>();
+    public DbSet<SafetyAck> SafetyAcks => Set<SafetyAck>();
+    public DbSet<SafetyInduction> SafetyInductions => Set<SafetyInduction>();
+    public DbSet<InductionPass> InductionPasses => Set<InductionPass>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -261,6 +265,21 @@ public sealed class YardsyncsDbContext(DbContextOptions<YardsyncsDbContext> opti
             e.Property(x => x.Resolution).HasConversion(new UpperSnakeEnumConverter<TroubleResolution>());
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
         });
+
+        b.Entity<SafetyCampaign>(e =>
+        {
+            e.HasKey(x => x.CampaignId);
+            e.Property(x => x.Texts).HasColumnType("jsonb");
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+        });
+        b.Entity<SafetyAck>(e => e.HasKey(x => new { x.CampaignId, x.Mobile }));
+        b.Entity<SafetyInduction>(e =>
+        {
+            e.HasKey(x => x.InductionId);
+            e.Property(x => x.Pages).HasColumnType("jsonb");
+            e.Property(x => x.Questions).HasColumnType("jsonb");
+        });
+        b.Entity<InductionPass>(e => e.HasKey(x => x.PassId));
 
         b.Entity<DriverIncident>(e =>
         {

@@ -18,6 +18,7 @@ import { ControlRoom } from './ControlRoom.tsx';
 import { Messages } from './Messages.tsx';
 import { CompanyReportScreen } from './CompanyReport.tsx';
 import { DriverRecords } from './DriverRecords.tsx';
+import { Safety } from './Safety.tsx';
 import { TrackContainers } from './TrackContainers.tsx';
 import { GateScreen } from './Gate.tsx';
 import { Lanes } from './Lanes.tsx';
@@ -47,6 +48,7 @@ const navText: Record<Screen, TextKey> = {
   kpi: 'nav.kpi',
   report: 'nav.report',
   drivers: 'nav.drivers',
+  safety: 'nav.safety',
   fleet: 'nav.fleet',
   help: 'nav.help',
 };
@@ -139,6 +141,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
           {screen === 'kpi' && <Kpi />}
           {screen === 'report' && <CompanyReportScreen />}
           {screen === 'drivers' && <DriverRecords />}
+          {screen === 'safety' && <Safety />}
           {screen === 'fleet' && <Fleet />}
           {screen === 'help' && <Help />}
         </main>
@@ -177,6 +180,7 @@ function NavIcon({ screen }: { screen: Screen }) {
     bulk: <><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4M9 12h6M9 16h6" /></>,
     kpi: <><path d="M4 20V4M4 20h16" /><path d="M7 15l4-5 3 3 5-7" /></>,
     report: <><path d="M6 3h9l4 4v14H6z" /><path d="M9 17v-3M12 17v-6M15 17v-4" /></>,
+    safety: <><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" /><path d="M8.5 12l2.5 2.5 4.5-5" /></>,
     drivers: <><circle cx="9" cy="8" r="3.5" /><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6" /><path d="M17 7v6M17 16.5v.5" /></>,
     fleet: <><path d="M2 16V7h11v9M13 10h4l3 3v3h-7" /><circle cx="6" cy="17" r="2" /><circle cx="17" cy="17" r="2" /></>,
     control: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" /></>,

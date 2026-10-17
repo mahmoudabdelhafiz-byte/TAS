@@ -80,6 +80,9 @@ platforms with a managed database. Step by step, upgrades, restore and monitorin
   `driver_record_company` is on), `POST …/driver-records/{driverId}/incidents` (`{kind, points?, appointmentNo?, note?}`),
   `POST …/driver-incidents/{iid}/withdraw|decision`; the app: `GET /api/driver/record`, `POST /api/driver/incidents/{iid}/dispute`.
   Settings `driver_points_days`, `driver_warn_points`, `driver_limit_points`.
+- Safety: `/api/terminals/{id}/safety/campaigns[/{cid}[/archive]]` and `/safety/induction` (planners and terminal
+  admins write, staff read); the app: `GET /api/driver/safety`, `POST …/campaigns/{cid}/confirm`,
+  `POST …/inductions/{terminalId}/answers`. Setting `induction_mode` (0 off, 1 warn, 2 trouble desk).
 - New terminals: **Terminal set-up** in the portal (`POST /api/terminals`, `GET /api/terminals/{id}/setup`): the usual
   move types, lanes and rules, then a checklist until trucks can book.
 - Another TOS: the TOS adapter kit (`TosContract`, conformance tests in `tests/Yardsyncs.Infrastructure.Tests/TosKit/`,

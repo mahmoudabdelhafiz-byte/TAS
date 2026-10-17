@@ -54,3 +54,14 @@ entry is on a visit the driver gets a message and sees it in the app.
 - A driver can dispute an entry once. Planners and terminal admins answer with **Accept the dispute** (the points go)
   or **Reject the dispute**; the driver sees the answer. They can also **Withdraw** an entry, saying why.
 - Trucking companies see their own drivers' records unless the terminal turns that off.
+
+## Safety notices and the induction
+
+On **Safety**, planners and terminal admins publish **Safety notices** for drivers: a title and a text in English (and
+Arabic, Urdu or Hindi if you have them), an optional picture, the days it runs, and every driver or chosen companies'
+drivers. Drivers see it at the top of their trips in Yardsyncs mobile and press "I have read it"; the list shows how many
+confirmed, and the gate mentions drivers who haven't. **End now** stops a notice.
+
+The **Safety induction** is a short course: pages to read, then questions with one right answer each. A driver who
+answers every question right has passed for the months you set. Choose what happens at the gate for a driver without a
+valid induction: nothing, a warning for the clerk, or the trouble desk.
