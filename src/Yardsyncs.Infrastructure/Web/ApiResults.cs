@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Yardsyncs.Application.Auth;
 using Yardsyncs.Application.Booking;
 using Yardsyncs.Application.Capacity;
+using Yardsyncs.Application.Languages;
 
 // The HTTP helpers every Yardsyncs module's endpoints share (core and Autogate): the signed-in user, problem
 // responses, and the { data, regeneratedSlots } envelope of configuration changes.
@@ -45,8 +46,10 @@ public static class YardsyncsApi
     public static IResult ToResult(BookingOutcome outcome, string? createdBase = null)
     {
         var extensions = new Dictionary<string, object?> { ["errors"] = outcome.Errors };
-        if (outcome.Checks.Count > 0)
-            extensions["checks"] = outcome.Checks;
+        // Check results in the reader's language (the detail and errors are done with every problem response).
+        var checks = outcome.Checks.Select(c => c with { Message = ServerText.TOrNull(c.Message) }).ToList();
+        if (checks.Count > 0)
+            extensions["checks"] = checks;
         var detail = string.Join(" ", outcome.Errors);
 
         return outcome.Kind switch
@@ -57,7 +60,7 @@ public static class YardsyncsApi
             BookingOutcomeKind.NotFound => Results.Problem(detail, statusCode: StatusCodes.Status404NotFound, title: "Not found", extensions: extensions),
             BookingOutcomeKind.Rejected => Results.Problem(detail, statusCode: StatusCodes.Status422UnprocessableEntity, title: "Not cleared for booking", extensions: extensions),
             BookingOutcomeKind.NoCapacity => Results.Problem(detail, statusCode: StatusCodes.Status409Conflict, title: "No capacity", extensions: extensions),
-            BookingOutcomeKind.Valid => Results.Ok(new { valid = true, checks = outcome.Checks }),
+            BookingOutcomeKind.Valid => Results.Ok(new { valid = true, checks }),
             _ => Results.Problem(detail, statusCode: StatusCodes.Status409Conflict, title: "Conflict", extensions: extensions),
         };
     }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ApiClient, ApiError, type SessionStore } from '../src/lib/api.ts';
+import { ApiClient, ApiError, setServerLanguage, type SessionStore } from '../src/lib/api.ts';
 
 const user = { userId: 1, email: 'd@x', fullName: 'D', role: 'CompanyUser', companyId: 7, companyName: 'Al Noor', terminalId: null, preferredLanguage: 'ar' } as const;
 
@@ -120,4 +120,21 @@ test('two-step sign-in: the password gives a challenge, the code signs in', asyn
   assert.equal(store.value, null, 'not signed in after the password alone');
   assert.equal((await api.loginCode('c1', '123456')).fullName, 'D');
   assert.deepEqual(store.value, { user });
+});
+
+test('requests ask for the portal language, and a problem keeps its fixed code', async () => {
+  const seen: string[] = [];
+  const api = new ApiClient(memoryStore(), async (_url, init) => {
+    seen.push((init?.headers as Record<string, string>)['Accept-Language']);
+    return json(401, { detail: 'استغرق تسجيل الدخول وقتاً طويلاً. أدخل كلمة المرور من جديد.', code: 'challenge_expired' });
+  });
+  setServerLanguage('ar');
+  try {
+    await assert.rejects(api.loginCode('c', '123456'), (err: unknown) =>
+      err instanceof ApiError && err.code === 'challenge_expired' && err.message.startsWith('استغرق'));
+    await assert.rejects(api.get('/api/x'));
+  } finally {
+    setServerLanguage('en');
+  }
+  assert.deepEqual(seen.slice(0, 2), ['ar', 'ar']);
 });

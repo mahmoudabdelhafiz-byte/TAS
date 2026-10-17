@@ -1,3 +1,4 @@
+using Yardsyncs.Application.Capacity;
 using Yardsyncs.Application.Auth;
 using Yardsyncs.Application.Gate;
 using Yardsyncs.Infrastructure.Gate;
@@ -17,11 +18,11 @@ public static class GateEndpoints
 
         // A truck at an entry lane: match, re-check, admit or refer to the trouble desk.
         gate.MapPost("/arrivals", async (int terminalId, ArrivalInput body, HttpContext http, GateService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.ArriveAsync(YardsyncsApi.User(http)!, terminalId, body, ct)));
+            Denied(http, terminalId) ?? YardsyncsApi.Admin(ForReader(await service.ArriveAsync(YardsyncsApi.User(http)!, terminalId, body, ct))));
 
         // The same, asked only: what the gate would decide, recording nothing (for the terminal's own gate system).
         gate.MapPost("/arrivals/check", async (int terminalId, ArrivalInput body, HttpContext http, GateService service, CancellationToken ct) =>
-            Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.ArriveAsync(YardsyncsApi.User(http)!, terminalId, body, ct, record: false)));
+            Denied(http, terminalId) ?? YardsyncsApi.Admin(ForReader(await service.ArriveAsync(YardsyncsApi.User(http)!, terminalId, body, ct, record: false))));
 
         gate.MapPost("/in", async (int terminalId, GateInInput body, HttpContext http, GateService service, CancellationToken ct) =>
             Denied(http, terminalId) ?? YardsyncsApi.Admin(await service.GateInAsync(YardsyncsApi.User(http)!, terminalId, body, ct)));
@@ -81,4 +82,7 @@ public static class GateEndpoints
         AccessRules.CanManageCategories(YardsyncsApi.User(http)!, terminalId)
             ? null
             : YardsyncsApi.Forbidden("Only terminal admins of this terminal can set up lanes, their devices and gate systems.");
+
+    private static AdminResult<ArrivalResult> ForReader(AdminResult<ArrivalResult> result) =>
+        result.Value is null ? result : result with { Value = result.Value.ForReader() };
 }

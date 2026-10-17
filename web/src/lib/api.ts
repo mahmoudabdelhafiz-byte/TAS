@@ -21,18 +21,30 @@ interface Stored {
 
 const SESSION_HEADERS = { 'Content-Type': 'application/json', 'X-Yardsyncs-Session': 'cookie' };
 
+/** The portal's language: the server writes check results, gate decisions and errors in it. */
+let serverLanguage = 'en';
+export function setServerLanguage(lang: string): void {
+  serverLanguage = lang;
+}
+function sessionHeaders(): Record<string, string> {
+  return { ...SESSION_HEADERS, 'Accept-Language': serverLanguage };
+}
+
 /** An API refusal with the server's explanation (RFC 7807 problem details). */
 export class ApiError extends Error {
   readonly status: number;
   readonly errors: string[];
   readonly checks: { item: number | null; type: string; result: string; message: string | null }[];
+  /** A fixed code for problems the portal reacts to (the message is in the reader's language). */
+  readonly code: string | null;
 
-  constructor(status: number, message: string, errors: string[] = [], checks: ApiError['checks'] = []) {
+  constructor(status: number, message: string, errors: string[] = [], checks: ApiError['checks'] = [], code: string | null = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.errors = errors;
     this.checks = checks;
+    this.code = code;
   }
 }
 
@@ -64,7 +76,7 @@ export const browserStore: SessionStore = {
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export async function readProblem(response: Response): Promise<ApiError> {
-  let body: { detail?: string; title?: string; errors?: unknown; checks?: unknown } = {};
+  let body: { detail?: string; title?: string; errors?: unknown; checks?: unknown; code?: unknown } = {};
   try {
     body = await response.json();
   } catch {
@@ -73,7 +85,7 @@ export async function readProblem(response: Response): Promise<ApiError> {
   const errors = Array.isArray(body.errors) ? body.errors.map(String) : [];
   const checks = Array.isArray(body.checks) ? (body.checks as ApiError['checks']) : [];
   const message = body.detail || errors.join(' ') || body.title || `Request failed (${response.status}).`;
-  return new ApiError(response.status, message, errors, checks);
+  return new ApiError(response.status, message, errors, checks, typeof body.code === 'string' ? body.code : null);
 }
 
 export class ApiClient {
@@ -105,7 +117,7 @@ export class ApiClient {
   async login(email: string, password: string): Promise<{ user: UserProfile } | { challenge: string }> {
     const response = await this.fetcher(`${this.base}/api/auth/login`, {
       method: 'POST',
-      headers: SESSION_HEADERS,
+      headers: sessionHeaders(),
       credentials: 'same-origin',
       body: JSON.stringify({ email, password }),
     });
@@ -120,7 +132,7 @@ export class ApiClient {
   async loginCode(challenge: string, code: string): Promise<UserProfile> {
     const response = await this.fetcher(`${this.base}/api/auth/login/code`, {
       method: 'POST',
-      headers: SESSION_HEADERS,
+      headers: sessionHeaders(),
       credentials: 'same-origin',
       body: JSON.stringify({ challenge, code }),
     });
@@ -141,7 +153,7 @@ export class ApiClient {
     try {
       await this.fetcher(`${this.base}/api/auth/logout`, {
         method: 'POST',
-        headers: SESSION_HEADERS,
+        headers: sessionHeaders(),
         credentials: 'same-origin',
         body: JSON.stringify({}),
       });
@@ -201,7 +213,7 @@ export class ApiClient {
   }
 
   private send(method: string, path: string, body?: unknown): Promise<Response> {
-    const headers: Record<string, string> = { Accept: 'application/json' };
+    const headers: Record<string, string> = { Accept: 'application/json', 'Accept-Language': serverLanguage };
     const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
     if (this.session?.accessToken) headers.Authorization = `Bearer ${this.session.accessToken}`;
@@ -226,7 +238,7 @@ export class ApiClient {
             this.legacyRefreshToken = null;
             const response = await this.fetcher(`${this.base}/api/auth/refresh`, {
               method: 'POST',
-              headers: SESSION_HEADERS,
+              headers: sessionHeaders(),
               credentials: 'same-origin',
               body: JSON.stringify(legacy ? { refreshToken: legacy } : {}),
             });

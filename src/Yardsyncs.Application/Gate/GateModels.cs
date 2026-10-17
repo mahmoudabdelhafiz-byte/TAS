@@ -81,7 +81,11 @@ public sealed record ArrivalResult(
     long? TroubleId,
     TroubleReason? Reason,
     IReadOnlyList<string> Warnings,
-    AppointmentDto? Appointment);
+    AppointmentDto? Appointment)
+{
+    /// <summary>The message and warnings in the reader's language (only on the way out: lanes keep the English).</summary>
+    public ArrivalResult ForReader() => this with { Message = Languages.ServerText.T(Message), Warnings = Languages.ServerText.T(Warnings) };
+}
 
 public sealed record GateOutResult(
     string AppointmentNo,
