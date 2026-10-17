@@ -75,6 +75,7 @@ public static class DependencyInjection
         services.AddScoped<GateService>();
         services.AddScoped<LaneService>();
         services.AddScoped<GateSystemService>();
+        services.AddScoped<Yardsyncs.Infrastructure.Auth.CompanyApiKeyService>();
         services.AddSingleton<Modules>(); // which modules this installation and each terminal have
 
         // Notifications: outbox delivery; provider per channel from "Notifications" (default: Log = not sent).

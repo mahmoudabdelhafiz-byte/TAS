@@ -34,3 +34,11 @@ erased. In **Drivers**:
   driver has a visit under way: assign another driver or cancel the visit first. It cannot be undone.
 
 Positions are kept only from the start of a trip until the truck leaves the terminal, and deleted after 30 days.
+
+## API keys
+
+If your company books from its own system (a TMS or dispatch software), the company admin opens **API keys**, enters a
+name, chooses what the key is **Allowed to** do — **Book and change appointments** or **Only look** — and chooses
+**Add API key**. Copy the key into your system straight away: it is shown only once. The list shows when each key was
+last used; **Revoke key** stops one at once. Your IT team finds the calls in the technical page *API for trucking
+companies and integrators*.

@@ -1,10 +1,28 @@
 # API for trucking companies and integrators
 
 Everything the portal does goes through the same HTTPS API, so a trucking company's dispatch system or a port
-community system can book and follow visits directly. Ask the terminal for an account with the right role (a company
-user for booking, a gate clerk account for an automated gate).
+community system can book and follow visits directly.
 
-## Signing in
+## API keys (for systems)
+
+A trucking company's own system (a TMS, dispatch software) uses a key instead of a person's sign-in. The company's
+admin makes one in **Fleet & users → API keys**:
+
+- **Book and change appointments**: everything a user of the company can do through the API.
+- **Only look**: reads only (`GET`); anything else is answered `403`.
+
+Send it with every call, over HTTPS:
+
+```
+X-Api-Key: ysc_…
+```
+
+The key is shown once; the portal shows when each key was last used. Revoking a key stops it at once. Each key may make
+300 calls a minute (`429` beyond that). A key acts as its own user of the company, so the history shows which system
+booked what; it can't sign in to the portal or manage keys. A terminal's own gate system uses a gate system key in the
+same header: see *Connecting your own gate system*.
+
+## Signing in (people)
 
 ```
 POST /api/auth/login        {"email": "...", "password": "..."}

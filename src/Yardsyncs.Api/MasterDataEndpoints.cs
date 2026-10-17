@@ -179,6 +179,17 @@ public static class MasterDataEndpoints
 
         // ================================================================ operators (system admins; operator admins see their own)
 
+        // API keys for the company's own systems (TMS, dispatch): made and revoked by the company admin or a terminal admin.
+        companies.MapGet("/{companyId:int}/api-keys", async (int companyId, HttpContext http, Yardsyncs.Infrastructure.Auth.CompanyApiKeyService service, CancellationToken ct) =>
+            KeysDenied(http, companyId) ?? Results.Ok(await service.ListAsync(companyId, ct)));
+
+        companies.MapPost("/{companyId:int}/api-keys", async (int companyId, CompanyApiKeyInput body, HttpContext http, Yardsyncs.Infrastructure.Auth.CompanyApiKeyService service, CancellationToken ct) =>
+            KeysDenied(http, companyId) ?? YardsyncsApi.Admin(await service.CreateAsync(YardsyncsApi.User(http)!, companyId, body, ct),
+                k => $"/api/companies/{companyId}/api-keys/{k.ApiKey.KeyId}"));
+
+        companies.MapDelete("/{companyId:int}/api-keys/{keyId:int}", async (int companyId, int keyId, HttpContext http, Yardsyncs.Infrastructure.Auth.CompanyApiKeyService service, CancellationToken ct) =>
+            KeysDenied(http, companyId) ?? YardsyncsApi.Admin(await service.RevokeAsync(YardsyncsApi.User(http)!, companyId, keyId, ct)));
+
         var operators = app.MapGroup("/api/operators").RequireAuthorization();
 
         operators.MapGet("/", async (HttpContext http, OperatorService service, CancellationToken ct) =>
@@ -269,6 +280,12 @@ public static class MasterDataEndpoints
 
     // Other companies' records look like they don't exist.
     private static IResult NotFound(int companyId) => YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Company {companyId} not found.");
+
+    /// <summary>Keys are for people: a key can't make or see keys.</summary>
+    private static IResult? KeysDenied(HttpContext http, int companyId) =>
+        http.User.Identity?.AuthenticationType == Yardsyncs.Infrastructure.Auth.GateSystemAuth.Scheme
+            ? YardsyncsApi.Forbidden("API keys are managed in the portal, not with an API key.")
+            : FleetDenied(http, companyId);
 
     private static IResult? FleetDenied(HttpContext http, int companyId)
     {

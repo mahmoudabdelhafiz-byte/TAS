@@ -69,6 +69,15 @@ builder.Services.AddRateLimiter(o =>
             PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("Devices:PerMinute", 600),
             Window = TimeSpan.FromMinutes(1),
         }));
+    // Trucking companies' API keys: calls per minute per key (Api:KeyPerMinute, default 300). Everything else: no global limit.
+    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+        ctx.Request.Headers["X-Api-Key"].FirstOrDefault() is { } apiKey && Yardsyncs.Application.Auth.CompanyApiKeys.LooksLikeKey(apiKey)
+            ? RateLimitPartition.GetFixedWindowLimiter("api:" + Yardsyncs.Application.Auth.CompanyApiKeys.Hash(apiKey), _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("Api:KeyPerMinute", 300),
+                Window = TimeSpan.FromMinutes(1),
+            })
+            : RateLimitPartition.GetNoLimiter("none"));
     // AI assistant: questions per minute per signed-in user (Assistant:PerMinute, default 10); the daily limit is in the service.
     o.AddPolicy("assistant", ctx => RateLimitPartition.GetFixedWindowLimiter(
         YardsyncsApi.User(ctx)?.UserId.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -127,6 +136,17 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseAuthentication();
+// A read-only API key may only read.
+app.Use(async (context, next) =>
+{
+    if (context.User.HasClaim(Yardsyncs.Application.Auth.CompanyApiKeys.ReadOnlyClaim, "true")
+        && !Yardsyncs.Application.Auth.CompanyApiKeys.Allows(true, context.Request.Method))
+    {
+        await YardsyncsApi.Problem(StatusCodes.Status403Forbidden, "This API key can only read. Ask your company admin for a key that can book.").ExecuteAsync(context);
+        return;
+    }
+    await next();
+});
 app.UseRateLimiter(); // after authentication, so limits can be per signed-in user
 app.UseAuthorization();
 
