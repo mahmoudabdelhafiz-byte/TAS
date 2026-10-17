@@ -126,24 +126,30 @@ public static class LaneControllerRules
         t.Status == LaneTransactionStatus.Open && !CanIdentify(t) && now - t.StartedAt >= abandonAfter;
 
     /// <summary>
-    /// The commands after a decision. Admitted: green, barrier open, a welcome on the display and, at an entry lane,
-    /// the gate ticket. Referred: red and the reason on the display. Commands for devices the lane doesn't have are
-    /// simply not sent.
+    /// The commands after a decision. Admitted: green, barrier open and a welcome on the display (the gate ticket
+    /// follows at gate-in, with the yard position: see <see cref="AfterGateIn"/>). Referred: red and the reason on the
+    /// display. Commands for devices the lane doesn't have are simply not sent.
     /// </summary>
-    public static IReadOnlyList<PlannedCommand> Plan(LaneDirection direction, bool admitted, string? appointmentNo, string? message, string? ticket)
+    public static IReadOnlyList<PlannedCommand> Plan(LaneDirection direction, bool admitted, string? appointmentNo, string? message)
     {
         if (!admitted)
             return [new(LaneCommand.Red), new(LaneCommand.Show, Display.Refer(message))];
-        var commands = new List<PlannedCommand>
-        {
+        return
+        [
             new(LaneCommand.Green),
             new(LaneCommand.Open),
             new(LaneCommand.Show, direction == LaneDirection.In ? Display.Welcome(appointmentNo) : Display.Goodbye),
-        };
-        if (direction == LaneDirection.In && ticket is not null)
-            commands.Add(new(LaneCommand.Print, ticket));
-        return commands;
+        ];
     }
+
+    /// <summary>
+    /// The truck is in (the barrier opened at an entry lane) and the TOS gave its yard position: where to go on the
+    /// display, and the gate ticket with it on the lane printer.
+    /// </summary>
+    public static IReadOnlyList<PlannedCommand> AfterGateIn(string? stops, string ticket) =>
+        string.IsNullOrWhiteSpace(stops)
+            ? [new(LaneCommand.Print, ticket)]
+            : [new(LaneCommand.Show, Display.GoTo(stops)), new(LaneCommand.Print, ticket)];
 
     /// <summary>Texts for the lane display and the gate ticket (English; the display shows what it is sent).</summary>
     public static class Display
@@ -161,7 +167,12 @@ public static class LaneControllerRules
             return string.IsNullOrWhiteSpace(message) ? text : Clip($"{text} {message.Trim()}", DeviceRules.MaxTextLength);
         }
 
-        public static string Ticket(string terminalName, string laneCode, string? appointmentNo, string? plate, IReadOnlyList<string> containers, string localTime) =>
+        /// <summary>Where to go inside, on the lane display: "Go to B2 (14.03.2) → E1".</summary>
+        public static string GoTo(string stops) => Clip($"Go to {stops.Trim()}", DeviceRules.MaxTextLength);
+
+        /// <param name="stops">The yard position from the TOS, in driving order ("B2 (14.03.2) → E1"); null when it gave none.</param>
+        public static string Ticket(string terminalName, string laneCode, string? appointmentNo, string? plate, IReadOnlyList<string> containers, string localTime,
+            string? stops = null) =>
             Clip(string.Join("\n", new[]
             {
                 terminalName,
@@ -169,6 +180,7 @@ public static class LaneControllerRules
                 appointmentNo is null ? null : $"Appointment: {appointmentNo}",
                 plate is null ? null : $"Truck: {plate}",
                 containers.Count == 0 ? null : $"Containers: {string.Join(", ", containers)}",
+                string.IsNullOrWhiteSpace(stops) ? null : $"Go to: {stops.Trim()}",
             }.Where(l => l is not null)), DeviceRules.MaxTextLength);
 
         private static string Clip(string text, int max) => text.Length <= max ? text : text[..(max - 1)] + "…";

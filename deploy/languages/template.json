@@ -1020,6 +1020,7 @@
     "exit.keep": "Keep it here",
     "exit.letOutDone": "Let out: the barrier at {lane} is opening.",
     "ticket.netWeight": "Cargo weight (in − out)",
+    "ticket.yardPosition": "Go to",
     "ticket.exitCheck": "Exit check",
     "ticket.exit.Ok": "in order",
     "ticket.exit.Problem": "let out despite a problem",

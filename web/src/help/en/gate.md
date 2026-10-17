@@ -65,7 +65,8 @@ Trucks inside are listed with how long they have been in. **Gate out** when the 
 and the turn time counted.
 
 **Gate ticket** shows the visit's interchange receipt: company, truck, driver, times and lanes, the moves with their
-seals, damage seen at the gate, and the TOS visit once recorded. **Print** prints only the ticket. After a gate out,
+seals, damage seen at the gate, where to go inside (from the TOS at gate-in), and the TOS visit once recorded.
+**Print** prints only the ticket. After a gate out,
 the link below the list opens that truck's ticket.
 
 Where the exit lane has a camera reading container numbers, **Gate out** first checks the truck: a container it came

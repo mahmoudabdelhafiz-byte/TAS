@@ -29,6 +29,8 @@ export interface GateTicketData {
   exitProblems: string | null;
   exitNote: string | null;
   netWeightKg: number | null;
+  /** Where to go inside, as the TOS gave it at gate-in. */
+  yardPosition: string | null;
 }
 
 /**
@@ -68,6 +70,7 @@ export function GateTicket({ appointmentNo, onClose }: { appointmentNo: string; 
               <div><dt>{t('ticket.slot')}</dt><dd className="num"><bdi dir="ltr">{x.slotLocal}</bdi></dd></div>
               <div><dt>{t('ticket.in')}</dt><dd className="num">{when(x.gateInAt)}{x.inLane && <> · <bdi>{x.inLane}</bdi></>}</dd></div>
               <div><dt>{t('ticket.out')}</dt><dd className="num">{when(x.gateOutAt)}{x.outLane && <> · <bdi>{x.outLane}</bdi></>}</dd></div>
+              {x.yardPosition && <div><dt>{t('ticket.yardPosition')}</dt><dd><bdi dir="ltr">{x.yardPosition}</bdi></dd></div>}
               <div><dt>{t('ticket.tosVisit')}</dt><dd><bdi>{x.tosVisitReference ?? t('ticket.notRecorded')}</bdi></dd></div>
               {x.weightKg !== null && <div><dt>{t('ticket.weight')}</dt><dd className="num"><bdi dir="ltr">{x.weightKg} kg</bdi></dd></div>}
               {x.netWeightKg !== null && <div><dt>{t('ticket.netWeight')}</dt><dd className="num"><bdi dir="ltr">{x.netWeightKg} kg</bdi></dd></div>}

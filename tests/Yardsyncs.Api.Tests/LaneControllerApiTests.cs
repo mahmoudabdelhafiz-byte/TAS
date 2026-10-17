@@ -98,6 +98,57 @@ public sealed class LaneControllerApiTests(YardsyncsApiFactory factory) : ApiTes
     }
 
     [Fact]
+    public async Task The_driver_shows_the_gate_pass_at_the_kiosk_and_gets_the_yard_position_at_gate_in()
+    {
+        if (!Enabled) return;
+        var admin = await As(DemoDataSeeder.TerminalAdminEmail);
+        var dispatcher = await As(DemoDataSeeder.DispatcherEmail);
+        var booked = await Read<AppointmentDto>(await dispatcher.PostAsJsonAsync(Appointments, new
+        {
+            slotId = SlotId, companyId = Demo.CompanyId, truckId = Demo.TruckIds[0], driverId = Demo.DriverIds[0],
+            items = new[] { new { category = "IMP_PICKUP", containerNo = "MSCU1234566" } },
+        }));
+        await SlotIsNow();
+        var in1 = (await Read<List<LaneView>>(await admin.GetAsync($"{Gate}/lanes"))).Single(l => l.LaneCode == "IN-1");
+        Assert.Equal(HttpStatusCode.Created, (await admin.PostAsJsonAsync($"{Gate}/lanes/{in1.LaneId}/devices", new { deviceCode = "IN1-PRINTER", kind = "Printer" })).StatusCode);
+        var (laneId, devices) = await AutomaticIn1(admin);
+
+        // The driver's app: sign in with the code, get the rotating gate pass.
+        const string mobile = "0500000001";
+        var start = await Factory.CreateClient().PostAsJsonAsync("/api/driver/login/start", new { mobile, installId = "kiosk-test-phone" });
+        using var started = System.Text.Json.JsonDocument.Parse(await start.Content.ReadAsStringAsync());
+        var verify = await Factory.CreateClient().PostAsJsonAsync("/api/driver/login/verify",
+            new { mobile, installId = "kiosk-test-phone", code = started.RootElement.GetProperty("testCode").GetString(), platform = "android", appVersion = "0.1.0" });
+        Assert.Equal(HttpStatusCode.OK, verify.StatusCode);
+        var phone = Factory.CreateClient();
+        phone.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",
+            (await Read<Yardsyncs.Infrastructure.DriverApp.DriverSession>(verify)).Token);
+        var pass = await Read<Yardsyncs.Infrastructure.DriverApp.GatePassView>(await phone.GetAsync("/api/driver/gate-pass"));
+        var code = GatePassCode.Payload(pass.PassId, booked.AppointmentNo,
+            GatePassCode.Compute(Convert.FromBase64String(pass.Secret), GatePassCode.Step(DateTimeOffset.UtcNow)));
+
+        // The kiosk scans it: decided at once, let in.
+        Assert.Equal(HttpStatusCode.Created, (await devices["IN1-KIOSK"].PostAsJsonAsync("/api/devices/reads", new { qrToken = code })).StatusCode);
+        var tx = Assert.Single(await Read<List<LaneTransactionView>>(await admin.GetAsync($"{Gate}/transactions?laneId={laneId}")));
+        Assert.Equal((LaneTransactionStatus.Admitted, booked.AppointmentNo), (tx.Status, tx.AppointmentNo)); // the pass itself is not kept once decided
+        Assert.Empty(await Commands(devices["IN1-PRINTER"])); // the ticket waits for gate-in
+        var welcome = Assert.Single(await Commands(devices["IN1-KIOSK"]));
+        await devices["IN1-KIOSK"].PostAsJsonAsync($"/api/devices/commands/{welcome.CommandId}/ack", new { done = true });
+
+        // The barrier opened: in, and the TOS's yard position goes to the kiosk and onto the printed ticket.
+        var open = Assert.Single(await Commands(devices["IN1-BARRIER"]));
+        await devices["IN1-BARRIER"].PostAsJsonAsync($"/api/devices/commands/{open.CommandId}/ack", new { done = true });
+        Assert.Equal("Go to B2 (14.03.2)", Assert.Single(await Commands(devices["IN1-KIOSK"])).Text);
+        var ticket = Assert.Single(await Commands(devices["IN1-PRINTER"]));
+        Assert.Equal(LaneCommand.Print, ticket.Command);
+        Assert.Contains($"Appointment: {booked.AppointmentNo}", ticket.Text);
+        Assert.EndsWith("Go to: B2 (14.03.2)", ticket.Text);
+
+        var view = await Read<GateTicketView>(await admin.GetAsync($"{Gate}/tickets/{booked.AppointmentNo}"));
+        Assert.Equal("B2 (14.03.2)", view.YardPosition);
+    }
+
+    [Fact]
     public async Task A_truck_that_is_early_waits_on_red_until_a_clerk_lets_it_in()
     {
         if (!Enabled) return;

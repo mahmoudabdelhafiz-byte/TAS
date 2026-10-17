@@ -51,16 +51,21 @@ public class LaneControllerRulesTests
     }
 
     [Fact]
-    public void Admitted_opens_the_barrier_on_green_and_prints_the_ticket_at_the_entry()
+    public void Admitted_opens_the_barrier_on_green_and_the_ticket_follows_at_gate_in_with_the_yard_position()
     {
-        var entry = LaneControllerRules.Plan(LaneDirection.In, true, "DEMO-261020-00001", null, "ticket");
-        Assert.Equal(new[] { LaneCommand.Green, LaneCommand.Open, LaneCommand.Show, LaneCommand.Print }, entry.Select(c => c.Command));
+        var entry = LaneControllerRules.Plan(LaneDirection.In, true, "DEMO-261020-00001", null);
+        Assert.Equal(new[] { LaneCommand.Green, LaneCommand.Open, LaneCommand.Show }, entry.Select(c => c.Command));
         Assert.Equal("DEMO-261020-00001: go ahead.", entry[2].Text);
 
-        var exit = LaneControllerRules.Plan(LaneDirection.Out, true, "DEMO-261020-00001", null, "ticket");
+        var inside = LaneControllerRules.AfterGateIn("B2 (14.03.2) → E1", "ticket");
+        Assert.Equal(new[] { LaneCommand.Show, LaneCommand.Print }, inside.Select(c => c.Command));
+        Assert.Equal("Go to B2 (14.03.2) → E1", inside[0].Text);
+        Assert.Equal(LaneCommand.Print, Assert.Single(LaneControllerRules.AfterGateIn(null, "ticket")).Command); // no position from the TOS
+
+        var exit = LaneControllerRules.Plan(LaneDirection.Out, true, "DEMO-261020-00001", null);
         Assert.Equal(new[] { LaneCommand.Green, LaneCommand.Open, LaneCommand.Show }, exit.Select(c => c.Command));
 
-        var referred = LaneControllerRules.Plan(LaneDirection.In, false, null, "Early: the arrival window opens at 09:30.", null);
+        var referred = LaneControllerRules.Plan(LaneDirection.In, false, null, "Early: the arrival window opens at 09:30.");
         Assert.Equal(new[] { LaneCommand.Red, LaneCommand.Show }, referred.Select(c => c.Command));
         Assert.Equal("Please wait: a clerk will help you. Early: the arrival window opens at 09:30.", referred[1].Text);
         Assert.Equal(400, LaneControllerRules.Display.Refer(new string('x', 600)).Length);
@@ -71,5 +76,7 @@ public class LaneControllerRulesTests
     {
         var ticket = LaneControllerRules.Display.Ticket("Demo Terminal", "IN-1", "DEMO-1", "1234ABJ", ["MSCU1234566"], "2026-10-20 13:00");
         Assert.Equal("Demo Terminal\nGate ticket · lane IN-1 · 2026-10-20 13:00\nAppointment: DEMO-1\nTruck: 1234ABJ\nContainers: MSCU1234566", ticket);
+        var placed = LaneControllerRules.Display.Ticket("Demo Terminal", "IN-1", "DEMO-1", null, [], "2026-10-20 13:00", "B2 (14.03.2)");
+        Assert.EndsWith("\nGo to: B2 (14.03.2)", placed);
     }
 }

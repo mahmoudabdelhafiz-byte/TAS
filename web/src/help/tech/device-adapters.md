@@ -100,8 +100,9 @@ At a lane set to **Automatic**, Yardsyncs runs the lane itself, one transaction 
    both reported; a kiosk entry or a scanned gate pass is decided at once. The decision is the same as the gate's for a
    clerk: match the appointment, re-check with the TOS, check the arrival window, the holds and any blocks.
 3. **Act.**
-   - Let in: `Green`, `Open`, a welcome on the display, and at an entry lane the gate ticket on the printer. When the
-     barrier confirms `Open`, the truck is gated in.
+   - Let in: `Green`, `Open` and a welcome on the display. When the barrier confirms `Open`, the truck is gated in;
+     at an entry lane the TOS's yard position then goes to the display (`Go to B2 (14.03.2)`) and the gate ticket,
+     with the position, to the printer. The driver app gets the same stops by push.
    - Referred: `Red`, and the reason on the display. The case goes to the trouble desk, and when a clerk lets the truck
      in there, the lane's barrier opens.
    - Exit lanes gate the truck out (by plate or appointment number) and open, or call a clerk. Before that, the
