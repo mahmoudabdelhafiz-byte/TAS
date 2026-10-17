@@ -5,6 +5,7 @@
     <Project Path="src/Yardsyncs.Infrastructure/Yardsyncs.Infrastructure.csproj" />
     <Project Path="src/Yardsyncs.Autogate/Yardsyncs.Autogate.csproj" />
     <Project Path="src/Yardsyncs.Api/Yardsyncs.Api.csproj" />
+    <Project Path="src/Yardsyncs.Edge/Yardsyncs.Edge.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Yardsyncs.Application.Tests/Yardsyncs.Application.Tests.csproj" />

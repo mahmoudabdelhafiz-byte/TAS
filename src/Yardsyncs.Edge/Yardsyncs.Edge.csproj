@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Yardsyncs lane agent (edge mode, Yardsyncs Autogate): runs at the terminal when Yardsyncs is hosted in the cloud.
+    Lane devices talk to it instead of the cloud; it passes everything through while the cloud answers, and runs the
+    automatic lanes itself from a snapshot when it doesn't, sending back what it decided once the link is up.
+    Only the rules (Yardsyncs.Application) are shared with the cloud; no database.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Yardsyncs.Application\Yardsyncs.Application.csproj" />
+  </ItemGroup>
+
+</Project>

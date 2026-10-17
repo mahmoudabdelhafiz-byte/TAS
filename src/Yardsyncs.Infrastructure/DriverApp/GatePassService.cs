@@ -52,6 +52,22 @@ public sealed class GatePassService(YardsyncsDbContext db, IOptions<JwtOptions> 
             .Where(p => driverIds.Contains(p.DriverId) && p.Status == "ACTIVE")
             .ExecuteUpdateAsync(s => s.SetProperty(p => p.Status, "REVOKED").SetProperty(p => p.RevokedReason, reason), ct);
 
+    /// <summary>
+    /// The live gate passes of the drivers with these mobile numbers, with their secrets: for the terminal's own lane
+    /// agent (edge mode) to check rotating codes while the cloud can't be reached.
+    /// </summary>
+    public async Task<IReadOnlyList<Yardsyncs.Application.Edge.EdgePass>> ForEdgeAsync(int terminalId, IReadOnlyCollection<string> mobiles, CancellationToken ct = default)
+    {
+        if (mobiles.Count == 0)
+            return [];
+        var now = clock.GetUtcNow();
+        var rows = await db.GatePasses.AsNoTracking()
+            .Where(p => p.Status == "ACTIVE" && (p.ExpiresAt == null || p.ExpiresAt > now) && (p.TerminalId == null || p.TerminalId == terminalId))
+            .Join(db.Drivers.Where(d => !d.IsBlocked && mobiles.Contains(d.Mobile)), p => p.DriverId, d => d.DriverId, (p, d) => new { p.GatePassId, p.PassSecret, d.Mobile })
+            .ToListAsync(ct);
+        return rows.Select(r => new Yardsyncs.Application.Edge.EdgePass(r.GatePassId, Convert.ToBase64String(Unprotect(r.PassSecret)), r.Mobile)).ToList();
+    }
+
     /// <summary>Checks a gate pass QR read at a lane of this terminal.</summary>
     public async Task<GatePassCheck> VerifyAsync(int terminalId, string payload, CancellationToken ct = default)
     {

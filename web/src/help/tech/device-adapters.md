@@ -125,6 +125,29 @@ The controller runs inside Yardsyncs. When Yardsyncs is installed at the termina
 doesn't depend on any outside link (only on the TOS, as a clerk does). If the TOS can't be reached, no truck is let in
 automatically: it is referred for a clerk to check.
 
+## Edge mode: lanes that keep working when the cloud is out of reach
+
+When Yardsyncs is hosted in the cloud, a small **lane agent** runs at the terminal (`deploy/edge/`), next to the lanes.
+The devices talk to the agent instead of the cloud, with the same device API and the same keys:
+
+- **While the cloud answers**, the agent passes every call through, and the cloud runs the lanes as described above.
+- **When it doesn't** (no answer within 3 seconds), the agent runs the automatic lanes itself from a snapshot it took
+  in the last few minutes: the lanes and device keys (fingerprints only), the appointments of the next 36 hours with
+  their plates, containers and last "ready to go" light, the drivers' gate passes, and the terminal's gate rules. It
+  matches and decides with the same rules as the cloud, and sends the same commands.
+- **When the cloud is back**, the agent sends what it decided (`POST …/gate/edge/passages`): trucks let in are gated
+  in at the time the barrier opened, trucks let out are gated out, referrals are logged. Each one is recorded once,
+  however often it is sent. The TOS then gets the gate transactions and the drivers their yard position.
+
+What the agent can't do on its own: ask the TOS again (it uses the last light the cloud saw; a truck that was red stays
+referred), give a yard position, check exits against the containers, or put cases on the trouble desk. A truck it
+refers is dealt with at the lane, and the referral shows in the gate log afterwards. A truck let in offline whose
+barrier never confirmed is recorded as arrived, for the gate staff to check.
+
+The agent signs in to the cloud with a gate system key of the terminal (**Lanes → Gate systems**); only such a key can
+take the snapshot (`GET …/gate/edge/snapshot`) or send passages. `GET /edge/status` on the agent tells whether it is
+online, how old its snapshot is and how many passages it still has to send.
+
 ## A reference adapter
 
 `deploy/device-adapter/simulator.mjs` acts as a camera and a barrier with no other software needed. It reads a plate,

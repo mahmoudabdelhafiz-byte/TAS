@@ -523,6 +523,15 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Only a contradiction holds: no seal read, or fewer seals read than declared, never does; without the setting the mismatch is recorded in the inspection as before |
 | ✅ | The gate API takes `sealReads` with an arrival, so the check is the gate's own, not the lanes' |
 
+### 55. Edge mode (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Lane agent (`src/Yardsyncs.Edge`, image `deploy/edge/`): devices talk to it with the same API and keys; it passes everything to the cloud while it answers, and runs the automatic lanes itself from a snapshot when it doesn't |
+| ✅ | The same rules offline (`EdgeLaneEngine`, shared with the cloud): reads gathered per truck, matching, gate pass check, arrival window, holds as last seen, blocks, driver identity; same commands; an appointment can't be used twice; exits for trucks inside |
+| ✅ | Snapshot (`GET …/gate/edge/snapshot`) and passages (`POST …/gate/edge/passages`) for the agent's gate system key only; passages recorded at the times they happened, once, then the TOS gate transactions and the driver's yard position follow |
+| ✅ | Snapshot and unsent passages kept on disk; `GET /edge/status` for monitoring; CI builds and starts the agent image |
+| ⬜ | Offline: no TOS re-check, no yard position, no exit check, no trouble desk (a referred truck is handled at the lane). A trouble desk on the agent if a terminal needs it |
+
 ---
 
 ## Remaining
@@ -610,7 +619,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Lane model: lanes, devices per lane (cameras, OCR, RFID reader, kiosk, barrier, traffic light, intercom, weighbridge), lane states | Section 44 |
 | ✅ | Device adapters, vendor-neutral: OCR results in (plate, container numbers, ISO code, seal, damage photos), barrier / light / display commands out | Section 45; vendor-specific adapters (a given OCR make's own protocol) per customer |
 | ✅ | Lane controller service at the terminal: one transaction per truck — identify, match appointment, re-check, decide, open barrier or send to remote clerk | Section 46; runs inside Yardsyncs, so at the terminal when Yardsyncs is installed there |
-| ⬜ | Edge mode for cloud-hosted terminals: a small lane agent at the terminal with today's appointments cached, so automatic lanes keep deciding when the link to the cloud drops, and sync back afterwards | Needed only where Yardsyncs is hosted in the cloud and the lanes run automatic |
+| ✅ | Edge mode for cloud-hosted terminals: a small lane agent at the terminal with today's appointments cached, so automatic lanes keep deciding when the link to the cloud drops, and sync back afterwards | Section 55 |
 | ✅ | Remote clerk station: live lane view, photos, OCR corrections, intercom, admit / refer / reject — grows out of today's trouble desk | Section 47; the intercom audio itself is the intercom system's |
 | ✅ | TOS gate transaction: create the truck visit and gate-in / gate-out in the TOS (N4 gate API), print or send the EIR / gate ticket | Section 48; N4 documents to verify on the customer's N4 test system ❓ test access; sending the ticket to the driver app with push (Phase E) |
 | ✅ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | Section 49; holding a truck for a seal mismatch: section 54 |

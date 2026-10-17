@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Yardsyncs.Application.Auth;
 using Yardsyncs.Application.Booking;
 using Yardsyncs.Application.Capacity;
+using Yardsyncs.Application.Edge;
 using Yardsyncs.Application.Gate;
 using Yardsyncs.Application.MasterData;
 using Yardsyncs.Application.Tos;
@@ -566,6 +567,96 @@ public sealed class GateService(
             db.ChangeTracker.Clear();
             logger.LogWarning(ex, "In-gate ticket for appointment {AppointmentId} could not be issued", appointmentId);
         }
+    }
+
+    // ================================================================ decided at the terminal without the cloud (edge mode)
+
+    /// <summary>
+    /// Records a passage the lane agent decided while the cloud couldn't be reached, at the times it happened: an entry
+    /// that went through is gated in (one let in whose barrier never confirmed is only arrived), an exit is gated out,
+    /// a referral is logged. The TOS gets the gate transactions and the driver the yard position as for any passage.
+    /// Sending the same passage again records nothing.
+    /// </summary>
+    public async Task<EdgePassageResult> RecordOfflineAsync(CurrentUser agent, int terminalId, EdgePassage p, CancellationToken ct = default)
+    {
+        EdgePassageResult Result(EdgePassageOutcome outcome, string? detail = null) => new(p.PassageId, outcome, detail);
+        var tag = $"Edge passage {p.PassageId:N}.";
+        if (await db.GateEvents.AsNoTracking().AnyAsync(e => e.TerminalId == terminalId && e.Details != null && e.Details.StartsWith(tag), ct))
+            return Result(EdgePassageOutcome.Duplicate);
+
+        var laneCode = (p.LaneCode ?? "").Trim().ToUpperInvariant();
+        var lane = await db.GateLanes.AsNoTracking().SingleOrDefaultAsync(l => l.TerminalId == terminalId && l.LaneCode == laneCode, ct);
+        if (lane is null || lane.Direction != p.Direction)
+            return Result(EdgePassageOutcome.Failed, $"Lane {laneCode} is not an {(p.Direction == LaneDirection.In ? "entry" : "exit")} lane of this terminal.");
+        var containers = p.Containers ?? [];
+        var number = p.AppointmentNo?.Trim().ToUpperInvariant();
+        var offline = $"{tag} Decided at the terminal without the cloud at lane {lane.LaneCode}.";
+
+        if (!p.Admitted || number is null)
+        {
+            AddEvent(terminalId, lane.LaneId, null, GateEventType.Trouble, p.Plate, [], $"{offline} Referred{(p.Reason is null ? "" : $" ({p.Reason})")}: {p.Message}", p.DecidedAt);
+            await db.SaveChangesAsync(ct);
+            return Result(EdgePassageOutcome.Applied);
+        }
+
+        var appointment = await db.Appointments.AsNoTracking().SingleOrDefaultAsync(a => a.TerminalId == terminalId && a.AppointmentNo == number, ct);
+        if (appointment is null)
+            return Result(EdgePassageOutcome.Failed, $"Appointment {number} not found.");
+
+        if (p.Direction == LaneDirection.In)
+        {
+            if (appointment.Status is AppointmentStatus.GateIn or AppointmentStatus.Completed
+                || (appointment.Status == AppointmentStatus.Arrived && p.PassedAt is null))
+                return Result(EdgePassageOutcome.Duplicate, $"Appointment {number} is already {appointment.Status}.");
+            if (!Appointment.IsBeforeGate(appointment.Status))
+            {
+                AddEvent(terminalId, lane.LaneId, appointment.AppointmentId, GateEventType.Trouble, p.Plate, [],
+                    $"{offline} Let in while the visit was {appointment.Status}: check this truck.", p.PassedAt ?? p.DecidedAt);
+                await db.SaveChangesAsync(ct);
+                return Result(EdgePassageOutcome.Failed, $"Appointment {number} was {appointment.Status} when the lane let the truck in: logged for the gate staff.");
+            }
+
+            var arrivedAt = appointment.ArrivedAt ?? p.DecidedAt;
+            await db.Appointments.Where(a => a.AppointmentId == appointment.AppointmentId)
+                .ExecuteUpdateAsync(x => x
+                    .SetProperty(a => a.Status, p.PassedAt is null ? AppointmentStatus.Arrived : AppointmentStatus.GateIn)
+                    .SetProperty(a => a.ArrivedAt, arrivedAt)
+                    .SetProperty(a => a.GateInAt, p.PassedAt)
+                    .SetProperty(a => a.CheckInMethod, appointment.CheckInMethod ?? "OCR"), ct);
+            if (appointment.Status != AppointmentStatus.Arrived)
+                AddHistory(appointment.AppointmentId, appointment.Status, AppointmentStatus.Arrived, agent.UserId, $"Arrived at lane {lane.LaneCode} (decided at the terminal without the cloud)", p.DecidedAt);
+            AddEvent(terminalId, lane.LaneId, appointment.AppointmentId, GateEventType.Matched, p.Plate, [], $"{offline} {p.Message}", p.DecidedAt);
+            if (p.PassedAt is { } passed)
+            {
+                AddHistory(appointment.AppointmentId, AppointmentStatus.Arrived, AppointmentStatus.GateIn, agent.UserId, "Gate in (decided at the terminal without the cloud)", passed);
+                AddEvent(terminalId, lane.LaneId, appointment.AppointmentId, GateEventType.GateIn, p.Plate, containers, null, passed);
+                foreach (var hook in hooks ?? [])
+                    await hook.GateInAsync(new GatePassage(terminalId, appointment.AppointmentId, lane.LaneCode, passed, agent.UserId), ct);
+            }
+            await db.SaveChangesAsync(ct);
+            if (p.PassedAt is not null)
+                await AfterGateInAsync(appointment.AppointmentId, ct);
+            return Result(EdgePassageOutcome.Applied);
+        }
+
+        if (appointment.Status == AppointmentStatus.Completed)
+            return Result(EdgePassageOutcome.Duplicate, $"Appointment {number} is already completed.");
+        if (appointment.Status != AppointmentStatus.GateIn)
+            return Result(EdgePassageOutcome.Failed, $"Appointment {number} was not inside (status {appointment.Status}).");
+        var outAt = p.PassedAt ?? p.DecidedAt;
+        await db.Appointments.Where(a => a.AppointmentId == appointment.AppointmentId && a.Status == AppointmentStatus.GateIn)
+            .ExecuteUpdateAsync(x => x
+                .SetProperty(a => a.Status, AppointmentStatus.Completed)
+                .SetProperty(a => a.GateOutAt, outAt)
+                .SetProperty(a => a.TrafficLight, TrafficLight.Grey)
+                .SetProperty(a => a.TrafficReason, "Visit completed"), ct);
+        AddHistory(appointment.AppointmentId, AppointmentStatus.GateIn, AppointmentStatus.Completed, agent.UserId,
+            $"Gate out at lane {lane.LaneCode} (decided at the terminal without the cloud; exit not checked)", outAt);
+        AddEvent(terminalId, lane.LaneId, appointment.AppointmentId, GateEventType.GateOut, p.Plate, [], $"{offline} {p.Message}", outAt);
+        foreach (var hook in hooks ?? [])
+            await hook.GateOutAsync(new GatePassage(terminalId, appointment.AppointmentId, lane.LaneCode, outAt, agent.UserId), ct);
+        await db.SaveChangesAsync(ct);
+        return Result(EdgePassageOutcome.Applied);
     }
 
     private async Task<long?> ResolveAppointmentIdAsync(int terminalId, long? fromTrouble, string? appointmentNo, CancellationToken ct)
