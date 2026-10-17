@@ -509,6 +509,13 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | OCR read rate: plates read and not corrected by a clerk at lanes with a plate camera; containers the same, for trucks with containers |
 | ✅ | **KPIs** screen: a **Lanes** section with tiles, exceptions by day, the reasons, and one row per lane |
 
+### 53. Gate pass at the kiosk, yard position at gate-in (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | The driver shows the app's rotating gate pass at the kiosk of an automatic lane: decided at once, as at a clerk's lane (tested end to end: driver sign-in, pass, kiosk scan, barrier, gate-in) |
+| ✅ | The printed gate ticket now comes when the barrier has opened (the truck is in), with the TOS's yard position ("Go to: B2 (14.03.2)"); the lane display shows where to go; the driver app gets the stops by push as before |
+| ✅ | The gate ticket on screen shows the yard position too |
+
 ---
 
 ## Remaining
@@ -602,7 +609,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Inspection: damage photos and seal check stored with the gate event; disputes with trucking companies | Section 49; holding a truck at an automatic lane for a seal mismatch is a per-terminal option still to add |
 | ✅ | Exit gate: match outbound container, check delivered against booked, close the visit, turn time | Section 50 |
 | ✅ | Lane KPIs: transaction time, OCR read rate, exception rate per lane | Section 52 |
-| ⬜ | Gate pass from the driver app read at the kiosk; yard position printed or pushed at gate-in | Phase E |
+| ✅ | Gate pass from the driver app read at the kiosk; yard position printed or pushed at gate-in | Section 53 |
 
 ---
 

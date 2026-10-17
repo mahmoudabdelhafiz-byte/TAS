@@ -121,6 +121,10 @@ public sealed class LaneControllerService(
         await db.LaneTransactions.Where(t => t.TransactionId == txId && t.Status == LaneTransactionStatus.Admitted)
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.Status, LaneTransactionStatus.Passed).SetProperty(t => t.ClosedAt, now), ct);
 
+        // In: where to go on the display, and the gate ticket with the yard position the TOS gave at gate-in.
+        if (lane.Direction == LaneDirection.In && tx.AppointmentNo is not null)
+            await AfterGateInAsync(lane, tx, now, ct);
+
         // What the cameras saw (seals, damage) becomes the passage's inspection.
         await inspections.FromLaneAsync(txId, ct);
     }
@@ -150,7 +154,7 @@ public sealed class LaneControllerService(
             tx.AppointmentId = trouble.AppointmentId ?? tx.AppointmentId;
             tx.AppointmentNo = number ?? tx.AppointmentNo;
             tx.Message = "Let in by a clerk.";
-            plan = LaneControllerRules.Plan(lane.Direction, true, tx.AppointmentNo, null, null);
+            plan = LaneControllerRules.Plan(lane.Direction, true, tx.AppointmentNo, null);
         }
         else if (resolution == TroubleResolution.Rejected)
         {
@@ -192,7 +196,7 @@ public sealed class LaneControllerService(
         tx.Status = LaneTransactionStatus.Admitted;
         tx.Message = Clip($"Let out by a clerk: {why}");
         await db.SaveChangesAsync(ct);
-        await devices.QueueAsync(terminalId, lane.LaneId, transactionId, LaneControllerRules.Plan(LaneDirection.Out, true, tx.AppointmentNo, null, null), ct);
+        await devices.QueueAsync(terminalId, lane.LaneId, transactionId, LaneControllerRules.Plan(LaneDirection.Out, true, tx.AppointmentNo, null), ct);
         logger.LogInformation("Lane {Lane}: transaction {Tx} let out by user {UserId}", lane.LaneCode, transactionId, clerk.UserId);
         return AdminResult<LaneTransactionView>.Ok(LaneTransactionView.From(tx, lane.LaneCode));
     }
@@ -397,19 +401,35 @@ public sealed class LaneControllerService(
         await db.SaveChangesAsync(ct);
 
         var admitted = status == LaneTransactionStatus.Admitted;
-        string? ticket = null;
-        if (admitted && lane.Direction == LaneDirection.In)
-        {
-            var terminal = await db.Terminals.AsNoTracking().SingleAsync(t => t.TerminalId == lane.TerminalId, ct);
-            var local = TimeZoneInfo.ConvertTime(now, TimeZoneInfo.FindSystemTimeZoneById(terminal.TimeZone));
-            ticket = LaneControllerRules.Display.Ticket(terminal.Name, lane.LaneCode, appointmentNo, row.Plate, containers, local.ToString("yyyy-MM-dd HH:mm"));
-        }
         await devices.QueueAsync(lane.TerminalId, lane.LaneId, transactionId,
-            LaneControllerRules.Plan(lane.Direction, admitted, appointmentNo, message, ticket), ct);
+            LaneControllerRules.Plan(lane.Direction, admitted, appointmentNo, message), ct);
 
         logger.LogInformation("Lane {Lane}: transaction {Tx} {Status} ({No}{Reason})",
             lane.LaneCode, transactionId, status, appointmentNo ?? "no appointment", reason is null ? "" : $", {reason}");
         return LaneTransactionView.From(row, lane.LaneCode);
+    }
+
+    private async Task AfterGateInAsync(GateLane lane, LaneTransaction tx, DateTimeOffset now, CancellationToken ct)
+    {
+        var stops = await StopsAsync(tx.TerminalId, tx.AppointmentNo!, ct);
+        var terminal = await db.Terminals.AsNoTracking().Where(t => t.TerminalId == lane.TerminalId).Select(t => new { t.Name, t.TimeZone }).SingleAsync(ct);
+        var local = TimeZoneInfo.ConvertTime(now, TimeZoneInfo.FindSystemTimeZoneById(terminal.TimeZone));
+        var ticket = LaneControllerRules.Display.Ticket(terminal.Name, lane.LaneCode, tx.AppointmentNo, tx.Plate,
+            LaneControllerRules.ContainersOf(tx), local.ToString("yyyy-MM-dd HH:mm"), stops);
+        await devices.QueueAsync(lane.TerminalId, lane.LaneId, tx.TransactionId, LaneControllerRules.AfterGateIn(stops, ticket), ct);
+    }
+
+    /// <summary>The visit's yard stops as the TOS gave them at gate-in, in driving order: "B2 (14.03.2) → E1"; null without.</summary>
+    internal async Task<string?> StopsAsync(int terminalId, string appointmentNo, CancellationToken ct)
+    {
+        var stops = await db.YardInstructions.AsNoTracking()
+            .Where(y => y.Status != "CANCELLED" && y.StopType != "EXIT" && y.Block != null
+                        && db.Appointments.Any(a => a.AppointmentId == y.AppointmentId && a.TerminalId == terminalId && a.AppointmentNo == appointmentNo))
+            .OrderBy(y => y.Sequence)
+            .Select(y => new { y.Block, y.Bay })
+            .ToListAsync(ct);
+        var text = string.Join(" → ", stops.Select(y => y.Bay is null ? y.Block! : $"{y.Block} ({y.Bay})"));
+        return text.Length == 0 ? null : text;
     }
 
     private static string? Clip(string? text) => text is null ? null : text.Length <= 400 ? text : text[..399] + "…";

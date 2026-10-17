@@ -36,7 +36,8 @@ public sealed record GateTicketView(
     ExitCheckStatus? ExitStatus = null,
     string? ExitProblems = null,
     string? ExitNote = null,
-    decimal? NetWeightKg = null);
+    decimal? NetWeightKg = null,
+    string? YardPosition = null);
 
 /// <summary>Builds the gate ticket for the gate screen, the lane printer and the driver.</summary>
 public sealed class GateTicketService(YardsyncsDbContext db, Yardsyncs.Infrastructure.Booking.AppointmentQueryService queries)
@@ -84,6 +85,12 @@ public sealed class GateTicketService(YardsyncsDbContext db, Yardsyncs.Infrastru
             .Where(m => m.AppointmentId == a.AppointmentId && m.Stage == TosGateStageCode.GateIn && m.Status == TosMessageStatus.Sent)
             .Select(m => m.TosReference).SingleOrDefaultAsync(ct);
 
+        // Where to go inside, as the TOS gave it at gate-in: "B2 (14.03.2) → E1".
+        var stops = await db.YardInstructions.AsNoTracking()
+            .Where(y => y.AppointmentId == a.AppointmentId && y.Status != "CANCELLED" && y.StopType != "EXIT" && y.Block != null)
+            .OrderBy(y => y.Sequence).Select(y => new { y.Block, y.Bay }).ToListAsync(ct);
+        var position = string.Join(" → ", stops.Select(y => y.Bay is null ? y.Block! : $"{y.Block} ({y.Bay})"));
+
         var exit = await db.GateExitChecks.AsNoTracking().SingleOrDefaultAsync(e => e.AppointmentId == a.AppointmentId, ct);
 
         return new GateTicketView(
@@ -93,6 +100,7 @@ public sealed class GateTicketService(YardsyncsDbContext db, Yardsyncs.Infrastru
                 ? new GateTicketMove(i.NameEn, i.NameAr, i.ContainerNo, i.IsoType, i.Reference, seen.SealSeen is null ? [] : [seen.SealSeen], seen.SealStatus)
                 : new GateTicketMove(i.NameEn, i.NameAr, i.ContainerNo, i.IsoType, i.Reference, i.ContainerNo is null ? [] : seals)).ToList(),
             damage, weight,
-            exit?.Status, exit?.Problems, exit?.Note, ExitRules.NetKg(exit?.WeightInKg, exit?.WeightOutKg));
+            exit?.Status, exit?.Problems, exit?.Note, ExitRules.NetKg(exit?.WeightInKg, exit?.WeightOutKg),
+            position.Length == 0 ? null : position);
     }
 }
