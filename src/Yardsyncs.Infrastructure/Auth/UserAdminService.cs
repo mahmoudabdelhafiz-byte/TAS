@@ -137,6 +137,8 @@ public sealed class UserAdminService(YardsyncsDbContext db, PasswordService pass
         if (operatorId is not null)
             query = query.Where(u => u.OperatorId == operatorId);
 
+        // The accounts behind API keys and gate system keys are managed with their keys, not as people.
+        query = query.Where(u => !db.CompanyApiKeys.Any(k => k.UserId == u.UserId) && !db.GateSystemKeys.Any(k => k.UserId == u.UserId));
         var users = await query.OrderBy(u => u.Email).Take(1000).ToListAsync(ct);
         return AdminResult<IReadOnlyList<UserView>>.Ok(users.Select(UserView.From).ToList());
     }
@@ -261,7 +263,8 @@ public sealed class UserAdminService(YardsyncsDbContext db, PasswordService pass
 
     private async Task<(AppUser? User, AdminResult<UserView>? Denied)> LoadManagedAsync(CurrentUser actor, int userId, CancellationToken ct)
     {
-        var user = await db.AppUsers.SingleOrDefaultAsync(u => u.UserId == userId, ct);
+        var user = await db.AppUsers.SingleOrDefaultAsync(u => u.UserId == userId
+            && !db.CompanyApiKeys.Any(k => k.UserId == u.UserId) && !db.GateSystemKeys.Any(k => k.UserId == u.UserId), ct);
         if (user is null)
             return (null, AdminResult<UserView>.NotFound($"User {userId} not found."));
 

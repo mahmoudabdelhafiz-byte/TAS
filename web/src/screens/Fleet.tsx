@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { contrastWithWhite, defaultBrand } from '../lib/brand.ts';
-import { languageName, messageLanguages } from '../lib/languages.ts';
+import { languageName, messageLanguages, portalLanguages } from '../lib/languages.ts';
 import { isAdminRole, isCompanyRole } from '../lib/routes.ts';
 import { stamp } from '../lib/time.ts';
 import type { Company, Country, Driver, Terminal, Truck, UserRole } from '../lib/types.ts';
@@ -120,7 +120,9 @@ function Trucks({ companyId, canEdit, canBlock }: { companyId: number; canEdit: 
   const base = `/api/companies/${companyId}/trucks`;
   const list = useLoad(() => api.get<Truck[]>(base), [base]);
   const [plate, setPlate] = useState('');
+  const [editing, setEditing] = useState<Truck | null>(null);
   const m = useMessages();
+  const done = () => { setPlate(''); setEditing(null); m.setDone(t('fleet.saved')); list.reload(); };
   return (
     <div className="setup-two">
       <div>
@@ -133,10 +135,11 @@ function Trucks({ companyId, canEdit, canBlock }: { companyId: number; canEdit: 
               <thead><tr><th>{t('fleet.plate')}</th><th>{t('appt.status')}</th><th /></tr></thead>
               <tbody>
                 {list.data.map(x => (
-                  <tr key={x.truckId}>
+                  <tr key={x.truckId} className={editing?.truckId === x.truckId ? 'row-editing' : undefined}>
                     <td className="plate"><bdi>{x.plateNumber}</bdi></td>
                     <td>{x.isBlocked ? <span className="check-fail">{t('fleet.blocked')}</span> : <span className="ok-text">{t('fleet.active')}</span>}</td>
                     <td className="cell-action">
+                      {canEdit && <button type="button" className="link-btn" onClick={() => { setEditing(x); setPlate(x.plateNumber); }}>{t('fleet.edit')}</button>}{' '}
                       {canBlock && <BlockButton blocked={x.isBlocked} onError={m.setError}
                         onSet={async (blocked, reason) => { await api.post(`${base}/${x.truckId}/block`, { blocked, reason }); list.reload(); }} />}
                     </td>
@@ -149,16 +152,24 @@ function Trucks({ companyId, canEdit, canBlock }: { companyId: number; canEdit: 
       </div>
       {canEdit && (
         <form className="book-side form-stack" onSubmit={e => e.preventDefault()}>
-          <h2>{t('fleet.addTruck')}</h2>
+          <h2>{editing ? t('fleet.editTruck') : t('fleet.addTruck')}</h2>
           <label className="field"><span>{t('fleet.plate')}</span>
             <input value={plate} onChange={e => setPlate(e.target.value)} placeholder="1234 ABJ / ١٢٣٤ أ ب ح" /></label>
           <p className="hint">{t('fleet.plateHint')}</p>
-          <ActionButton kind="primary" disabled={!plate.trim()} onError={m.setError} onRun={async () => {
-            await api.post(base, { plateNumber: plate.trim() });
-            setPlate('');
-            m.setDone(t('fleet.saved'));
-            list.reload();
-          }}>{t('fleet.addTruck')}</ActionButton>
+          {editing ? (
+            <div className="actions">
+              <ActionButton kind="primary" disabled={!plate.trim()} onError={m.setError} onRun={async () => {
+                await api.put(`${base}/${editing.truckId}`, { plateNumber: plate.trim() });
+                done();
+              }}>{t('fleet.saveChanges')}</ActionButton>
+              <button type="button" className="link-btn" onClick={() => { setEditing(null); setPlate(''); }}>{t('fleet.cancel')}</button>
+            </div>
+          ) : (
+            <ActionButton kind="primary" disabled={!plate.trim()} onError={m.setError} onRun={async () => {
+              await api.post(base, { plateNumber: plate.trim() });
+              done();
+            }}>{t('fleet.addTruck')}</ActionButton>
+          )}
         </form>
       )}
     </div>
@@ -209,8 +220,11 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
   const list = useLoad(() => api.get<(Driver & { idNumber: string })[]>(base), [base]);
   // The country's ID document and how its mobiles are typed (Saudi Arabia: ID / Iqama, 05…).
   const country = useLoad(() => api.get<Country>('/api/country'), []).data;
-  const [form, setForm] = useState({ fullName: '', idNumber: '', mobile: '', preferredLanguage: 'ar' });
+  const empty = { fullName: '', idNumber: '', mobile: '', preferredLanguage: 'ar' };
+  const [form, setForm] = useState(empty);
+  const [editing, setEditing] = useState<number | null>(null);
   const m = useMessages();
+  const done = () => { setForm(empty); setEditing(null); m.setDone(t('fleet.saved')); list.reload(); };
   return (
     <div className="setup-two">
       <div>
@@ -223,13 +237,17 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
               <thead><tr><th>{t('fleet.name')}</th><th>{t('fleet.mobile')}</th><th>{t('fleet.language')}</th><th>{t('appt.status')}</th><th /></tr></thead>
               <tbody>
                 {list.data.map(x => (
-                  <tr key={x.driverId}>
+                  <tr key={x.driverId} className={editing === x.driverId ? 'row-editing' : undefined}>
                     <td>{x.fullName}</td>
                     <td className="num"><bdi>{x.mobile}</bdi></td>
                     <td>{languageName(x.preferredLanguage.trim())}</td>
                     <td>{erased(x) ? <span className="muted">{t('fleet.erased')}</span>
                       : x.isBlocked ? <span className="check-fail">{t('fleet.blocked')}</span> : <span className="ok-text">{t('fleet.active')}</span>}</td>
                     <td className="cell-action">
+                      {canEdit && !erased(x) && <button type="button" className="link-btn" onClick={() => {
+                        setEditing(x.driverId);
+                        setForm({ fullName: x.fullName, idNumber: x.idNumber, mobile: x.mobile, preferredLanguage: x.preferredLanguage.trim() });
+                      }}>{t('fleet.edit')}</button>}{' '}
                       {canBlock && !erased(x) && <BlockButton blocked={x.isBlocked} onError={m.setError}
                         onSet={async (blocked, reason) => { await api.post(`${base}/${x.driverId}/block`, { blocked, reason }); list.reload(); }} />}
                       {canEdit && (
@@ -246,7 +264,7 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
       </div>
       {canEdit && (
         <form className="book-side form-stack" onSubmit={e => e.preventDefault()}>
-          <h2>{t('fleet.addDriver')}</h2>
+          <h2>{editing ? t('fleet.editDriver') : t('fleet.addDriver')}</h2>
           <label className="field"><span>{t('fleet.name')}</span>
             <input value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} /></label>
           <label className="field"><span>{country ? (lang === 'ar' ? country.idNameAr : country.idNameEn) : t('fleet.idNumber')}</span>
@@ -257,13 +275,16 @@ function Drivers({ companyId, canEdit, canBlock }: { companyId: number; canEdit:
             <select value={form.preferredLanguage} onChange={e => setForm({ ...form, preferredLanguage: e.target.value })}>
               {messageLanguages().map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
             </select></label>
-          <ActionButton kind="primary" disabled={!form.fullName.trim() || !form.idNumber.trim() || !form.mobile.trim()} onError={m.setError}
-            onRun={async () => {
-              await api.post(base, form);
-              setForm({ fullName: '', idNumber: '', mobile: '', preferredLanguage: 'ar' });
-              m.setDone(t('fleet.saved'));
-              list.reload();
-            }}>{t('fleet.addDriver')}</ActionButton>
+          {editing && <p className="hint">{t('fleet.mobileChangeHint')}</p>}
+          <div className="actions">
+            <ActionButton kind="primary" disabled={!form.fullName.trim() || !form.idNumber.trim() || !form.mobile.trim()} onError={m.setError}
+              onRun={async () => {
+                if (editing) await api.put(`${base}/${editing}`, form);
+                else await api.post(base, form);
+                done();
+              }}>{editing ? t('fleet.saveChanges') : t('fleet.addDriver')}</ActionButton>
+            {editing && <button type="button" className="link-btn" onClick={() => { setEditing(null); setForm(empty); }}>{t('fleet.cancel')}</button>}
+          </div>
         </form>
       )}
     </div>
@@ -278,6 +299,8 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
   const roles: UserRole[] = staff ? ['GateClerk', 'Planner', 'TerminalAdmin'] : ['CompanyUser', 'CompanyAdmin'];
   const [form, setForm] = useState({ email: '', fullName: '', role: roles[0], password: '', mobile: '' });
   const [ownPassword, setOwnPassword] = useState(false);
+  const [editing, setEditing] = useState<UserRow | null>(null);
+  const [edit, setEdit] = useState({ fullName: '', mobile: '', role: roles[0], preferredLanguage: 'en' });
   const m = useMessages();
 
   return (
@@ -291,12 +314,18 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
               <thead><tr><th>{t('fleet.name')}</th><th>{t('login.email')}</th><th>{t('fleet.role')}</th><th>{t('fleet.lastLogin')}</th><th /></tr></thead>
               <tbody>
                 {list.data.map(x => (
-                  <tr key={x.userId} className={x.isActive ? undefined : 'inactive'}>
+                  <tr key={x.userId} className={[x.isActive ? '' : 'inactive', editing?.userId === x.userId ? 'row-editing' : ''].join(' ').trim() || undefined}>
                     <td>{x.fullName}</td>
                     <td><bdi>{x.email}</bdi></td>
                     <td>{tx('role', x.role)}{x.twoStepOn && <span className="muted" title={t('fleet.twoStepOn')}> · 2FA</span>}</td>
                     <td className="num">{x.lastLoginAt ? stamp(x.lastLoginAt, terminal.timeZone, lang) : '—'}</td>
                     <td className="cell-action">
+                      {canEdit && (
+                        <button type="button" className="link-btn" onClick={() => {
+                          setEditing(x);
+                          setEdit({ fullName: x.fullName, mobile: x.mobile ?? '', role: roles.includes(x.role) ? x.role : roles[0], preferredLanguage: x.preferredLanguage });
+                        }}>{t('fleet.edit')}</button>
+                      )}{' '}
                       {canEdit && x.userId !== user.userId && x.isActive && (
                         <ActionButton kind="secondary" onError={m.setError} onRun={async () => {
                           await api.post(`/api/users/${x.userId}/password-link`);
@@ -324,7 +353,33 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
           </div>
         )}
       </div>
-      {canEdit && (
+      {canEdit && editing && (
+        <form className="book-side form-stack" onSubmit={e => e.preventDefault()}>
+          <h2>{t('fleet.editUser', { email: editing.email })}</h2>
+          <label className="field"><span>{t('fleet.name')}</span><input value={edit.fullName} onChange={e => setEdit({ ...edit, fullName: e.target.value })} /></label>
+          <label className="field"><span>{t('fleet.mobile')}</span><input dir="ltr" inputMode="tel" value={edit.mobile} onChange={e => setEdit({ ...edit, mobile: e.target.value })} /></label>
+          <label className="field"><span>{t('fleet.role')}</span>
+            <select value={edit.role} disabled={editing.userId === user.userId || !roles.includes(editing.role)} onChange={e => setEdit({ ...edit, role: e.target.value as UserRole })}>
+              {(roles.includes(editing.role) ? roles : [editing.role]).map(r => <option key={r} value={r}>{tx('role', r)}</option>)}
+            </select></label>
+          {editing.userId === user.userId && <p className="hint">{t('fleet.ownRoleHint')}</p>}
+          {editing.userId !== user.userId && edit.role !== editing.role && <p className="hint">{t('fleet.roleChangeHint')}</p>}
+          <label className="field"><span>{t('fleet.language')}</span>
+            <select value={edit.preferredLanguage} onChange={e => setEdit({ ...edit, preferredLanguage: e.target.value })}>
+              {portalLanguages().map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+            </select></label>
+          <div className="actions">
+            <ActionButton kind="primary" disabled={!edit.fullName.trim()} onError={m.setError} onRun={async () => {
+              await api.put(`/api/users/${editing.userId}`, { fullName: edit.fullName.trim(), mobile: edit.mobile.trim() || null, preferredLanguage: edit.preferredLanguage, role: edit.role });
+              setEditing(null);
+              m.setDone(t('fleet.saved'));
+              list.reload();
+            }}>{t('fleet.saveChanges')}</ActionButton>
+            <button type="button" className="link-btn" onClick={() => setEditing(null)}>{t('fleet.cancel')}</button>
+          </div>
+        </form>
+      )}
+      {canEdit && !editing && (
         <form className="book-side form-stack" onSubmit={e => e.preventDefault()}>
           <h2>{t('fleet.addUser')}</h2>
           <label className="field"><span>{t('fleet.name')}</span><input value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} /></label>
@@ -361,7 +416,9 @@ function Users({ companyId, canEdit }: { companyId: number; canEdit: boolean }) 
 
 function Companies({ list, reload }: { list: CompanyRow[]; reload: () => void }) {
   const { api, t } = useApp();
-  const [form, setForm] = useState({ name: '', crNumber: '', companyType: 'Trucking' });
+  const empty = { name: '', crNumber: '', companyType: 'Trucking', isPriority: false };
+  const [form, setForm] = useState(empty);
+  const [editing, setEditing] = useState<number | null>(null);
   const m = useMessages();
   return (
     <div className="setup-two">
@@ -372,13 +429,17 @@ function Companies({ list, reload }: { list: CompanyRow[]; reload: () => void })
             <thead><tr><th>{t('fleet.name')}</th><th>{t('fleet.cr')}</th><th>{t('fleet.type')}</th><th>{t('fleet.noShows')}</th><th>{t('appt.status')}</th><th /></tr></thead>
             <tbody>
               {list.map(c => (
-                <tr key={c.companyId}>
+                <tr key={c.companyId} className={editing === c.companyId ? 'row-editing' : undefined}>
                   <td>{c.name}</td>
                   <td className="num"><bdi>{c.crNumber ?? '—'}</bdi></td>
                   <td>{t(typeText[c.companyType as keyof typeof typeText] ?? 'fleet.type.Other')}</td>
                   <td className="num">{c.noShowCount}</td>
                   <td>{c.status === 'Active' ? <span className="ok-text">{t('fleet.active')}</span> : <span className="check-fail">{t(c.status === 'Suspended' ? 'fleet.suspended' : 'fleet.pending')}</span>}</td>
                   <td className="cell-action">
+                    <button type="button" className="link-btn" onClick={() => {
+                      setEditing(c.companyId);
+                      setForm({ name: c.name, crNumber: c.crNumber ?? '', companyType: c.companyType, isPriority: c.isPriority });
+                    }}>{t('fleet.edit')}</button>{' '}
                     {c.status === 'Active'
                       ? <BlockButton blocked={false} label={t('fleet.suspend')} onError={m.setError}
                           onSet={async (_, reason) => { await api.post(`/api/companies/${c.companyId}/status`, { status: 'Suspended', reason }); reload(); }} />
@@ -394,19 +455,25 @@ function Companies({ list, reload }: { list: CompanyRow[]; reload: () => void })
         </div>
       </div>
       <form className="book-side form-stack" onSubmit={e => e.preventDefault()}>
-        <h2>{t('fleet.addCompany')}</h2>
+        <h2>{editing ? t('fleet.editCompany') : t('fleet.addCompany')}</h2>
         <label className="field"><span>{t('fleet.name')}</span><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
         <label className="field"><span>{t('fleet.cr')}</span><input dir="ltr" value={form.crNumber} onChange={e => setForm({ ...form, crNumber: e.target.value })} /></label>
         <label className="field"><span>{t('fleet.type')}</span>
           <select value={form.companyType} onChange={e => setForm({ ...form, companyType: e.target.value })}>
             {Object.entries(typeText).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}
           </select></label>
-        <ActionButton kind="primary" disabled={!form.name.trim()} onError={m.setError} onRun={async () => {
-          await api.post('/api/companies', { name: form.name.trim(), crNumber: form.crNumber.trim() || null, companyType: form.companyType });
-          setForm({ name: '', crNumber: '', companyType: 'Trucking' });
-          m.setDone(t('fleet.saved'));
-          reload();
-        }}>{t('fleet.addCompany')}</ActionButton>
+        <div className="actions">
+          <ActionButton kind="primary" disabled={!form.name.trim()} onError={m.setError} onRun={async () => {
+            const body = { name: form.name.trim(), crNumber: form.crNumber.trim() || null, companyType: form.companyType, isPriority: form.isPriority };
+            if (editing) await api.put(`/api/companies/${editing}`, body);
+            else await api.post('/api/companies', body);
+            setForm(empty);
+            setEditing(null);
+            m.setDone(t('fleet.saved'));
+            reload();
+          }}>{editing ? t('fleet.saveChanges') : t('fleet.addCompany')}</ActionButton>
+          {editing && <button type="button" className="link-btn" onClick={() => { setEditing(null); setForm(empty); }}>{t('fleet.cancel')}</button>}
+        </div>
       </form>
     </div>
   );

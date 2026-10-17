@@ -577,7 +577,7 @@ Details in [`releasing.md`](releasing.md).
 ### Phase D — Operator & company portal (React)
 | | Item |
 |---|---|
-| ⬜ | Edit truck plates / driver details and change user roles in the portal (API exists) |
+| ✅ | Edit truck plates / driver details and change user roles in the portal (API exists); also company details. The accounts behind API and gate system keys are kept out of user management |
 | ⬜ | Walk-in booking from the trouble desk; appointment search by container / plate across days |
 | ⬜ | Arabic texts for server messages (check results and errors are English today) |
 | ⬜ | Native review of the portal's Arabic wording |

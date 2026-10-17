@@ -1182,3 +1182,6 @@ button.seg { font: inherit; color: inherit; cursor: pointer; }
 .twostep-key { display: block; margin: 6px 0; padding: 8px 10px; background: var(--page); border: 1px solid var(--line); border-radius: var(--radius);
   font-size: 1.05rem; letter-spacing: 0.08em; word-break: normal; overflow-wrap: anywhere; }
 .twostep-actions { display: flex; gap: 16px; }
+
+/* The row being changed in the side form. */
+tr.row-editing > td { background: var(--teal-tint); }

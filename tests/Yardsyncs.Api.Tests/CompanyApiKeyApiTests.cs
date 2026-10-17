@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Yardsyncs.Application.Auth;
 using Yardsyncs.Application.Booking;
+using Microsoft.Extensions.DependencyInjection;
 using Yardsyncs.Infrastructure;
 
 namespace Yardsyncs.Api.Tests;
@@ -55,5 +56,25 @@ public sealed class CompanyApiKeyApiTests(YardsyncsApiFactory factory) : ApiTest
         Assert.Equal(HttpStatusCode.OK, (await dispatcher.DeleteAsync($"{keys}/{book.ApiKey.KeyId}")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await tms.GetAsync($"{Appointments}/{number}")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await reports.GetAsync($"{Appointments}/{number}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_account_behind_a_key_is_not_a_person_to_manage()
+    {
+        if (!Enabled) return;
+        var dispatcher = await As(DemoDataSeeder.DispatcherEmail);
+        var issued = (await Read<AdminResponse<CompanyApiKeyIssued>>(await dispatcher.PostAsJsonAsync($"/api/companies/{Demo.CompanyId}/api-keys", new { name = "Our TMS" }))).Data;
+        int accountId;
+        using (var scope = Factory.Services.CreateScope())
+            accountId = scope.ServiceProvider.GetRequiredService<Yardsyncs.Infrastructure.Persistence.YardsyncsDbContext>()
+                .CompanyApiKeys.Single(k => k.KeyId == issued.ApiKey.KeyId).UserId;
+
+        // Not in the user list; can't be given a role, a password or a new activation.
+        var admin = await As(DemoDataSeeder.TerminalAdminEmail);
+        var users = await Read<List<System.Text.Json.JsonElement>>(await admin.GetAsync($"/api/users?companyId={Demo.CompanyId}"));
+        Assert.DoesNotContain(users, u => u.GetProperty("userId").GetInt32() == accountId);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync($"/api/users/{accountId}",
+            new { fullName = "API: Our TMS", mobile = (string?)null, preferredLanguage = "en", role = "CompanyAdmin" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PostAsJsonAsync($"/api/users/{accountId}/reset-password", new { newPassword = "Yard-Takeover-2026" })).StatusCode);
     }
 }
