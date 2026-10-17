@@ -207,23 +207,24 @@ auth.MapPost("/login", async (LoginBody body, AuthService service, HttpContext h
     var result = await service.LoginAsync(body.Email, body.Password, http.Connection.RemoteIpAddress?.ToString(), ct);
     return result.Status switch
     {
-        AuthStatus.Ok => Results.Ok(TokenResponse.From(result)),
+        AuthStatus.Ok => PortalSession.Issue(http, result),
         AuthStatus.LockedOut => YardsyncsApi.Problem(StatusCodes.Status423Locked, result.Error!),
         _ => YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "Wrong email or password."),
     };
 }).RequireRateLimiting("auth");
 
-auth.MapPost("/refresh", async (RefreshBody body, AuthService service, HttpContext http, CancellationToken ct) =>
+auth.MapPost("/refresh", async (RefreshBody? body, AuthService service, HttpContext http, CancellationToken ct) =>
 {
-    var result = await service.RefreshAsync(body.RefreshToken, http.Connection.RemoteIpAddress?.ToString(), ct);
+    var result = await service.RefreshAsync(PortalSession.Token(http, body), http.Connection.RemoteIpAddress?.ToString(), ct);
     return result.Status == AuthStatus.Ok
-        ? Results.Ok(TokenResponse.From(result))
+        ? PortalSession.Issue(http, result)
         : YardsyncsApi.Problem(StatusCodes.Status401Unauthorized, "Session expired. Please sign in again.");
 }).RequireRateLimiting("auth");
 
-auth.MapPost("/logout", async (RefreshBody body, AuthService service, CancellationToken ct) =>
+auth.MapPost("/logout", async (RefreshBody? body, AuthService service, HttpContext http, CancellationToken ct) =>
 {
-    await service.LogoutAsync(body.RefreshToken, ct);
+    await service.LogoutAsync(PortalSession.Token(http, body), ct);
+    PortalSession.End(http);
     return Results.NoContent();
 });
 

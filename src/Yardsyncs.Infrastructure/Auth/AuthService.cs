@@ -93,7 +93,10 @@ public sealed class AuthService(
         return new AuthResult(AuthStatus.Ok, issued, await ProfileAsync(user, ct));
     }
 
-    public async Task<AuthResult> RefreshAsync(string refreshToken, string? ip, CancellationToken ct = default)
+    /// <summary>A refresh token used again within this of being rotated is a race between tabs, not a stolen token.</summary>
+    public static readonly TimeSpan RotationGrace = TimeSpan.FromSeconds(30);
+
+    public async Task<AuthResult> RefreshAsync(string? refreshToken, string? ip, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
             return new AuthResult(AuthStatus.InvalidToken);
@@ -102,6 +105,11 @@ public sealed class AuthService(
         var hash = TokenService.HashRefreshToken(refreshToken);
         var stored = await db.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash, ct);
         if (stored is null)
+            return new AuthResult(AuthStatus.InvalidToken);
+
+        // Rotated a moment ago by a parallel refresh (two browser tabs opening at once): refused, but no alarm — the
+        // other tab's new token is already in the shared cookie.
+        if (stored.RevokedAt is { } revokedAt && stored.ReplacedByHash is not null && now - revokedAt <= RotationGrace)
             return new AuthResult(AuthStatus.InvalidToken);
 
         if (stored.RevokedAt is not null)
@@ -138,7 +146,7 @@ public sealed class AuthService(
         return new AuthResult(AuthStatus.Ok, issued, await ProfileAsync(user, ct));
     }
 
-    public async Task LogoutAsync(string refreshToken, CancellationToken ct = default)
+    public async Task LogoutAsync(string? refreshToken, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
             return;

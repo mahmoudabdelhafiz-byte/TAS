@@ -40,9 +40,12 @@ personal data and how long it stays. Fixes come with automated tests (`PrivacyAp
 - **Database access.** All SQL is parameterised (EF Core or interpolated `SqlQuery`/`ExecuteSql`, which become
   parameters); no SQL is built by string concatenation.
 - **Browser.** Content-Security-Policy (scripts only from the app), no framing, `nosniff`, referrer policy, HSTS
-  outside development. The portal sends its token in the `Authorization` header, not in a cookie, so cross-site
-  request forgery does not apply. The session is kept in the browser's local storage so dispatchers stay signed in;
-  the strict script policy is what keeps other scripts from reading it, and shared office PCs should sign out.
+  outside development. The portal sends its access token in the `Authorization` header and keeps it only in the page's
+  memory (30 minutes). The refresh token is in an `HttpOnly`, `SameSite=Strict`, `Secure` cookie limited to
+  `/api/auth`, which scripts can't read; it is used only with the portal's own `X-Yardsyncs-Session` header, which
+  other sites can't send, so cross-site request forgery doesn't reach it. Browser storage keeps only who is signed in.
+  A refresh token used twice signs the user out everywhere, except within 30 seconds of its rotation (two tabs
+  refreshing at once). API clients keep the tokens in the request body as before. Shared office PCs should sign out.
 - **Webhooks to the terminal's systems** are signed (HMAC-SHA256 with timestamp) and their addresses come only from the
   server's settings, never from users.
 - **Secrets** live in environment variables (`deploy/.env`, not in the repository); the app refuses to start without
