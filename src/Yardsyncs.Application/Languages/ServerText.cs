@@ -207,6 +207,14 @@ public static class ServerText
             (R(@"The location is not valid\."), "الموقع غير صالح."),
             (R(@"Only terminal staff of this terminal can read and write drivers' messages\."), "قراءة رسائل السائقين والرد عليها لموظفي هذه المحطة فقط."),
 
+            // ---- reports
+            (R(@"Choose the company \(companyId\)\."), "اختر الشركة."),
+            (R(@"Only terminal staff of this terminal and the company itself see its report\."), "يطّلع على تقرير الشركة موظفو هذه المحطة والشركة نفسها فقط."),
+            (R(@"No access to this terminal\."), "لا صلاحية لك على هذه المحطة."),
+            (R(@"'to' must be on or after 'from'\."), "يجب أن يكون تاريخ النهاية في تاريخ البداية أو بعده."),
+            (R(@"The range can be at most (\d+) days\."), "يمكن أن تكون الفترة $1 يوماً على الأكثر."),
+            (R(@"You can only act for your own company\."), "يمكنك التصرف لشركتك فقط."),
+
             // ---- signing in
             (R(@"Wrong email or password\."), "البريد الإلكتروني أو كلمة المرور غير صحيحة."),
             (R(@"Too many failed attempts\. Try again in a few minutes\."), "محاولات فاشلة كثيرة. حاول مجدداً بعد دقائق."),

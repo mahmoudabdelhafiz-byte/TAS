@@ -3,8 +3,9 @@ import { addDays, dayLabel, duration } from '../lib/time.ts';
 import { useApp } from '../ui/context.tsx';
 import { LoadError, useLoad } from '../ui/kit.tsx';
 import { reasonName } from './Clerk.tsx';
+import { CompaniesSection } from './CompanyReport.tsx';
 
-interface KpiDay {
+export interface KpiDay {
   date: string;
   capacity: number;
   booked: number;
@@ -29,7 +30,7 @@ interface KpiHour {
   avgTurnMinutes: number | null;
 }
 
-interface KpiReport {
+export interface KpiReport {
   from: string;
   to: string;
   totals: {
@@ -65,13 +66,13 @@ interface KpiYard {
 }
 
 /** "16 Sep" — day and month, no weekday, for axis labels. */
-const shortDay = (date: string, lang: string) => {
+export const shortDay = (date: string, lang: string) => {
   const [y, m, d] = date.split('-').map(Number);
   return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-u-nu-latn' : 'en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
     .format(new Date(Date.UTC(y, m - 1, d)));
 };
 
-const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
+export const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
 
 export function Kpi() {
   const { api, t, lang, terminal, today } = useApp();
@@ -83,29 +84,13 @@ export function Kpi() {
   const min = t('unit.min');
   const hour = t('unit.h');
 
-  const presets: { label: string; from: string; to: string }[] = [
-    { label: t('kpi.last7'), from: addDays(today, -6), to: today },
-    { label: t('kpi.last30'), from: addDays(today, -29), to: today },
-    { label: t('kpi.next7'), from: today, to: addDays(today, 6) },
-  ];
   const r = report.data;
 
   return (
     <section className="screen kpi">
       <header className="screen-head">
         <h1>{t('kpi.title')}</h1>
-        <div className="segmented">
-          {presets.map(p => (
-            <button key={p.label} type="button" className={range.from === p.from && range.to === p.to ? 'seg active' : 'seg'}
-              onClick={() => setRange({ from: p.from, to: p.to })}>{p.label}</button>
-          ))}
-        </div>
-        <div className="range">
-          <label className="field field-inline"><span>{t('setup.from')}</span>
-            <input type="date" value={range.from} max={range.to} onChange={e => e.target.value && setRange(x => ({ ...x, from: e.target.value }))} /></label>
-          <label className="field field-inline"><span>{t('setup.to')}</span>
-            <input type="date" value={range.to} min={range.from} onChange={e => e.target.value && setRange(x => ({ ...x, to: e.target.value }))} /></label>
-        </div>
+        <RangePicker range={range} onChange={setRange} />
       </header>
 
       {report.error && <LoadError error={report.error} retry={report.reload} />}
@@ -160,6 +145,7 @@ export function Kpi() {
 
           {r.yard && <YardSection yard={r.yard} />}
           {terminal.autogate && <LaneSection from={range.from} to={range.to} />}
+          <CompaniesSection range={range} />
 
           <button type="button" className="link-btn" onClick={() => setTable(x => !x)}>{table ? t('kpi.hideTable') : t('kpi.showTable')}</button>
           {table && (
@@ -353,7 +339,35 @@ function LaneSection({ from, to }: { from: string; to: string }) {
   );
 }
 
-function Tile({ label, value, note }: { label: string; value: string; note: string }) {
+export interface DateRange { from: string; to: string }
+
+/** Last 7 / 30 days, next 7 days, or any dates. */
+export function RangePicker({ range, onChange, future = true }: { range: DateRange; onChange: (r: DateRange) => void; future?: boolean }) {
+  const { t, today } = useApp();
+  const presets: ({ label: string } & DateRange)[] = [
+    { label: t('kpi.last7'), from: addDays(today, -6), to: today },
+    { label: t('kpi.last30'), from: addDays(today, -29), to: today },
+    ...(future ? [{ label: t('kpi.next7'), from: today, to: addDays(today, 6) }] : []),
+  ];
+  return (
+    <>
+      <div className="segmented">
+        {presets.map(p => (
+          <button key={p.label} type="button" className={range.from === p.from && range.to === p.to ? 'seg active' : 'seg'}
+            onClick={() => onChange({ from: p.from, to: p.to })}>{p.label}</button>
+        ))}
+      </div>
+      <div className="range">
+        <label className="field field-inline"><span>{t('setup.from')}</span>
+          <input type="date" value={range.from} max={range.to} onChange={e => e.target.value && onChange({ ...range, from: e.target.value })} /></label>
+        <label className="field field-inline"><span>{t('setup.to')}</span>
+          <input type="date" value={range.to} min={range.from} onChange={e => e.target.value && onChange({ ...range, to: e.target.value })} /></label>
+      </div>
+    </>
+  );
+}
+
+export function Tile({ label, value, note }: { label: string; value: string; note: string }) {
   return (
     <div className="tile">
       <dt>{label}</dt>
@@ -393,7 +407,7 @@ function niceTop(v: number): number {
 const PAD = { top: 12, right: 8, bottom: 26, left: 40 };
 
 /** Thin columns from one baseline with a hover tooltip; at most ~12 x-labels are shown. */
-function Columns({ bars, max, format }: { bars: Point[]; max: number; format: (v: number) => string }) {
+export function Columns({ bars, max, format }: { bars: Point[]; max: number; format: (v: number) => string }) {
   const [hover, setHover] = useState<number | null>(null);
   const [ref, W] = useWidth();
   const top = Math.max(max, ...bars.map(b => b.value ?? 0));
@@ -438,7 +452,7 @@ function Columns({ bars, max, format }: { bars: Point[]; max: number; format: (v
 }
 
 /** One 2px line with end dots; gaps where a day has no value. */
-function Line({ points, format, unit }: { points: Point[]; format: (v: number) => string; unit: string }) {
+export function Line({ points, format, unit }: { points: Point[]; format: (v: number) => string; unit: string }) {
   const [hover, setHover] = useState<number | null>(null);
   const [ref, W] = useWidth();
   const values = points.map(p => p.value).filter((v): v is number => v !== null);

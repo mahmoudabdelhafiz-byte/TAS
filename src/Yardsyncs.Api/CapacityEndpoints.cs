@@ -119,6 +119,56 @@ public static class CapacityEndpoints
             }
         });
 
+        // A trucking company's performance at the terminal: the company's own users (their company only) and terminal staff.
+        terminal.MapGet("/company-report", async (int terminalId, int? companyId, DateOnly from, DateOnly to, HttpContext http,
+            Yardsyncs.Infrastructure.Reports.CompanyReportService service, CancellationToken ct) =>
+        {
+            var user = YardsyncsApi.User(http)!;
+            if (!AccessRules.CanAccessTerminal(user, terminalId))
+                return YardsyncsApi.Forbidden("No access to this terminal.");
+            if (user.IsCompanyUser)
+            {
+                var (own, error) = AccessRules.ResolveCompany(user, companyId, required: false);
+                if (error is not null)
+                    return YardsyncsApi.Forbidden(error);
+                companyId = own;
+            }
+            else if (!AccessRules.CanViewCapacity(user, terminalId))
+                return YardsyncsApi.Forbidden("Only terminal staff of this terminal and the company itself see its report.");
+            if (companyId is null)
+                return YardsyncsApi.Problem(StatusCodes.Status400BadRequest, "Choose the company (companyId).");
+            if (RangeProblem(from, to) is { } bad)
+                return bad;
+            try
+            {
+                return await service.ReportAsync(terminalId, companyId.Value, from, to, ct) is { } report
+                    ? Results.Ok(report)
+                    : YardsyncsApi.Problem(StatusCodes.Status404NotFound, $"Company {companyId} not found.");
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return YardsyncsApi.Problem(StatusCodes.Status404NotFound, ex.Message);
+            }
+        });
+
+        // All companies side by side, the most no-shows first: terminal staff.
+        terminal.MapGet("/company-report/companies", async (int terminalId, DateOnly from, DateOnly to, HttpContext http,
+            Yardsyncs.Infrastructure.Reports.CompanyReportService service, CancellationToken ct) =>
+        {
+            if (CanView(http, terminalId) is { } denied)
+                return denied;
+            if (RangeProblem(from, to) is { } bad)
+                return bad;
+            try
+            {
+                return Results.Ok(await service.CompaniesAsync(terminalId, from, to, ct));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return YardsyncsApi.Problem(StatusCodes.Status404NotFound, ex.Message);
+            }
+        });
+
         terminal.MapGet("/audit", async (int terminalId, string? entity, int? limit, HttpContext http, CapacityAdminService service, CancellationToken ct) =>
             CanManage(http, terminalId) ?? Results.Ok(await service.AuditAsync(terminalId, entity, limit ?? 100, ct)));
 
@@ -139,4 +189,11 @@ public static class CapacityEndpoints
             : YardsyncsApi.Forbidden("Only planners and terminal admins of this terminal can change capacity.");
 
     private static IResult ToResult<T>(AdminResult<T> result, Func<T, string>? location = null) => YardsyncsApi.Admin(result, location);
+
+    private static IResult? RangeProblem(DateOnly from, DateOnly to) =>
+        to < from
+            ? YardsyncsApi.Problem(StatusCodes.Status400BadRequest, "'to' must be on or after 'from'.")
+            : to.DayNumber - from.DayNumber + 1 > Yardsyncs.Application.Reports.KpiCalculator.MaxDays
+                ? YardsyncsApi.Problem(StatusCodes.Status400BadRequest, $"The range can be at most {Yardsyncs.Application.Reports.KpiCalculator.MaxDays} days.")
+                : null;
 }

@@ -1242,3 +1242,12 @@ tr.row-editing > td { background: var(--teal-tint); }
   .msg-grid { grid-template-columns: 1fr; }
   .msg-open { margin-inline-start: 0; }
 }
+
+/* ------------------------------------------------------------------ company reports */
+
+.rep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 28px; margin: 8px 0 12px; }
+.rep-holds { list-style: none; margin: 0; padding: 0; }
+.rep-holds li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }
+.rep-holds li .muted { flex-basis: 100%; font-size: 13.5px; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: var(--teal-tint); }
