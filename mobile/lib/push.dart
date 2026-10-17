@@ -76,6 +76,9 @@ class PushMessage {
 
   /// A message from the control room about a visit.
   bool get isControlRoomMessage => template == 'CONTROL_ROOM_MESSAGE';
+
+  /// The terminal recorded an entry on the driver's record.
+  bool get isRecordEntry => template == 'DRIVER_INCIDENT';
 }
 
 class PushService {

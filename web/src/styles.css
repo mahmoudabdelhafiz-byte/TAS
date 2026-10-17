@@ -1253,3 +1253,31 @@ tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--teal-tint); }
 .excel-buttons { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .panel .excel-buttons { margin-bottom: 14px; }
+
+/* ------------------------------------------------------------------ driver records */
+
+.standing { display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.standing-Clear { color: var(--muted); }
+.standing-Warning { background: var(--amber-tint); color: #7a5300; }
+.standing-OverLimit { background: var(--red); color: #fff; }
+.driver-record { display: grid; gap: 12px; }
+.record-head { display: grid; gap: 6px; }
+.record-points { display: flex; align-items: baseline; gap: 8px; }
+.record-points-value { font-size: 28px; font-weight: 700; }
+.record-head .hint { margin: 0; }
+.add-incident { padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--page); }
+.add-incident-row { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.add-incident-row .field input[type=number] { width: 7rem; }
+.incidents { list-style: none; margin: 0; padding: 0; }
+.incident { padding: 10px 0; border-bottom: 1px solid var(--line-soft); display: grid; gap: 4px; }
+.incident p { margin: 0; }
+.incident-off { opacity: 0.6; }
+.incident-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.incident-points { font-weight: 700; }
+.small { font-size: 13px; }
+.dispute { padding: 8px 10px; border-inline-start: 3px solid var(--amber); background: var(--amber-tint); display: grid; gap: 6px; }
+.dispute-Accepted { border-inline-start-color: var(--teal); background: var(--teal-tint); }
+.dispute-Rejected { border-inline-start-color: var(--line); background: var(--page); }
+.decide { display: grid; gap: 6px; }
+.decide-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.record-rules { margin-top: 28px; padding-top: 8px; border-top: 1px solid var(--line-soft); max-width: 46rem; }

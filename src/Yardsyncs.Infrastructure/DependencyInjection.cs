@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.Configure<Yardsyncs.Infrastructure.DriverApp.DriverLoginOptions>(config.GetSection("DriverLogin"));
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.DriverLoginService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.DriverAppService>();
+        services.AddScoped<Yardsyncs.Infrastructure.DriverApp.DriverRecordService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.GatePassService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.TripTrackingService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.YardGuidanceService>();

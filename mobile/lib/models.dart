@@ -205,3 +205,82 @@ class QuickMessage {
 
   factory QuickMessage.fromJson(Map<String, dynamic> json) => QuickMessage(code: json['code'] as String, text: (json['text'] as String?) ?? '');
 }
+
+/// An entry on the driver's record at a terminal.
+class RecordEntry {
+  const RecordEntry({
+    required this.id,
+    required this.terminalName,
+    this.appointmentNo,
+    required this.kind,
+    required this.points,
+    required this.occurredAt,
+    this.note,
+    this.disputeStatus,
+    this.disputeText,
+    this.disputeAnswer,
+    this.withdrawn = false,
+    this.counts = true,
+    required this.countsUntil,
+    this.canDispute = false,
+  });
+
+  final int id;
+  final String terminalName;
+  final String? appointmentNo;
+  final String kind; // Speeding, UnsafeDriving, NoPpe, WrongArea, Damage, Abusive, NoShow, Other
+  final int points;
+  final DateTime occurredAt; // UTC
+  final String? note;
+  final String? disputeStatus; // Open, Accepted, Rejected
+  final String? disputeText;
+  final String? disputeAnswer;
+  final bool withdrawn;
+  final bool counts;
+  final DateTime countsUntil; // UTC
+  final bool canDispute;
+
+  factory RecordEntry.fromJson(Map<String, dynamic> json) => RecordEntry(
+        id: (json['incidentId'] as num).toInt(),
+        terminalName: (json['terminalName'] as String?) ?? '',
+        appointmentNo: json['appointmentNo'] as String?,
+        kind: (json['kind'] as String?) ?? 'Other',
+        points: (json['points'] as num?)?.toInt() ?? 0,
+        occurredAt: DateTime.parse(json['occurredAt'] as String).toUtc(),
+        note: json['note'] as String?,
+        disputeStatus: json['disputeStatus'] as String?,
+        disputeText: json['disputeText'] as String?,
+        disputeAnswer: json['disputeAnswer'] as String?,
+        withdrawn: json['withdrawn'] as bool? ?? false,
+        counts: json['counts'] as bool? ?? false,
+        countsUntil: DateTime.parse(json['countsUntil'] as String).toUtc(),
+        canDispute: json['canDispute'] as bool? ?? false,
+      );
+}
+
+/// Points at one terminal and where they stand (Clear, Warning, OverLimit).
+class TerminalPoints {
+  const TerminalPoints({required this.terminalName, required this.points, required this.standing});
+
+  final String terminalName;
+  final int points;
+  final String standing;
+
+  factory TerminalPoints.fromJson(Map<String, dynamic> json) => TerminalPoints(
+        terminalName: (json['terminalName'] as String?) ?? '',
+        points: (json['points'] as num?)?.toInt() ?? 0,
+        standing: (json['standing'] as String?) ?? 'Clear',
+      );
+}
+
+class MyRecord {
+  const MyRecord({required this.terminals, required this.entries});
+
+  final List<TerminalPoints> terminals;
+  final List<RecordEntry> entries;
+
+  factory MyRecord.fromJson(Map<String, dynamic> json) => MyRecord(
+        terminals: ((json['terminals'] as List?) ?? const []).map((e) => TerminalPoints.fromJson(e as Map<String, dynamic>)).toList(),
+        entries: ((json['incidents'] as List?) ?? const []).map((e) => RecordEntry.fromJson(e as Map<String, dynamic>)).toList(),
+      );
+}

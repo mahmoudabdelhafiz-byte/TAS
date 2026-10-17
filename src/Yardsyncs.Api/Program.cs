@@ -661,6 +661,7 @@ app.MapGet("/api/modules", async (int? terminalId, HttpContext http, Yardsyncs.I
 app.MapDriverApp();
 app.MapMessages();
 app.MapReportExports();
+app.MapDriverRecords();
 
 // ================================================================ development helpers
 

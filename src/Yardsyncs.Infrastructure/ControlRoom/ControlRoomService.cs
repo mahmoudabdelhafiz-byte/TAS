@@ -18,7 +18,8 @@ public sealed record ControlTruck(
     string AppointmentNo, AppointmentStatus Status, string Stage, string Company, string? TruckPlate, string? DriverName,
     DateTimeOffset SlotStart, DateTimeOffset SlotEnd, DateTimeOffset? Eta, DateTimeOffset? ArrivedAt, DateTimeOffset? GateInAt,
     int? MinutesInside, double[]? Position, DateTimeOffset? PositionAt, IReadOnlyList<string> Moves,
-    IReadOnlyList<ControlStop> Stops, int? CurrentStop, bool Overdue, bool Silent);
+    IReadOnlyList<ControlStop> Stops, int? CurrentStop, bool Overdue, bool Silent,
+    int? DriverId = null, int DriverPoints = 0, Yardsyncs.Application.MasterData.DriverStanding DriverStanding = Yardsyncs.Application.MasterData.DriverStanding.Clear);
 
 /// <param name="AvgMinutesToBlock">Gate-in to arrival at the first block, today.</param>
 /// <param name="AvgMinutesAtBlock">Arrival at a block to "Done here", today.</param>
@@ -64,6 +65,8 @@ public sealed class ControlRoomService(YardsyncsDbContext db, YardGuidanceServic
                 a.AppointmentId, a.AppointmentNo, a.Status, Company = a.Company.Name,
                 Plate = a.Truck != null ? a.Truck.PlateNumber : null,
                 Driver = a.Driver != null ? a.Driver.FullName : null,
+                a.DriverId,
+                DriverMobile = a.Driver != null ? a.Driver.Mobile : null,
                 a.Slot.StartAt, a.Slot.EndAt, a.CurrentEta, a.ArrivedAt, a.GateInAt,
                 a.LastLatitude, a.LastLongitude, a.LastPositionAt,
                 Moves = a.Items.Select(i => i.ContainerNo ?? i.BookingRef ?? i.Category.Code).ToList(),
@@ -77,6 +80,11 @@ public sealed class ControlRoomService(YardsyncsDbContext db, YardGuidanceServic
                 .ToListAsync(ct))
             .GroupBy(y => y.AppointmentId)
             .ToDictionary(g => g.Key, g => g.Select(y => new ControlStop(y.Sequence, y.StopType, y.Block, y.Bay, y.Status, y.ArrivedAt, y.CompletedAt)).ToList());
+
+        // Drivers' penalty points at this terminal (the record), per person.
+        var settings = Yardsyncs.Domain.TerminalSettings.From(await db.TerminalSettings.AsNoTracking().Where(s => s.TerminalId == terminalId).ToListAsync(ct));
+        var pointsByMobile = await Yardsyncs.Infrastructure.DriverApp.DriverRecordService.PointsByMobileAsync(db, terminalId,
+            live.Where(a => a.DriverMobile != null).Select(a => a.DriverMobile!).Distinct().ToList(), settings, now, ct);
 
         var trucks = new List<ControlTruck>();
         foreach (var a in live)
@@ -98,7 +106,9 @@ public sealed class ControlRoomService(YardsyncsDbContext db, YardGuidanceServic
 
             trucks.Add(new ControlTruck(a.AppointmentNo, a.Status, stage, a.Company, a.Plate, a.Driver, a.StartAt, a.EndAt,
                 a.Status == AppointmentStatus.EnRoute ? a.CurrentEta : null, a.ArrivedAt, a.GateInAt, inside, position, a.LastPositionAt,
-                a.Moves, stops, current?.Sequence, inside > target, silent));
+                a.Moves, stops, current?.Sequence, inside > target, silent, a.DriverId,
+                a.DriverMobile is null ? 0 : pointsByMobile.GetValueOrDefault(a.DriverMobile),
+                Yardsyncs.Application.MasterData.DriverRecordRules.Standing(a.DriverMobile is null ? 0 : pointsByMobile.GetValueOrDefault(a.DriverMobile), settings)));
         }
 
         // Inside first (longest first), then at the gate, then on the way (soonest first).

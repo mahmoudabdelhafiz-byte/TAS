@@ -52,6 +52,12 @@ it about 50 metres before ("In 50 metres, turn left at block A1") and again at t
 When you reach the block the terminal knows it. Press **Done here** when the container is on or off the truck (stop
 the truck first); the app then shows the next stop, and finally **Drive to the exit**.
 
+## My record
+
+**My record** (top of the list of trips) shows what terminals recorded on your driving — speeding, no safety equipment
+and so on — with points and until when they count. If you think an entry is wrong, press **Dispute** once and say why;
+the terminal's answer appears there.
+
 ## If something goes wrong
 
 - **No connection to the server** — check mobile data; the app keeps the last directions.

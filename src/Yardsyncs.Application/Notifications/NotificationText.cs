@@ -113,6 +113,13 @@ public static partial class NotificationText
             ["hi"] = ("आप अंदर हैं: अपॉइंटमेंट {appointmentNo}",
                 "Yardsyncs: अपॉइंटमेंट {appointmentNo}, आप टर्मिनल के अंदर हैं। {stops} जाएँ। नक्शे के लिए Yardsyncs mobile खोलें।"),
         },
+        [NotificationTemplates.DriverIncident] = new()
+        {
+            ["en"] = ("Recorded on your driver record", "Yardsyncs: the terminal recorded \"{reason}\" on appointment {appointmentNo}. See it in Yardsyncs mobile; you can dispute it there."),
+            ["ar"] = ("سُجّلت مخالفة في سجلك", "Yardsyncs: سجّلت المحطة \"{reason}\" على الموعد {appointmentNo}. راجعها في تطبيق Yardsyncs mobile ويمكنك الاعتراض عليها هناك."),
+            ["ur"] = ("آپ کے ریکارڈ میں درج", "Yardsyncs: ٹرمینل نے اپوائنٹمنٹ {appointmentNo} پر \"{reason}\" درج کیا ہے۔ Yardsyncs mobile میں دیکھیں؛ وہاں اعتراض کر سکتے ہیں۔"),
+            ["hi"] = ("आपके रिकॉर्ड में दर्ज", "Yardsyncs: टर्मिनल ने अपॉइंटमेंट {appointmentNo} पर \"{reason}\" दर्ज किया है। Yardsyncs mobile में देखें; वहाँ आपत्ति कर सकते हैं।"),
+        },
         [NotificationTemplates.ControlRoomMessage] = new()
         {
             ["en"] = ("Message from the terminal", "Yardsyncs: appointment {appointmentNo}, from the control room: {message}"),
