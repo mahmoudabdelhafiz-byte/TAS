@@ -25,3 +25,17 @@ Click a truck to see its appointment, containers, blocks and last position.
 
 Positions come only from the drivers' app, only from the start of the trip until the truck leaves the terminal. They
 are used for arrival times, check-in, directions and this screen, and deleted after 30 days.
+
+## Messages with drivers
+
+**Messages** lists the visits with messages from the last two days, those with unread ones first. Open a visit to read
+it; to write to a driver who hasn't written, enter the **Appointment number** and press **Open**, or use **Message the
+driver** next to a truck on the control room map.
+
+- Send one of the **Ready-made messages** (come to the trouble desk, wait in the parking, come to the gate…): the driver
+  reads it in their own language.
+- Or type in **Write to the driver** and press **Send**: the text arrives as written.
+- Each message also goes to the driver's phone as a notification (or by SMS / WhatsApp if the app isn't installed).
+- When a driver asks to be called, **Call …** shows their number.
+
+A visit can be written about while it is live and for a day after its slot.

@@ -73,6 +73,7 @@ public static class DependencyInjection
 
         // Gate
         services.AddScoped<GateService>();
+        services.AddScoped<Yardsyncs.Infrastructure.Messages.MessageService>();
         services.AddScoped<LaneService>();
         services.AddScoped<GateSystemService>();
         services.AddScoped<Yardsyncs.Infrastructure.Auth.CompanyApiKeyService>();

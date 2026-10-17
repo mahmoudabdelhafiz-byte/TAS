@@ -10,6 +10,7 @@ import '../push.dart';
 import '../strings.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'messages.dart';
 import 'yard_screen.dart';
 
 /// My appointments: the next ones first, each with its traffic light.
@@ -54,6 +55,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   /// A message from the terminal: refresh; at gate-in go straight to the ticket and directions.
   Future<void> _onPush(PushMessage m) async {
     await _load();
+    if (mounted && m.isControlRoomMessage && m.appointmentNo.isNotEmpty) {
+      if (m.opened) {
+        _openMessages(m.appointmentNo);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(m.body ?? t('messages')),
+          duration: const Duration(seconds: 20),
+          action: SnackBarAction(label: t('messages'), onPressed: () => _openMessages(m.appointmentNo)),
+        ));
+      }
+      return;
+    }
     if (!mounted || !m.isGateIn || m.appointmentNo.isEmpty) {
       if (mounted && m.body != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m.body!), duration: const Duration(seconds: 8)));
@@ -69,6 +82,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         action: SnackBarAction(label: t('whereToGo'), onPressed: () => _openYard(m.appointmentNo)),
       ));
     }
+  }
+
+  Future<void> _openMessages(String appointmentNo) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => MessagesScreen(api: widget.api, lang: widget.lang, appointmentNo: appointmentNo),
+    ));
+    _load();
   }
 
   void _openYard(String appointmentNo) {
@@ -173,6 +193,10 @@ class _AppointmentCard extends StatelessWidget {
             Row(children: [
               Text(word == null ? shortDate(a) : tr(lang, word), style: const TextStyle(fontSize: 15, color: muted)),
               const Spacer(),
+              if (a.unreadMessages > 0) ...[
+                _Unread(count: a.unreadMessages, lang: lang),
+                const SizedBox(width: 10),
+              ],
               Text(tr(lang, 'status.${a.status}'), style: const TextStyle(fontSize: 14, color: muted)),
             ]),
             const SizedBox(height: 2),
@@ -311,6 +335,14 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     }
   }
 
+  Future<void> _openMessages() async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => MessagesScreen(api: widget.api, lang: widget.lang, appointmentNo: _a.appointmentNo),
+    ));
+    // Opening them marked them read.
+    if (mounted) setState(() => _a = _a.copyWith(eta: _a.eta, unreadMessages: 0));
+  }
+
   @override
   Widget build(BuildContext context) {
     final a = _a;
@@ -387,6 +419,12 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
             Text(_done!, style: const TextStyle(fontSize: 16, color: green, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
           ],
+          OutlinedButton.icon(
+            onPressed: _openMessages,
+            icon: const Icon(Icons.chat_bubble_outline),
+            label: Text(a.unreadMessages > 0 ? '${t('messages')} · ${t('newMessages', {'n': '${a.unreadMessages}'})}' : t('messages')),
+          ),
+          const SizedBox(height: 12),
           if (a.status == 'GateIn') ...[
             FilledButton(
               onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
@@ -405,6 +443,24 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       ),
     );
   }
+}
+
+class _Unread extends StatelessWidget {
+  const _Unread({required this.count, required this.lang});
+
+  final int count;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: teal, borderRadius: BorderRadius.circular(10)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.chat_bubble, size: 13, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(tr(lang, 'newMessages', {'n': '$count'}), style: const TextStyle(fontSize: 13, color: Colors.white)),
+        ]),
+      );
 }
 
 class _Fact extends StatelessWidget {

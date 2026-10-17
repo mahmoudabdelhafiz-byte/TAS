@@ -659,6 +659,7 @@ app.MapGet("/api/modules", async (int? terminalId, HttpContext http, Yardsyncs.I
     return Results.Ok(new { truckAppointments = true, autogate = modules.AutogateInstalled, autogateAtTerminal = at });
 }).RequireAuthorization();
 app.MapDriverApp();
+app.MapMessages();
 
 // ================================================================ development helpers
 

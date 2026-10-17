@@ -15,7 +15,7 @@ export const guides: Guide[] = [
   { id: 'fleet', screens: ['fleet'] },
   { id: 'driver', screens: ['book', 'fleet', 'gate'] },
   { id: 'gate', screens: ['gate'] },
-  { id: 'control', screens: ['control'] },
+  { id: 'control', screens: ['control', 'messages'] },
   { id: 'planning', screens: ['setup', 'slots'] },
   { id: 'admin', screens: ['map'] },
 ];

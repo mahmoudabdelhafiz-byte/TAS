@@ -169,6 +169,25 @@ class DriverApi {
   Future<DriverAppointment> startTrip(String appointmentNo) async => DriverAppointment.fromJson(
       await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/start-trip') as Map<String, dynamic>);
 
+  /// The visit's messages with the control room (opening them marks the control room's ones read).
+  Future<List<ChatMessage>> messages(String appointmentNo) async {
+    final json = await _send('GET', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/messages') as Map<String, dynamic>;
+    return ((json['data'] as List?) ?? const []).map((e) => ChatMessage.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Sends a ready-made message (its code) or a text.
+  Future<ChatMessage> sendMessage(String appointmentNo, {String? templateCode, String? text}) async {
+    final json = await _send('POST', '/api/driver/appointments/${Uri.encodeComponent(appointmentNo)}/messages',
+        body: {if (templateCode != null) 'templateCode': templateCode, if (text != null) 'text': text}) as Map<String, dynamic>;
+    return ChatMessage.fromJson(json['data'] as Map<String, dynamic>);
+  }
+
+  /// Ready-made messages to the control room, in the app's language.
+  Future<List<QuickMessage>> quickMessages() async {
+    final list = await _send('GET', '/api/driver/message-templates') as List<dynamic>;
+    return list.map((e) => QuickMessage.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   /// The gate pass secret; kept on the phone so the QR works without mobile data at the gate.
   Future<GatePass?> gatePass({bool refresh = false}) async {
     if (!refresh) {

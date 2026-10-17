@@ -1191,3 +1191,53 @@ tr.row-editing > td { background: var(--teal-tint); }
 .appt-search input { min-width: 0; width: 18rem; max-width: 100%; }
 @media (max-width: 700px) { .appt-search { width: 100%; margin-inline-start: 0; } .appt-search input { flex: 1; width: auto; } }
 .walkin-form { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); display: grid; gap: 8px; }
+
+/* ------------------------------------------------------------------ messages with drivers */
+
+.rail-link { position: relative; }
+.rail-badge {
+  position: absolute; top: 6px; inset-inline-end: 14px;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--amber); color: var(--ink); font-size: 11.5px; font-weight: 700; line-height: 18px; text-align: center;
+}
+.truck-detail-actions { display: flex; gap: 14px; align-items: baseline; }
+
+.msg-open { display: flex; align-items: flex-end; gap: 8px; margin-inline-start: auto; }
+.msg-open input { width: 14rem; max-width: 100%; }
+.msg-grid { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.msg-list ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line-soft); }
+.msg-row {
+  display: grid; gap: 3px; width: 100%; padding: 10px 12px; text-align: start; font: inherit; color: inherit;
+  background: none; border: 0; border-bottom: 1px solid var(--line-soft); border-inline-start: 3px solid transparent; cursor: pointer;
+}
+.msg-row:hover { background: var(--teal-tint); }
+.msg-row.active { background: var(--surface); border-inline-start-color: var(--teal); }
+.msg-row-head { display: flex; align-items: center; gap: 8px; }
+.msg-when { margin-inline-start: auto; font-size: 12.5px; color: var(--muted); }
+.msg-unread { padding: 0 7px; border-radius: 9px; background: var(--amber); color: var(--ink); font-size: 12px; font-weight: 700; }
+.msg-row-who { font-size: 13px; color: var(--muted); }
+.msg-row-text { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-call-text { color: var(--red); }
+
+.msg-thread { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.msg-thread-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
+.msg-thread-head h2 { margin: 0; font-size: 18px; }
+.msg-thread-head p { margin: 0; }
+.msg-call { margin-inline-start: auto; }
+.msg-bubbles { list-style: none; margin: 0; padding: 14px 0; display: grid; gap: 10px; max-height: 52vh; overflow-y: auto; }
+.msg-bubble { display: grid; gap: 2px; max-width: min(34rem, 85%); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); }
+.msg-bubble.from-driver { justify-self: start; background: var(--page, #f2f5f7); }
+.msg-bubble.from-room { justify-self: end; background: var(--teal-tint); border-color: transparent; }
+.msg-bubble-who { font-size: 12.5px; color: var(--muted); }
+.msg-bubble-text { font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-bubble-when { font-size: 12px; color: var(--muted); justify-self: end; }
+.msg-compose { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.msg-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn-small { min-height: 30px; padding: 4px 10px; font-size: 13.5px; }
+.msg-write { display: flex; align-items: flex-end; gap: 10px; }
+.msg-write .field { flex: 1; }
+.msg-write textarea { width: 100%; resize: vertical; }
+@media (max-width: 860px) {
+  .msg-grid { grid-template-columns: 1fr; }
+  .msg-open { margin-inline-start: 0; }
+}

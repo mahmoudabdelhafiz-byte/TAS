@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { TextKey } from '../lib/i18n.ts';
 import { buildHash, type Screen } from '../lib/routes.ts';
 import type { Lang } from '../lib/time.ts';
-import type { Terminal } from '../lib/types.ts';
+import type { Conversation, Terminal } from '../lib/types.ts';
 import { useApp } from '../ui/context.tsx';
 import { Assistant, type AssistantInfo } from '../ui/Assistant.tsx';
 import { Appointments } from './Appointments.tsx';
@@ -15,6 +15,7 @@ import { MapEditor } from './MapEditor.tsx';
 import { Onboard } from './Onboard.tsx';
 import { Charges } from './Charges.tsx';
 import { ControlRoom } from './ControlRoom.tsx';
+import { Messages } from './Messages.tsx';
 import { TrackContainers } from './TrackContainers.tsx';
 import { GateScreen } from './Gate.tsx';
 import { Lanes } from './Lanes.tsx';
@@ -36,6 +37,7 @@ const navText: Record<Screen, TextKey> = {
   charges: 'nav.charges',
   map: 'nav.map',
   control: 'nav.control',
+  messages: 'nav.messages',
   gate: 'nav.gate',
   clerk: 'nav.clerk',
   lanes: 'nav.lanes',
@@ -59,6 +61,20 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
     api.get<AssistantInfo>('/api/assistant').then(setAssistant).catch(() => setAssistant(null));
   }, [api]);
 
+  // Unread messages from drivers, on the menu.
+  const [unread, setUnread] = useState(0);
+  const withMessages = screens.includes('messages');
+  useEffect(() => {
+    if (!withMessages) return;
+    let live = true;
+    const count = () => api.get<Conversation[]>(`/api/terminals/${terminal.terminalId}/messages`)
+      .then(list => { if (live) setUnread(list.reduce((n, c) => n + c.unread, 0)); })
+      .catch(() => { /* the count waits for the next round */ });
+    void count();
+    const id = setInterval(count, 30_000);
+    return () => { live = false; clearInterval(id); };
+  }, [api, terminal.terminalId, withMessages, screen]);
+
   return (
     <div className="shell">
       <nav className="rail" aria-label={brand.name}>
@@ -69,6 +85,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
               <a href={buildHash(s)} className={s === screen ? 'rail-link active' : 'rail-link'} aria-current={s === screen ? 'page' : undefined}>
                 <NavIcon screen={s} />
                 <span>{t(navText[s])}</span>
+                {s === 'messages' && unread > 0 && <span className="rail-badge num" aria-label={t('msg.unread', { n: unread })}>{unread}</span>}
               </a>
             </li>
           ))}
@@ -114,6 +131,7 @@ export function Shell({ terminals, screens, onTerminal, setLang, onSignOut }: {
           {screen === 'onboard' && <Onboard />}
           {screen === 'charges' && <Charges />}
           {screen === 'control' && <ControlRoom />}
+          {screen === 'messages' && <Messages />}
           {screen === 'kpi' && <Kpi />}
           {screen === 'fleet' && <Fleet />}
           {screen === 'help' && <Help />}
@@ -154,6 +172,7 @@ function NavIcon({ screen }: { screen: Screen }) {
     kpi: <><path d="M4 20V4M4 20h16" /><path d="M7 15l4-5 3 3 5-7" /></>,
     fleet: <><path d="M2 16V7h11v9M13 10h4l3 3v3h-7" /><circle cx="6" cy="17" r="2" /><circle cx="17" cy="17" r="2" /></>,
     control: <><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" /></>,
+    messages: <><path d="M4 5h16v11H9l-5 4z" /><path d="M8 9h8M8 12.5h5" /></>,
     map: <><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" /><path d="M9 4v14M15 6v14" /></>,
     setup: <><rect x="3" y="4" width="18" height="16" rx="1" /><path d="M3 9h18M9 4v16M15 4v16" /></>,
     charges: <><rect x="3" y="5" width="18" height="14" rx="1.5" /><path d="M3 10h18M7 15h4" /></>,

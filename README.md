@@ -381,6 +381,11 @@ Drivers sign in with the mobile number their company registered; the code arrive
 | `PUT` | `/api/driver/push-token` | `{token}`: the app's Firebase push token for this phone (null stops pushes) |
 | `GET` | `/api/driver/gate-pass` | Secret for the rotating gate QR `YS1:{passId}:{appointmentNo}:{code}` (8 digits, changes every 30 s, made offline on the phone; revoked on sign-in elsewhere) |
 | `POST` | `/api/driver/appointments/{no}/position` | `{latitude, longitude, speed?}` on the way: arrival estimate, terminal areas entered, automatic check-in in the pre-gate area. Inside the terminal (after gate-in): `atStop` when the truck reaches the block of its current stop (within 10 m, slower than ~15 km/h) → `TRUCK_AT_BLOCK` |
+| `GET` | `/api/driver/message-templates` | Ready-made messages to the control room, in the app's language (`Accept-Language`) |
+| `GET` / `POST` | `/api/driver/appointments/{no}/messages` | The visit's messages with the control room (reading marks theirs read); send `{templateCode}` or `{text}` (500 characters) |
+| `GET` | `/api/terminals/{id}/messages` | Control room (any staff of the terminal): visits with messages from the last two days, unread first |
+| `GET` | `/api/terminals/{id}/messages/templates` | Ready-made messages to drivers, in the reader's language |
+| `GET` / `POST` | `/api/terminals/{id}/messages/{no}` | One visit's messages (reading marks the driver's read); a message to the driver also goes to their phone (`CONTROL_ROOM_MESSAGE`: push, else SMS / WhatsApp) in their language |
 | `GET` / `POST` | `/api/terminals/{id}/geofences` | Terminal areas (approach, pre-gate, gate, yard zones…) as GeoJSON; terminal admins draw them as a ring of `[longitude, latitude]` points |
 | `PUT` | `/api/terminals/{id}/geofences/{gid}` | Terminal admins: change an area's name, kind, shape, block or check-in flag. Yard blocks need the TOS block name, unique among the terminal's blocks |
 | `POST` | `/api/terminals/{id}/geofences/{gid}/deactivate` | Remove an area |

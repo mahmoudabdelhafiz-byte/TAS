@@ -11,6 +11,7 @@ public sealed record DriverMove(string Category, string CategoryEn, string Categ
 
 /// <param name="UtcOffsetMinutes">The terminal's UTC offset at the slot, so the app shows terminal time without a time-zone database.</param>
 /// <param name="GateCode">What the lane reads (QR) — only while the appointment can still pass the gate.</param>
+/// <param name="UnreadMessages">Messages from the control room the driver hasn't opened yet.</param>
 public sealed record DriverAppointment(
     string AppointmentNo,
     int TerminalId,
@@ -26,7 +27,8 @@ public sealed record DriverAppointment(
     string? TruckPlate,
     IReadOnlyList<DriverMove> Moves,
     string? GateCode,
-    DateTimeOffset? Eta);
+    DateTimeOffset? Eta,
+    int UnreadMessages = 0);
 
 /// <summary>What the driver app reads and does: the driver's appointments (by mobile number, across companies) and start trip.</summary>
 public sealed class DriverAppService(YardsyncsDbContext db, AppointmentQueryService queries, RevalidationService revalidation, TimeProvider clock)
@@ -109,6 +111,9 @@ public sealed class DriverAppService(YardsyncsDbContext db, AppointmentQueryServ
                 names.TryGetValue(i.Category, out var m) ? m.NameAr : i.Category,
                 i.ContainerNo, i.BookingRef, i.CargoRef)).ToList(),
             live ? dto.QrToken : null,
-            dto.Eta);
+            dto.Eta,
+            await db.AppointmentMessages.CountAsync(m => m.AppointmentId != null
+                && m.Direction == Yardsyncs.Domain.Booking.MessageDirection.ToDriver && m.ReadAt == null
+                && db.Appointments.Any(a => a.AppointmentId == m.AppointmentId && a.TerminalId == terminalId && a.AppointmentNo == dto.AppointmentNo), ct));
     }
 }

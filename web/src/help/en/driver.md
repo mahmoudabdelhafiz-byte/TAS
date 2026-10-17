@@ -55,3 +55,7 @@ the truck first); the app then shows the next stop, and finally **Drive to the e
 - **Ask the terminal where to go for this container** — the container's place isn't known; ask at the gate or the
   trouble desk.
 - **You were signed out** — you signed in on another phone, or your company changed your number: sign in again.
+
+To reach the control room, open the appointment and press **Messages**: choose one of the **Quick messages** (running
+late, waiting in the parking, truck broken down, container not found, please call me) or write a text. Answers from the
+control room arrive as a notification and in **Messages**.

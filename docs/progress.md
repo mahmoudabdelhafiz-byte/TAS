@@ -565,6 +565,15 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | SMS and push messages: the reason from the terminal (e.g. a customs hold) and the slot's day and month in the driver's language, no longer English inside an Arabic message |
 | ⬜ | Native review of the Urdu and Hindi wording; portal-only sentences stay English in Urdu and Hindi |
 
+### 60. Messages between the driver and the control room (2026-10-17)
+| | Item |
+|---|---|
+| ✅ | Per visit, both ways: ready-made messages shown in each reader's language (drivers: running late, at the parking, breakdown, container not found, call me; control room: trouble desk, wait in the parking, come to the gate, documents, call us) or a text up to 500 characters |
+| ✅ | Portal **Messages** (any staff of the terminal): visits with messages, unread first and counted on the menu; open any visit by its number or from the control room map; the driver's number when they ask to be called |
+| ✅ | Driver app: **Messages** on the appointment, unread count on the list; a message from the control room arrives as a push (else SMS / WhatsApp) and opens the conversation |
+| ✅ | Open while the visit is live and for a day after its slot; reading marks the other side's messages read; the driver sees "Control room", not a person's name |
+| ⬜ | Voice notes and sharing a location (`appointment_message` has the columns); ready-made messages in language packs |
+
 ---
 
 ## Remaining
@@ -609,8 +618,7 @@ Details in [`releasing.md`](releasing.md).
 | ⬜ | Turn-by-turn prompts at junctions ("turn left at block A1"); spoken stops exist | |
 | ⬜ | Container moved in the yard → push to the driver (today the app re-reads every 30 s and flags the move) | needs push notifications |
 | ⬜ | N4 write-back of arrival at block (instead of / besides the webhook) | ❓ customer's N4 |
-| ⬜ | Chat / call request to the control room, templated messages | `appointment_message` table |
-| ⬜ | Backend for messages | `appointment_message` table |
+| ✅ | Messages between the driver and the control room: ready-made ones (in each reader's language) or text, call request; push / SMS to the driver (section 60) | Voice notes and sharing a location still to come |
 
 ### Phase F — Production readiness
 | | Item |

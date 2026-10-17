@@ -58,5 +58,24 @@ void main() {
     expect(u.atStop, 1);
     expect(TripUpdate.fromJson({'status': 'EnRoute', 'checkedIn': false}).atStop, isNull);
   });
-}
 
+  test('messages: unread count, who wrote and call requests', () {
+    expect(DriverAppointment.fromJson(sample()).unreadMessages, 0);
+    expect(DriverAppointment.fromJson({...sample(), 'unreadMessages': 2}).unreadMessages, 2);
+
+    final m = ChatMessage.fromJson({
+      'messageId': 7,
+      'direction': 'FromDriver',
+      'type': 'CallRequest',
+      'templateCode': 'CALL_ME',
+      'text': 'براہ کرم مجھے کال کریں۔',
+      'senderName': null,
+      'sentAt': '2026-10-20T07:05:00+00:00',
+      'readAt': null,
+    });
+    expect(m.fromDriver, isTrue);
+    expect(m.callRequest, isTrue);
+    expect(m.sentAt.isUtc, isTrue);
+    expect(ChatMessage.fromJson({'messageId': 8, 'direction': 'ToDriver', 'type': 'Template', 'text': 'x', 'sentAt': '2026-10-20T07:06:00Z'}).fromDriver, isFalse);
+  });
+}
