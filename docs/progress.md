@@ -546,7 +546,8 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Release image scan fails when the scanner can't run (checked in CI); critical problems without a fix are listed for review |
 | ✅ | What the lanes do when the TOS, the cloud, the lane agent, a camera or the barrier fails: table in *Connecting lane devices* |
 | ✅ | Portal session: short access token in memory and the refresh token in an HttpOnly cookie instead of browser storage (PR after section 57) |
-| ⬜ | Two-step sign-in for admins; outside penetration test; secret rotation procedure (Phase F) |
+| ✅ | Two-step sign-in (authenticator app), required for admins (`Auth__AdminTwoStep`); reset by another admin |
+| ⬜ | Outside penetration test; secret rotation procedure (Phase F) |
 | ⬜ | Real N4, hardware and link-failure acceptance tests on the customer's test systems; staging with monitoring and a restore drill |
 
 ---
@@ -611,7 +612,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Backups, health checks, JSON logging, status for monitoring |
 | ⬜ | Alerting wired to the customer's monitoring (rules listed in `deploy/README.md`); off-site copy of backups |
 | ✅ | Security review; PDPL privacy: retention, drivers' copy and erasure, location notice (`docs/security.md`) |
-| ⬜ | Outside penetration test; two-step sign-in for admins; audit trail screen; secret rotation procedure |
+| 🟡 | Outside penetration test; two-step sign-in for admins; audit trail screen; secret rotation procedure | Two-step sign-in done (section 57); the rest open |
 | ✅ | Load test for peak booking times (CI size every pull request; `peak` profile to run on the customer's staging before go-live) |
 | ✅ | User guides (Arabic / English) and onboarding for trucking companies — **Help** in the portal |
 | ⬜ | Driver guide in Urdu and Hindi; short videos for drivers |

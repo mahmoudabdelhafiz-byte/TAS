@@ -101,7 +101,8 @@ export class ApiClient {
     return this.session?.user ?? null;
   }
 
-  async login(email: string, password: string): Promise<UserProfile> {
+  /** The password: signed in, or (two-step sign-in) a challenge for {@link loginCode}. */
+  async login(email: string, password: string): Promise<{ user: UserProfile } | { challenge: string }> {
     const response = await this.fetcher(`${this.base}/api/auth/login`, {
       method: 'POST',
       headers: SESSION_HEADERS,
@@ -109,8 +110,30 @@ export class ApiClient {
       body: JSON.stringify({ email, password }),
     });
     if (!response.ok) throw await readProblem(response);
+    const body = (await response.json()) as TokenResponse | { secondStep: true; challenge: string };
+    if ('secondStep' in body) return { challenge: body.challenge };
+    this.adopt(body);
+    return { user: this.session!.user };
+  }
+
+  /** The second step: the code from the authenticator app. */
+  async loginCode(challenge: string, code: string): Promise<UserProfile> {
+    const response = await this.fetcher(`${this.base}/api/auth/login/code`, {
+      method: 'POST',
+      headers: SESSION_HEADERS,
+      credentials: 'same-origin',
+      body: JSON.stringify({ challenge, code }),
+    });
+    if (!response.ok) throw await readProblem(response);
     this.adopt((await response.json()) as TokenResponse);
     return this.session!.user;
+  }
+
+  /** The signed-in user changed (e.g. two-step sign-in turned on). */
+  updateUser(user: UserProfile) {
+    if (!this.session) return;
+    this.session = { ...this.session, user };
+    this.store.save({ user });
   }
 
   async logout(): Promise<void> {

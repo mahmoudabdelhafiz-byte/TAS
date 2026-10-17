@@ -237,6 +237,28 @@ public sealed class UserAdminService(YardsyncsDbContext db, PasswordService pass
         return AdminResult<UserView>.Ok(UserView.From(user));
     }
 
+    /// <summary>
+    /// A lost phone: two-step sign-in is turned off for the user, whose sessions end; they set it up again at the next
+    /// sign-in (admins must). Not for your own account — another admin does it.
+    /// </summary>
+    public async Task<AdminResult<UserView>> ResetTwoStepAsync(CurrentUser actor, int userId, string? reason, CancellationToken ct = default)
+    {
+        var (user, denied) = await LoadManagedAsync(actor, userId, ct);
+        if (denied is not null)
+            return denied;
+        if (user!.UserId == actor.UserId)
+            return AdminResult<UserView>.Invalid("Another admin resets your own two-step sign-in.");
+        if (string.IsNullOrWhiteSpace(reason))
+            return AdminResult<UserView>.Invalid("Say why (e.g. phone lost).");
+        user.TotpSecret = null;
+        user.TotpEnabledAt = null;
+        user.TotpLastStep = null;
+        Audit(user, AuditAction.Update, null, new { TwoStep = "reset" }, reason, actor);
+        await db.SaveChangesAsync(ct);
+        await RevokeSessionsAsync(user.UserId, ct);
+        return AdminResult<UserView>.Ok(UserView.From(user));
+    }
+
     private async Task<(AppUser? User, AdminResult<UserView>? Denied)> LoadManagedAsync(CurrentUser actor, int userId, CancellationToken ct)
     {
         var user = await db.AppUsers.SingleOrDefaultAsync(u => u.UserId == userId, ct);

@@ -14,6 +14,10 @@ export interface UserProfile {
   /** For an operator admin: the operator whose terminals they run. */
   operatorId?: number | null;
   operatorName?: string | null;
+  /** Signs in with a code from an authenticator app. */
+  twoStepEnabled?: boolean;
+  /** An admin who must set up two-step sign-in before anything else. */
+  twoStepSetupRequired?: boolean;
 }
 
 export interface TokenResponse {

@@ -98,8 +98,26 @@ test('login stores the session; logout clears it even if the server is down', as
     if (url === '/api/auth/login') return json(200, { accessToken: 'a', refreshToken: 'r', accessTokenExpiresAt: '', refreshTokenExpiresAt: '', user });
     throw new TypeError('offline');
   });
-  assert.equal((await api.login('d@x', 'pw')).fullName, 'D');
+  const outcome = await api.login('d@x', 'pw');
+  assert.ok('user' in outcome && outcome.user.fullName === 'D');
   assert.deepEqual(store.value, { user }, 'only who is signed in is stored');
   await api.logout();
   assert.equal(store.value, null);
+});
+
+test('two-step sign-in: the password gives a challenge, the code signs in', async () => {
+  const store = memoryStore();
+  const api = new ApiClient(store, async (url, init) => {
+    if (url === '/api/auth/login') return json(200, { secondStep: true, challenge: 'c1' });
+    if (url === '/api/auth/login/code') {
+      assert.deepEqual(JSON.parse(String(init?.body)), { challenge: 'c1', code: '123456' });
+      return json(200, { accessToken: 'a', refreshToken: '', accessTokenExpiresAt: '', refreshTokenExpiresAt: '', user });
+    }
+    return new Response(null, { status: 404 });
+  });
+  const outcome = await api.login('d@x', 'pw');
+  assert.deepEqual(outcome, { challenge: 'c1' });
+  assert.equal(store.value, null, 'not signed in after the password alone');
+  assert.equal((await api.loginCode('c1', '123456')).fullName, 'D');
+  assert.deepEqual(store.value, { user });
 });

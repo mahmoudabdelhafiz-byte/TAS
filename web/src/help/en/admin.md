@@ -32,6 +32,14 @@ reason, which the gate shows.
 **Users** → **Terminal staff** → **Add a user**: **Gate clerk**, **Planner** or **Terminal admin**. Each sees only this
 terminal.
 
+## Two-step sign-in
+
+Admins sign in with their password and a code from an authenticator app on their phone. At the first sign-in the portal
+asks for it before anything else: choose **Start**, add the account in the app (type the key, or open the link on the
+phone), type the code it shows and choose **Turn on**. From then on, after the password the portal asks for the code.
+A lost or replaced phone: another admin opens **Fleet & users** → **Users** and chooses **Reset two-step** for that person,
+who sets it up again at the next sign-in.
+
 ## Operators: several terminals, one team
 
 When one company runs several terminals on the same Yardsyncs, the system admin groups them under an operator:

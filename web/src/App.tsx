@@ -11,6 +11,7 @@ import { Login } from './screens/Login.tsx';
 import { Shell } from './screens/Shell.tsx';
 import { SetPassword } from './screens/SetPassword.tsx';
 import { Docs } from './screens/Docs.tsx';
+import { TwoStepSetup } from './screens/TwoStepSetup.tsx';
 
 const api = new ApiClient(browserStore);
 
@@ -100,6 +101,12 @@ export function App() {
       <Login api={api} lang={lang} t={t} setLang={setLang} sessionEnded={ended} brand={publicBrand}
         onSignedIn={u => { setEnded(false); setUser(u); }} />
     );
+  }
+
+  // Admins set up two-step sign-in before anything else (the server refuses everything else until then).
+  if (user.twoStepSetupRequired) {
+    return <TwoStepSetup api={api} user={user} lang={lang} t={t} setLang={setLang} brand={publicBrand}
+      onDone={setUser} onSignOut={async () => { await api.logout(); setUser(null); }} />;
   }
 
   return <SignedIn user={user} lang={lang} setLang={setLang} t={t} route={route} brand={brand} setBrand={setBrand}

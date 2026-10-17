@@ -11,6 +11,8 @@ namespace Yardsyncs.Api;
 
 public sealed record ActiveBody(bool Active, string? Reason);
 
+public sealed record ReasonBody(string? Reason);
+
 public sealed record TerminalView(
     int TerminalId, string Code, string Name, Yardsyncs.Domain.TerminalType TerminalType, string TimeZone, int SlotMinutes, int BookingHorizonDays,
     int? OperatorId = null, string Country = "SA", string Currency = "SAR", bool Autogate = false);
@@ -261,6 +263,10 @@ public static class MasterDataEndpoints
 
         users.MapPost("/{userId:int}/active", async (int userId, ActiveBody body, HttpContext http, UserAdminService service, CancellationToken ct) =>
             YardsyncsApi.Admin(await service.SetActiveAsync(YardsyncsApi.User(http)!, userId, body.Active, body.Reason, ct)));
+
+        // A lost phone: turn the user's two-step sign-in off (they set it up again at the next sign-in).
+        users.MapPost("/{userId:int}/two-step/reset", async (int userId, ReasonBody body, HttpContext http, UserAdminService service, CancellationToken ct) =>
+            YardsyncsApi.Admin(await service.ResetTwoStepAsync(YardsyncsApi.User(http)!, userId, body.Reason, ct)));
 
         // Email the user a link to set their password (invitation, or reset when they have one).
         users.MapPost("/{userId:int}/password-link", async (int userId, HttpContext http, UserAdminService service, CancellationToken ct) =>
