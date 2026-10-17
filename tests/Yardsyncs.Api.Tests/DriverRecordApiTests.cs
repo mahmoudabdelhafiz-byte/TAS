@@ -114,15 +114,16 @@ public sealed class DriverRecordApiTests(YardsyncsApiFactory factory) : ApiTestB
         var admin = await As(DemoDataSeeder.TerminalAdminEmail);
         Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync($"{Terminal}/settings",
             new { values = new Dictionary<string, int> { ["driver_warn_points"] = 2 }, reason = (string?)null })).StatusCode);
-        var added = await admin.PostAsJsonAsync($"{Records}/{Demo.DriverIds[0]}/incidents", new { kind = "NoPpe" });
-        Assert.Equal(DriverStanding.Warning, (await Read<AdminResponse<DriverRecordView>>(added)).Data.Standing);
+        var added = (await Read<AdminResponse<DriverRecordView>>(
+            await admin.PostAsJsonAsync($"{Records}/{Demo.DriverIds[0]}/incidents", new { kind = "NoPpe" }))).Data;
+        Assert.Equal(DriverStanding.Warning, added.Standing);
 
         var check = await admin.PostAsJsonAsync($"{Terminal}/gate/arrivals/check", new { laneCode = "IN-1", appointmentNo = number });
         Assert.Equal(HttpStatusCode.OK, check.StatusCode);
         var arrival = (await Read<AdminResponse<ArrivalResult>>(check)).Data;
         Assert.Contains(arrival.Warnings, w => w == "Driver Abdullah Al-Harbi has 2 penalty points at this terminal.");
 
-        var incident = (await Read<AdminResponse<DriverRecordView>>(added)).Data.Incidents.Single();
+        var incident = added.Incidents.Single();
         var planner = await As(DemoDataSeeder.PlannerEmail);
         Assert.Equal(HttpStatusCode.BadRequest, (await planner.PostAsJsonAsync($"{Terminal}/driver-incidents/{incident.IncidentId}/withdraw", new { reason = "" })).StatusCode);
         var withdrawn = await planner.PostAsJsonAsync($"{Terminal}/driver-incidents/{incident.IncidentId}/withdraw", new { reason = "Wrong driver" });
