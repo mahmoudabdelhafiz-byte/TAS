@@ -47,7 +47,17 @@ public class NotificationTextTests
         Assert.Contains("Customs hold on MSCU1234566", NotificationText.Render(NotificationTemplates.StatusRed, "en", Values).Body);
         Assert.Contains("09:30", NotificationText.Render(NotificationTemplates.SlotReminder, "ar", Values).Body);
         Assert.Contains("الموعد", NotificationText.Render(NotificationTemplates.StatusCleared, "ar", Values).Body);
-        Assert.Contains("Tue 20 Oct 10:00–11:00", NotificationText.Render(NotificationTemplates.SlotClosed, "hi", Values).Body);
+        Assert.Contains("मंगलवार 20 अक्टूबर 10:00–11:00", NotificationText.Render(NotificationTemplates.SlotClosed, "hi", Values).Body);
+        Assert.Contains("Tue 20 Oct 10:00–11:00", NotificationText.Render(NotificationTemplates.SlotClosed, "en", Values).Body);
+    }
+
+    [Fact]
+    public void The_reason_from_the_terminal_is_in_the_drivers_language()
+    {
+        Assert.Contains("حجز جمركي على MSCU1234566", NotificationText.Render(NotificationTemplates.StatusRed, "ar", Values).Body);
+        Assert.Contains("MSCU1234566 پر کسٹمز کی روک", NotificationText.Render(NotificationTemplates.StatusRed, "ur", Values).Body);
+        Assert.Contains("MSCU1234566 पर कस्टम्स रोक", NotificationText.Render(NotificationTemplates.StatusRed, "hi", Values).Body);
+        Assert.Contains("ہفتہ", NotificationText.Render(NotificationTemplates.SlotClosed, "ur", new Dictionary<string, string>(Values) { [NotificationText.Keys.Slot] = "Sat 24 Oct 08:00–09:00" }).Body);
     }
 
     [Fact]

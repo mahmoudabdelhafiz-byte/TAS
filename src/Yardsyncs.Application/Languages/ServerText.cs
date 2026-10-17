@@ -6,7 +6,8 @@ namespace Yardsyncs.Application.Languages;
 /// The server's own sentences — booking check results, gate decisions, the "ready to go" reason, errors — in the
 /// language of the request (Accept-Language). They are written in English where they arise (and stored that way, e.g.
 /// in a trouble-desk case), and put into the reader's language on the way out, sentence by sentence; anything not in
-/// the catalog stays English. Numbers, container numbers and plates are kept as they are.
+/// the catalog stays English. Numbers, container numbers and plates are kept as they are. Arabic covers the portal;
+/// Urdu and Hindi cover what drivers read. All wording to be reviewed by native speakers.
 /// </summary>
 public static class ServerText
 {
@@ -44,7 +45,7 @@ public static class ServerText
             return text;
         foreach (var (pattern, replacement) in catalog)
             text = replacement.StartsWith(DatePrefix, StringComparison.Ordinal)
-                ? pattern.Replace(text, m => m.Result(replacement[DatePrefix.Length..]).Replace("{date}", ArabicDate(m.Groups["date"].Value)))
+                ? pattern.Replace(text, m => m.Result(replacement[DatePrefix.Length..]).Replace("{date}", Dates(m.Groups["date"].Value, language)))
                 : pattern.Replace(text, replacement);
         return text;
     }
@@ -52,18 +53,38 @@ public static class ServerText
     /// <summary>How many sentences a language has (for tests and the language template).</summary>
     public static int Count(string language) => Catalogs.TryGetValue(language, out var c) ? c.Count : 0;
 
-    // A replacement starting with this has {date} for the "ddd dd MMM HH:mm" group named date, in Arabic words.
+    // A replacement starting with this has {date} for the "ddd dd MMM HH:mm" group named date, in the language's words.
     private const string DatePrefix = "date:";
 
-    private static readonly Dictionary<string, string> ArabicNames = new()
+    private static readonly Dictionary<string, Dictionary<string, string>> DateNames = new()
     {
-        ["Sat"] = "السبت", ["Sun"] = "الأحد", ["Mon"] = "الاثنين", ["Tue"] = "الثلاثاء", ["Wed"] = "الأربعاء", ["Thu"] = "الخميس", ["Fri"] = "الجمعة",
-        ["Jan"] = "يناير", ["Feb"] = "فبراير", ["Mar"] = "مارس", ["Apr"] = "أبريل", ["May"] = "مايو", ["Jun"] = "يونيو",
-        ["Jul"] = "يوليو", ["Aug"] = "أغسطس", ["Sep"] = "سبتمبر", ["Oct"] = "أكتوبر", ["Nov"] = "نوفمبر", ["Dec"] = "ديسمبر",
+        ["ar"] = new()
+        {
+            ["Sat"] = "السبت", ["Sun"] = "الأحد", ["Mon"] = "الاثنين", ["Tue"] = "الثلاثاء", ["Wed"] = "الأربعاء", ["Thu"] = "الخميس", ["Fri"] = "الجمعة",
+            ["Jan"] = "يناير", ["Feb"] = "فبراير", ["Mar"] = "مارس", ["Apr"] = "أبريل", ["May"] = "مايو", ["Jun"] = "يونيو",
+            ["Jul"] = "يوليو", ["Aug"] = "أغسطس", ["Sep"] = "سبتمبر", ["Oct"] = "أكتوبر", ["Nov"] = "نوفمبر", ["Dec"] = "ديسمبر",
+        },
+        ["ur"] = new()
+        {
+            ["Sat"] = "ہفتہ", ["Sun"] = "اتوار", ["Mon"] = "پیر", ["Tue"] = "منگل", ["Wed"] = "بدھ", ["Thu"] = "جمعرات", ["Fri"] = "جمعہ",
+            ["Jan"] = "جنوری", ["Feb"] = "فروری", ["Mar"] = "مارچ", ["Apr"] = "اپریل", ["May"] = "مئی", ["Jun"] = "جون",
+            ["Jul"] = "جولائی", ["Aug"] = "اگست", ["Sep"] = "ستمبر", ["Oct"] = "اکتوبر", ["Nov"] = "نومبر", ["Dec"] = "دسمبر",
+        },
+        ["hi"] = new()
+        {
+            ["Sat"] = "शनिवार", ["Sun"] = "रविवार", ["Mon"] = "सोमवार", ["Tue"] = "मंगलवार", ["Wed"] = "बुधवार", ["Thu"] = "गुरुवार", ["Fri"] = "शुक्रवार",
+            ["Jan"] = "जनवरी", ["Feb"] = "फ़रवरी", ["Mar"] = "मार्च", ["Apr"] = "अप्रैल", ["May"] = "मई", ["Jun"] = "जून",
+            ["Jul"] = "जुलाई", ["Aug"] = "अगस्त", ["Sep"] = "सितंबर", ["Oct"] = "अक्टूबर", ["Nov"] = "नवंबर", ["Dec"] = "दिसंबर",
+        },
     };
 
-    private static string ArabicDate(string date) =>
-        string.Join(' ', date.Split(' ').Select(part => ArabicNames.GetValueOrDefault(part, part)));
+    private static readonly Regex DateWord = R(@"\b(Sat|Sun|Mon|Tue|Wed|Thu|Fri|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b");
+
+    /// <summary>Day and month names of a date label ("Tue 20 Oct 10:00–11:00") in the language; numbers kept.</summary>
+    public static string Dates(string text, string language) =>
+        string.IsNullOrEmpty(text) || !DateNames.TryGetValue(language, out var names)
+            ? text
+            : DateWord.Replace(text, m => names[m.Value]);
 
     private static Regex R(string pattern) => new(pattern, RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
@@ -151,6 +172,7 @@ public static class ServerText
 
             // ---- booking
             (R(@"Item (\d+): "), "البند $1: "),
+            (R(@"Don't set off: "), "لا تتحرك: "),
             (R(@"Container (.+?) already has a live appointment\."), "الحاوية $1 لها موعد قائم بالفعل."),
             (R(@"No capacity left in this slot for this booking\. Please choose another slot\."), "لا توجد سعة متبقية في هذه الفترة لهذا الحجز. اختر فترة أخرى."),
             (R(@"This slot is closed or has already ended\."), "هذه الفترة مغلقة أو انتهت."),
@@ -184,6 +206,74 @@ public static class ServerText
             (R(@"Admins must keep two-step sign-in\. To move to another phone, ask another admin to reset it\."), "يجب على المسؤولين إبقاء التحقق بخطوتين. للانتقال إلى هاتف آخر، اطلب من مسؤول آخر إعادة تعيينه."),
             (R(@"Set up two-step sign-in first: admins sign in with a code from an authenticator app\."), "أعدّ التحقق بخطوتين أولاً: يسجّل المسؤولون الدخول برمز من تطبيق مصادقة."),
             (R(@"This API key can only read\. Ask your company admin for a key that can book\."), "مفتاح API هذا للاطلاع فقط. اطلب من مسؤول شركتك مفتاحاً يمكنه الحجز."),
+        ],
+        // Urdu and Hindi: what drivers read (the ready-to-go reason, check results, the gate's answer). Other
+        // sentences stay English for them.
+        ["ur"] =
+        [
+            (R(@"Customs hold on (\S+)"), "$1 پر کسٹمز کی روک"),
+            (R(@"Shipping line has not released (\S+)"), "شپنگ لائن نے $1 ریلیز نہیں کیا"),
+            (R(@"Terminal hold on (\S+)"), "$1 پر ٹرمینل کی روک"),
+            (R(@"Storage charges on (\S+) start today"), "$1 پر اسٹوریج چارجز آج سے شروع"),
+            (R(@"Charges for (\S+) are unpaid"), "$1 کے چارجز ادا نہیں ہوئے"),
+            (R(@"(\S+) is not available for pickup yet"), "$1 ابھی اٹھانے کے لیے دستیاب نہیں"),
+            (R(@"Cargo (\S+) is not released by customs"), "کارگو $1 کسٹمز سے ریلیز نہیں ہوا"),
+            (R(@"Cargo (\S+) is not released for delivery"), "کارگو $1 ڈیلیوری کے لیے ریلیز نہیں ہوا"),
+            (R(@"Cut-off has passed for booking (\S+)"), "بکنگ $1 کا کٹ آف گزر چکا ہے"),
+            (R(@"No VGM for (\S+) in N4 yet — it must be declared before gate-in"), "$1 کا VGM ابھی درج نہیں — گیٹ ان سے پہلے ضروری ہے"),
+            (R(@"No VGM declared for (\S+)"), "$1 کا VGM درج نہیں"),
+            (R(@"\bShipping line hold\b"), "شپنگ لائن کی روک"),
+            (R(@"\bCustoms hold\b"), "کسٹمز کی روک"),
+            (R(@"\bTerminal hold\b"), "ٹرمینل کی روک"),
+            (R(@"\bUnpaid charges\b"), "غیر ادا شدہ چارجز"),
+            (R(@"\bCargo hold\b"), "کارگو کی روک"),
+            (R(@"The terminal system could not be reached — this will be re-checked before arrival"), "ٹرمینل سسٹم سے رابطہ نہیں ہو سکا — آمد سے پہلے دوبارہ چیک ہوگا"),
+            (R(@"Missed — the truck did not arrive in its window"), "چھوٹ گیا — ٹرک اپنے وقت میں نہیں پہنچا"),
+            (R(@"Rejected at gate — contact the terminal"), "گیٹ پر مسترد — ٹرمینل سے رابطہ کریں"),
+            (R(@"In terminal — follow the yard instructions"), "ٹرمینل کے اندر — یارڈ کی ہدایات پر عمل کریں"),
+            (R(@"Arrival window has passed — reschedule the appointment"), "آمد کا وقت گزر گیا — اپوائنٹمنٹ دوبارہ طے کریں"),
+            (R(@"Checks are still running"), "جانچ ابھی جاری ہے"),
+            (R(@"Ready — proceed to the gate"), "تیار — گیٹ کی طرف چلیں"),
+            (R(@"Appointment (?<date>\w{3} \d\d \w{3} \d\d:\d\d) — gate opens for you at (?<at>\d\d:\d\d)"), "date:اپوائنٹمنٹ {date} — آپ کے لیے گیٹ ${at} بجے کھلے گا"),
+            (R(@"^Visit completed$"), "دورہ مکمل"),
+            (R(@"Rejected at gate: "), "گیٹ پر مسترد: "),
+            (R(@"Late: the arrival window closed at (\d\d:\d\d)\."), "دیر: آمد کا وقت $1 بجے ختم ہو گیا۔"),
+            (R(@"Early: the arrival window opens at (\d\d:\d\d)\."), "جلدی: آمد کا وقت $1 بجے شروع ہوگا۔"),
+            (R(@"Item (\d+): "), "آئٹم $1: "),
+            (R(@"Don't set off: "), "روانہ نہ ہوں: "),
+        ],
+        ["hi"] =
+        [
+            (R(@"Customs hold on (\S+)"), "$1 पर कस्टम्स रोक"),
+            (R(@"Shipping line has not released (\S+)"), "शिपिंग लाइन ने $1 रिलीज़ नहीं किया"),
+            (R(@"Terminal hold on (\S+)"), "$1 पर टर्मिनल रोक"),
+            (R(@"Storage charges on (\S+) start today"), "$1 पर स्टोरेज शुल्क आज से शुरू"),
+            (R(@"Charges for (\S+) are unpaid"), "$1 का शुल्क बकाया है"),
+            (R(@"(\S+) is not available for pickup yet"), "$1 अभी उठाने के लिए उपलब्ध नहीं"),
+            (R(@"Cargo (\S+) is not released by customs"), "कार्गो $1 कस्टम्स से रिलीज़ नहीं हुआ"),
+            (R(@"Cargo (\S+) is not released for delivery"), "कार्गो $1 डिलीवरी के लिए रिलीज़ नहीं हुआ"),
+            (R(@"Cut-off has passed for booking (\S+)"), "बुकिंग $1 का कट-ऑफ़ बीत चुका है"),
+            (R(@"No VGM for (\S+) in N4 yet — it must be declared before gate-in"), "$1 का VGM अभी दर्ज नहीं — गेट-इन से पहले ज़रूरी है"),
+            (R(@"No VGM declared for (\S+)"), "$1 का VGM दर्ज नहीं"),
+            (R(@"\bShipping line hold\b"), "शिपिंग लाइन रोक"),
+            (R(@"\bCustoms hold\b"), "कस्टम्स रोक"),
+            (R(@"\bTerminal hold\b"), "टर्मिनल रोक"),
+            (R(@"\bUnpaid charges\b"), "बकाया शुल्क"),
+            (R(@"\bCargo hold\b"), "कार्गो रोक"),
+            (R(@"The terminal system could not be reached — this will be re-checked before arrival"), "टर्मिनल सिस्टम से संपर्क नहीं हो सका — पहुँचने से पहले फिर जाँच होगी"),
+            (R(@"Missed — the truck did not arrive in its window"), "छूट गया — ट्रक अपने समय में नहीं पहुँचा"),
+            (R(@"Rejected at gate — contact the terminal"), "गेट पर अस्वीकार — टर्मिनल से संपर्क करें"),
+            (R(@"In terminal — follow the yard instructions"), "टर्मिनल के अंदर — यार्ड के निर्देशों का पालन करें"),
+            (R(@"Arrival window has passed — reschedule the appointment"), "पहुँचने का समय बीत गया — अपॉइंटमेंट दोबारा तय करें"),
+            (R(@"Checks are still running"), "जाँच अभी चल रही है"),
+            (R(@"Ready — proceed to the gate"), "तैयार — गेट की ओर चलें"),
+            (R(@"Appointment (?<date>\w{3} \d\d \w{3} \d\d:\d\d) — gate opens for you at (?<at>\d\d:\d\d)"), "date:अपॉइंटमेंट {date} — आपके लिए गेट ${at} बजे खुलेगा"),
+            (R(@"^Visit completed$"), "यात्रा पूरी"),
+            (R(@"Rejected at gate: "), "गेट पर अस्वीकार: "),
+            (R(@"Late: the arrival window closed at (\d\d:\d\d)\."), "देर: पहुँचने का समय $1 बजे बंद हो गया।"),
+            (R(@"Early: the arrival window opens at (\d\d:\d\d)\."), "जल्दी: पहुँचने का समय $1 बजे शुरू होगा।"),
+            (R(@"Item (\d+): "), "आइटम $1: "),
+            (R(@"Don't set off: "), "रवाना न हों: "),
         ],
     };
 }
