@@ -591,6 +591,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Sample dates move to the day it is shown, so the slot board, control room and KPIs always look current; Excel downloads say they are not in the demo |
 | ✅ | Driver app demo: an Android build with sample data on the phone (`--dart-define=YARDSYNCS_DEMO=true`, built by CI); the truck drives itself to the gate and to each stop with spoken turns; the control room answers messages |
 
+### 63. AI-optimised slots 1: suggestions the planner approves (2026-10-18)
+| | Item |
+|---|---|
+| ✅ | From the terminal's own history (default 8 weeks, at least 28 days): overbooking per template window from its real no-show rate (capped by `slot_max_overbook`); fewer trucks per slot where trucks wait at the gate longer than the target (`slot_target_wait`), more where the window is full and trucks get through quickly; coming days expected over capacity |
+| ✅ | **Slot board → Suggestions**: each with the numbers behind it (no-shows, waiting, use, visits read); **Approve** changes the default template (a busy day gets extra places that day), **Dismiss** hides it for four weeks; nothing changes on its own |
+| ✅ | Per-terminal settings `slot_advice` (off / suggest), `slot_target_wait`, `slot_max_overbook`, `slot_history_weeks` |
+| ⬜ | Mode "adjust within limits" (apply on its own) — after the suggestions have been checked against a real terminal's data |
+
 ---
 
 ## Remaining
@@ -656,7 +664,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Load test for peak booking times (CI size every pull request; `peak` profile to run on the customer's staging before go-live) |
 | ✅ | User guides (Arabic / English) and onboarding for trucking companies — **Help** in the portal |
 | ⬜ | Driver guide in Urdu and Hindi; short videos for drivers |
-| ✅ | GitHub repository made private (2026-10-18) |
+| ⬜ | GitHub repository private again: made private 2026-10-18, public for a few hours on 2026-10-18 so CI runs (private builds need GitHub billing) — **Mahmoud to switch it back to private when this round is merged** |
 
 ### Phase G — Generic product (any terminal operator)
 | | Item | Notes |
@@ -695,7 +703,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Driver record warnings: past a threshold of points the control room, the gate and the trouble desk see a warning when the driver's truck comes; optional automatic block past a second threshold | Thresholds and auto-block per terminal; the company sees its own drivers' records (per-terminal setting) |
 | ✅ | **Safety in the app**: safety campaigns (message, picture, period, which drivers / companies, read receipt or "I agree") shown in the driver's language | |
 | ✅ | **Safety induction**: short course with pages and a few questions, required before the first visit and renewed every N months; the gate warns or refers a driver without a valid induction | Per-terminal setting: off / warn / refer; renewal months |
-| 🔜 | **AI-optimised slots 1**: suggestions the planner approves — overbooking per hour from real no-shows, trucks per slot from measured gate and yard throughput against a target waiting time, demand forecast against capacity; each with its reason | Needs 4–8 weeks of a terminal's history; per-terminal setting off / suggest / adjust within limits |
+| ✅ | **AI-optimised slots 1**: suggestions the planner approves — overbooking per hour from real no-shows, trucks per slot from measured gate and yard throughput against a target waiting time, demand forecast against capacity; each with its reason | Needs 4–8 weeks of a terminal's history; per-terminal setting off / suggest / adjust within limits |
 | ⬜ | AI-optimised slots 2: slots ranked by expected waiting time when booking ("fast gate" hours) | |
 | ⬜ | AI-optimised slots 3: on the day — release no-show capacity to later hours, slow bookings for a congested block | Only with real data; block-level needs N4 equipment data |
 
