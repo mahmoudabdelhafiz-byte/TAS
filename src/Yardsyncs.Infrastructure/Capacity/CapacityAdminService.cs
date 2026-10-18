@@ -361,6 +361,7 @@ public sealed class CapacityAdminService(
             [TerminalSettings.SlotTargetWaitKey] = settings.SlotTargetWaitMinutes,
             [TerminalSettings.SlotMaxOverbookKey] = settings.SlotMaxOverbookPct,
             [TerminalSettings.SlotHistoryWeeksKey] = settings.SlotHistoryWeeks,
+            [TerminalSettings.SlotGateSpeedKey] = settings.SlotGateSpeed ? 1 : 0,
         };
     }
 

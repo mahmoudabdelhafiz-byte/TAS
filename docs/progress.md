@@ -599,6 +599,14 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Per-terminal settings `slot_advice` (off / suggest), `slot_target_wait`, `slot_max_overbook`, `slot_history_weeks` |
 | ⬜ | Mode "adjust within limits" (apply on its own) — after the suggestions have been checked against a real terminal's data |
 
+### 64. AI-optimised slots 2: fast and busy gate hours when booking (2026-10-18)
+| | Item |
+|---|---|
+| ✅ | The usual (median) wait from arrival to gate-in per weekday and hour, from the terminal's own gate history (the `slot_history_weeks`); an hour with fewer than 12 visits of its weekday uses the same hour on every day; fewer still: no figure, never a guess |
+| ✅ | **Book a truck**: free hours marked **Fast gate** (usually at most half the target wait) or **Busy gate** (over the target), the usual minutes on pointing; the availability API gives `expectedWaitMinutes` and `gateSpeed` |
+| ✅ | Per-terminal setting `slot_gate_speed` (on / off); kept 30 minutes per terminal, recomputed when the settings change |
+| ✅ | Demo: sample fast and busy hours; `?edition=tas` for the truck appointment system alone; dates inside timestamps and appointment numbers follow the day shown |
+
 ---
 
 ## Remaining
@@ -704,7 +712,7 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | **Safety in the app**: safety campaigns (message, picture, period, which drivers / companies, read receipt or "I agree") shown in the driver's language | |
 | ✅ | **Safety induction**: short course with pages and a few questions, required before the first visit and renewed every N months; the gate warns or refers a driver without a valid induction | Per-terminal setting: off / warn / refer; renewal months |
 | ✅ | **AI-optimised slots 1**: suggestions the planner approves — overbooking per hour from real no-shows, trucks per slot from measured gate and yard throughput against a target waiting time, demand forecast against capacity; each with its reason | Needs 4–8 weeks of a terminal's history; per-terminal setting off / suggest / adjust within limits |
-| ⬜ | AI-optimised slots 2: slots ranked by expected waiting time when booking ("fast gate" hours) | |
+| ✅ | AI-optimised slots 2: slots marked by expected waiting time when booking ("fast gate" hours) | Section 64 |
 | ⬜ | AI-optimised slots 3: on the day — release no-show capacity to later hours, slow bookings for a congested block | Only with real data; block-level needs N4 equipment data |
 
 ---

@@ -4,10 +4,14 @@ using Yardsyncs.Infrastructure.Persistence;
 
 namespace Yardsyncs.Infrastructure.Capacity;
 
-public sealed record SlotAvailability(long SlotId, DateTimeOffset StartAt, DateTimeOffset EndAt, bool IsClosed, int Available);
+/// <param name="ExpectedWaitMinutes">The usual minutes from arrival to gate-in at this hour (null without enough history or when switched off).</param>
+/// <param name="GateSpeed">Fast / Normal / Slow against the terminal's target wait (null as above).</param>
+public sealed record SlotAvailability(
+    long SlotId, DateTimeOffset StartAt, DateTimeOffset EndAt, bool IsClosed, int Available,
+    int? ExpectedWaitMinutes = null, string? GateSpeed = null);
 
 /// <summary>Answers "which slots can this company still book for this category on this day?"</summary>
-public sealed class AvailabilityQueryService(YardsyncsDbContext db, TimeProvider clock)
+public sealed class AvailabilityQueryService(YardsyncsDbContext db, TimeProvider clock, GateSpeedService? gateSpeed = null)
 {
     public async Task<IReadOnlyList<SlotAvailability>> GetAsync(
         int terminalId, DateOnly localDate, string categoryCode, int? companyId, CancellationToken ct = default)
@@ -47,6 +51,7 @@ public sealed class AvailabilityQueryService(YardsyncsDbContext db, TimeProvider
             .FirstOrDefaultAsync(ct);
 
         var now = clock.GetUtcNow();
+        var speed = gateSpeed is null ? null : await gateSpeed.ProfileAsync(terminalId, timeZone, ct);
 
         return slots.Select(s =>
         {
@@ -55,7 +60,8 @@ public sealed class AvailabilityQueryService(YardsyncsDbContext db, TimeProvider
                 s.Category?.QuotaCapacity ?? 0, s.Category?.Booked ?? 0);
             var reserved = AvailabilityCalculator.ReservedUnits(reservations, s.StartAt, now, companyId);
             var available = AvailabilityCalculator.Available(counters, now, reserved, releaseHours);
-            return new SlotAvailability(s.SlotId, s.StartAt, s.EndAt, s.IsClosed, available);
+            var usual = speed?.For(TimeZoneInfo.ConvertTime(s.StartAt, timeZone).DateTime);
+            return new SlotAvailability(s.SlotId, s.StartAt, s.EndAt, s.IsClosed, available, usual?.WaitMinutes, usual?.Level.ToString());
         }).ToList();
     }
 }

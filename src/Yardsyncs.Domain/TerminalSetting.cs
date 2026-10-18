@@ -51,7 +51,8 @@ public sealed record TerminalSettings(
     int SlotAdvice = 1,
     int SlotTargetWaitMinutes = 20,
     int SlotMaxOverbookPct = 15,
-    int SlotHistoryWeeks = 8)
+    int SlotHistoryWeeks = 8,
+    bool SlotGateSpeed = true)
 {
     /// <summary>Suggestions for the planner from the terminal's history: 0 = off, 1 = suggest (the planner approves each).</summary>
     public const string SlotAdviceKey = "slot_advice";
@@ -64,6 +65,9 @@ public sealed record TerminalSettings(
 
     /// <summary>Weeks of history the suggestions read (4–26).</summary>
     public const string SlotHistoryWeeksKey = "slot_history_weeks";
+
+    /// <summary>Booking shows how quickly each hour usually gets through the gate (fast / busy): 1 = on, 0 = off.</summary>
+    public const string SlotGateSpeedKey = "slot_gate_speed";
 
     /// <summary>Drivers without a valid safety induction: 0 = nothing, 1 = the gate warns, 2 = the trouble desk.</summary>
     public const string InductionModeKey = "induction_mode";
@@ -150,6 +154,7 @@ public sealed record TerminalSettings(
             Math.Min(Get(SlotAdviceKey, 1), 1),
             Math.Clamp(Get(SlotTargetWaitKey, 20), 5, 240),
             Math.Min(Get(SlotMaxOverbookKey, 15), 50),
-            Math.Clamp(Get(SlotHistoryWeeksKey, 8), 4, 26));
+            Math.Clamp(Get(SlotHistoryWeeksKey, 8), 4, 26),
+            Get(SlotGateSpeedKey, 1) != 0);
     }
 }
