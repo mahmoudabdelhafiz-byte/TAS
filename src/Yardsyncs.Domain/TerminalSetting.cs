@@ -47,8 +47,24 @@ public sealed record TerminalSettings(
     int DriverWarnPoints = 6,
     int DriverLimitPoints = 0,
     bool DriverRecordToCompany = true,
-    int InductionMode = 0)
+    int InductionMode = 0,
+    int SlotAdvice = 1,
+    int SlotTargetWaitMinutes = 20,
+    int SlotMaxOverbookPct = 15,
+    int SlotHistoryWeeks = 8)
 {
+    /// <summary>Suggestions for the planner from the terminal's history: 0 = off, 1 = suggest (the planner approves each).</summary>
+    public const string SlotAdviceKey = "slot_advice";
+
+    /// <summary>Minutes from arrival to gate-in the terminal aims for (5–240); longer waits suggest fewer trucks per slot.</summary>
+    public const string SlotTargetWaitKey = "slot_target_wait";
+
+    /// <summary>The highest overbooking a suggestion may propose, in percent (0–50).</summary>
+    public const string SlotMaxOverbookKey = "slot_max_overbook";
+
+    /// <summary>Weeks of history the suggestions read (4–26).</summary>
+    public const string SlotHistoryWeeksKey = "slot_history_weeks";
+
     /// <summary>Drivers without a valid safety induction: 0 = nothing, 1 = the gate warns, 2 = the trouble desk.</summary>
     public const string InductionModeKey = "induction_mode";
 
@@ -130,6 +146,10 @@ public sealed record TerminalSettings(
             Get(DriverWarnPointsKey, 6),
             Get(DriverLimitPointsKey, 0),
             Get(DriverRecordToCompanyKey, 1) != 0,
-            Math.Min(Get(InductionModeKey, 0), 2));
+            Math.Min(Get(InductionModeKey, 0), 2),
+            Math.Min(Get(SlotAdviceKey, 1), 1),
+            Math.Clamp(Get(SlotTargetWaitKey, 20), 5, 240),
+            Math.Min(Get(SlotMaxOverbookKey, 15), 50),
+            Math.Clamp(Get(SlotHistoryWeeksKey, 8), 4, 26));
     }
 }

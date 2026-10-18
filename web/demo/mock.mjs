@@ -400,7 +400,7 @@ export function route(method, path, query, body) {
     { reservationId: 2, companyId: 7, category: 'IMP_PICKUP', startAt: iso('2026-10-18', 6), endAt: iso('2026-11-18', 14), unitsPerSlot: 4, releaseHoursBefore: 12, isActive: true },
   ]];
   if (path.endsWith('/capacity/release-rules')) return [200, method === 'GET' ? [{ category: 'MTY_RETURN', hoursBefore: 12 }] : { data: [], regeneratedSlots: null }];
-  if (path.endsWith('/settings')) return [200, method === 'GET' ? { early_grace_min: 30, late_grace_min: 30, cancel_cutoff_min: 60, max_appt_per_truck_per_day: 6, report_hour: 6, report_weekday: 0, induction_mode: 1, driver_points_days: 90, driver_warn_points: 6, driver_limit_points: 10, driver_record_company: 1 } : { data: {}, regeneratedSlots: null }];
+  if (path.endsWith('/settings')) return [200, method === 'GET' ? { early_grace_min: 30, late_grace_min: 30, cancel_cutoff_min: 60, max_appt_per_truck_per_day: 6, report_hour: 6, report_weekday: 0, induction_mode: 1, slot_advice: 1, slot_target_wait: 20, slot_max_overbook: 15, slot_history_weeks: 8, driver_points_days: 90, driver_warn_points: 6, driver_limit_points: 10, driver_record_company: 1 } : { data: {}, regeneratedSlots: null }];
   if (path.endsWith('/appointments/bulk')) {
     const dry = query.get('dryRun') === 'true';
     const rows = [
@@ -486,5 +486,29 @@ export function route(method, path, query, body) {
     questions: [
       { correct: 1, texts: { en: { question: 'What is the speed limit inside the terminal?', options: ['40 km/h', '25 km/h', '60 km/h'] } } },
       { correct: 0, texts: { en: { question: 'A straddle carrier is coming. What do you do?', options: ['Stop and let it pass', 'Drive past quickly', 'Sound the horn'] } } }] }];
+  if (path.endsWith('/capacity/advice/decide')) {
+    globalThis.__adviceDone = [...(globalThis.__adviceDone ?? []), body.key];
+    return [200, { data: { key: body.key }, regeneratedSlots: null }];
+  }
+  if (path.endsWith('/capacity/advice')) {
+    // "Next Tuesday" on the day the demo is shown (demo.js moves the dates by whole days).
+    const shift = Math.round((globalThis.__demoShiftMs ?? 0) / 864e5);
+    const add = (x, n) => { const [y, m, d] = x.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+    const shown = add(today, shift);
+    const ahead = ((2 - new Date(shown).getUTCDay()) + 7) % 7 || 7;
+    const busy = add(today, ahead);
+    const all = [
+      { key: `busy|${busy}`, kind: 'BusyDay', day: null, start: null, end: null, date: busy, current: 620, suggested: 769, sample: 8,
+        noShowRate: null, avgWaitMinutes: null, utilization: 1.18, forecast: 732 },
+      { key: 'overbook|Sunday|06:00', kind: 'Overbook', day: 'Sunday', start: '06:00', end: '13:00', date: null, current: 5, suggested: 7, sample: 1840,
+        noShowRate: 0.092, avgWaitMinutes: null, utilization: null, forecast: null },
+      { key: 'capacity|Monday|14:00', kind: 'LowerCapacity', day: 'Monday', start: '14:00', end: '22:00', date: null, current: 40, suggested: 34, sample: 1512,
+        noShowRate: null, avgWaitMinutes: 27.4, utilization: 0.93, forecast: null },
+      { key: 'capacity|Thursday|06:00', kind: 'RaiseCapacity', day: 'Thursday', start: '06:00', end: '13:00', date: null, current: 40, suggested: 44, sample: 1630,
+        noShowRate: null, avgWaitMinutes: 6.1, utilization: 0.97, forecast: null },
+    ];
+    const done = globalThis.__adviceDone ?? [];
+    return [200, { mode: 1, historyDays: 56, visits: 21480, enoughHistory: true, suggestions: all.filter(a => !done.includes(a.key)) }];
+  }
   return [404, { detail: `No mock for ${method} ${path}` }];
 }

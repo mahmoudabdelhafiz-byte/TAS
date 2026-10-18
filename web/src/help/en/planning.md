@@ -49,6 +49,15 @@ On a public holiday of the terminal's country the board says so. Slots stay open
 day**; the dates of Eid and other lunar holidays are expected dates and follow the moon sighting, so check the official
 announcement.
 
+## Suggestions
+
+Under the slot board, **Suggestions** come from the terminal's own bookings and gate times once there are 28 days of
+them: overbooking for a window from how many trucks don't show, fewer trucks per slot when trucks wait at the gate longer
+than the target, more when slots are full and the gate is quick, and coming days expected over capacity. Each says why.
+**Approve** changes the window in the weekly plan (or adds places to that day) with the change written to the log;
+**Dismiss** hides it for four weeks. Nothing changes on its own. The target wait, the highest overbooking and the weeks
+read are terminal settings.
+
 ## KPIs
 
 **KPIs** for the last 7 or 30 days, or the next 7:

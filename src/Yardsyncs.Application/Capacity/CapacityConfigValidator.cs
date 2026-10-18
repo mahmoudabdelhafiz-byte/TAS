@@ -39,6 +39,10 @@ public static class CapacityConfigValidator
         [TerminalSettings.DriverLimitPointsKey] = (0, 100),
         [TerminalSettings.DriverRecordToCompanyKey] = (0, 1),
         [TerminalSettings.InductionModeKey] = (0, 2),
+        [TerminalSettings.SlotAdviceKey] = (0, 1),
+        [TerminalSettings.SlotTargetWaitKey] = (5, 240),
+        [TerminalSettings.SlotMaxOverbookKey] = (0, 50),
+        [TerminalSettings.SlotHistoryWeeksKey] = (4, 26),
     };
 
     // ------------------------------------------------------------ templates

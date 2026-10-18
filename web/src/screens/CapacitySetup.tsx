@@ -458,12 +458,17 @@ function Reserved({ editable }: { editable: boolean }) {
 
 // ================================================================== rules & settings
 
-const settingKeys = ['early_grace_min', 'late_grace_min', 'cancel_cutoff_min', 'max_appt_per_truck_per_day'] as const;
+const settingKeys = ['early_grace_min', 'late_grace_min', 'cancel_cutoff_min', 'max_appt_per_truck_per_day',
+  'slot_advice', 'slot_target_wait', 'slot_max_overbook', 'slot_history_weeks'] as const;
 const settingText = {
   early_grace_min: 'setup.earlyGrace',
   late_grace_min: 'setup.lateGrace',
   cancel_cutoff_min: 'setup.cancelCutoff',
   max_appt_per_truck_per_day: 'setup.maxPerTruck',
+  slot_advice: 'setup.slotAdvice',
+  slot_target_wait: 'setup.slotTargetWait',
+  slot_max_overbook: 'setup.slotMaxOverbook',
+  slot_history_weeks: 'setup.slotHistoryWeeks',
 } as const;
 
 function Rules({ editable }: { editable: boolean }) {
