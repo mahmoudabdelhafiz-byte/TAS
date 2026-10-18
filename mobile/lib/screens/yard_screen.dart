@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../api.dart';
+import '../location.dart';
 import '../strings.dart';
 import '../theme.dart';
 import '../voice.dart';
@@ -75,9 +76,9 @@ class _YardScreenState extends State<YardScreen> {
       Position? position = _position;
       if (position == null) {
         try {
-          final permission = await Geolocator.checkPermission();
+          final permission = await locations.checkPermission();
           if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
-            position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high))
+            position = await locations.current(const LocationSettings(accuracy: LocationAccuracy.high))
                 .timeout(const Duration(seconds: 8));
           }
         } catch (_) {
@@ -135,9 +136,9 @@ class _YardScreenState extends State<YardScreen> {
   /// The truck's dot on the map and whether it is moving, live while this screen is open.
   Future<void> _follow() async {
     try {
-      final permission = await Geolocator.checkPermission();
+      final permission = await locations.checkPermission();
       if (permission != LocationPermission.always && permission != LocationPermission.whileInUse) return;
-      _positions = Geolocator.getPositionStream(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high))
+      _positions = locations.stream(const LocationSettings(accuracy: LocationAccuracy.high))
           .listen((p) {
         if (!mounted) return;
         setState(() {

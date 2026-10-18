@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'api.dart';
+import 'location.dart';
 import 'models.dart';
 import 'strings.dart';
 
@@ -38,10 +39,13 @@ class ReportPolicy {
 enum TrackingProblem { locationOff, permissionDenied }
 
 class TripTracker extends ChangeNotifier {
-  TripTracker(this._api, {this.policy = const ReportPolicy()});
+  TripTracker(this._api, {this.policy = const ReportPolicy(), this.inside = insidePolicy});
 
   final DriverApi _api;
   final ReportPolicy policy;
+
+  /// After gate-in.
+  final ReportPolicy inside;
 
   String? _appointmentNo;
   StreamSubscription<Position>? _subscription;
@@ -76,18 +80,18 @@ class TripTracker extends ChangeNotifier {
     _inside = inside;
     last = null;
 
-    var permission = await Geolocator.checkPermission();
+    var permission = await locations.checkPermission();
     // Ask once per app start; the appointment list retries every minute and shouldn't keep popping the question.
     if (permission == LocationPermission.denied && !_asked) {
       _asked = true;
-      permission = await Geolocator.requestPermission();
+      permission = await locations.requestPermission();
     }
     if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
       _appointmentNo = null;
       _setProblem(TrackingProblem.permissionDenied);
       return;
     }
-    if (!await Geolocator.isLocationServiceEnabled()) {
+    if (!await locations.serviceEnabled()) {
       // The appointment list asks again every minute, so tracking starts once location is on.
       _appointmentNo = null;
       _setProblem(TrackingProblem.locationOff);
@@ -96,7 +100,7 @@ class TripTracker extends ChangeNotifier {
     problem = null;
     notifyListeners();
 
-    _subscription = Geolocator.getPositionStream(locationSettings: settingsFor(lang, inside: inside)).listen(
+    _subscription = locations.stream(settingsFor(lang, inside: inside)).listen(
       _onPosition,
       onError: (Object e) {
         if (e is LocationServiceDisabledException) _setProblem(TrackingProblem.locationOff);
@@ -119,7 +123,7 @@ class TripTracker extends ChangeNotifier {
     final moved = _lastSent == null
         ? null
         : Geolocator.distanceBetween(_lastSent!.latitude, _lastSent!.longitude, position.latitude, position.longitude);
-    if (!(_inside ? insidePolicy : policy).due(now: now, lastAt: _lastAt, movedMeters: moved)) return;
+    if (!(_inside ? inside : policy).due(now: now, lastAt: _lastAt, movedMeters: moved)) return;
 
     _sending = true;
     try {

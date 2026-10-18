@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
 import 'brand.dart';
+import 'demo.dart';
 import 'push.dart';
 import 'screens/appointments.dart';
 import 'screens/login.dart';
@@ -11,7 +12,7 @@ import 'theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(YardsyncsDriverApp(api: DriverApi()));
+  runApp(YardsyncsDriverApp(api: demoMode ? DriverApi(client: startDemo()) : DriverApi()));
 }
 
 /// App state: language and whether the driver is signed in.

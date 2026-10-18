@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../brand.dart';
+import '../demo.dart';
 import '../models.dart';
 import '../strings.dart';
 import '../theme.dart';
@@ -92,6 +93,14 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 8),
             Text(_codeSent ? t('codeSent', {'mobile': _mobile.text.trim()}) : t('signInLead'),
                 style: const TextStyle(fontSize: 16, color: muted)),
+            if (demoMode) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: teal.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
+                child: Text(t('demoHint'), style: const TextStyle(fontSize: 15, color: ink)),
+              ),
+            ],
             const SizedBox(height: 28),
             if (!_codeSent) ...[
               TextField(

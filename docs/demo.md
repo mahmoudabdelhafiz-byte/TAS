@@ -41,10 +41,26 @@ The sign-in page lists the roles; one click signs in (any password works when ty
 Good things to try: book a truck with BL `MEDUJD260001` (one container is on customs hold and is refused, one has
 storage charges), the control room map, **Ask the assistant**, switching to Arabic (top right).
 
-Excel downloads say they are not in the demo. The driver app is not part of it.
+Excel downloads say they are not in the demo. The driver app has its own demo (below).
 
 ## Sample data
 
 `web/demo/mock.mjs` holds the answers (one day at the fictional *Demo Container Terminal*); `web/demo/demo.js` answers
 the portal's `/api/…` calls from it and moves every date to the day the demo is shown. When a new screen is added,
 add its answers to `mock.mjs`; CI builds the demo so it keeps compiling.
+
+## Driver app demo (Android)
+
+The driver app with the same kind of sample data on the phone, no server: CI builds it on every change as the
+artifact **yardsyncs-driver-demo-apk** (Actions → the latest run on `main` → Artifacts; kept 30 days). Unzip it and
+send `yardsyncs-driver-demo.apk` to an Android phone, open it and allow installing from that source. To build it
+yourself: `flutter build apk --release --dart-define=YARDSYNCS_DEMO=true` (see `mobile/README.md`).
+
+- Sign in with any mobile number and any 6 digits.
+- **Today's visit** (green): press **I am leaving now** — the truck drives itself to the terminal (about a minute) with
+  the arrival time, passes the gate, then **Where to go** shows the yard map: drop the empty at E1, pick up the import
+  at B2, then the exit, with the turns spoken in the app's language. At each stop the truck stops and waits for **Done here**.
+- **Messages**: ready-made messages, text, **Share where I am** — the control room answers after a few seconds.
+- **Safety**: a notice to confirm and the induction (right answers: 25 km/h; stop and let it pass).
+- **My record**: one speeding entry to dispute. **Tomorrow's visit** is amber (storage charges), yesterday's is completed.
+- Signing out starts the demo again. Location, SMS and push are not used.
