@@ -5,6 +5,7 @@ import type { AdminResponse, Category, Holiday, Override, OverrideAction, SlotBo
 import { useApp } from '../ui/context.tsx';
 import { ActionButton, DayStepper, LoadError, Notice, Panel, useLoad } from '../ui/kit.tsx';
 import { categoryName } from './Book.tsx';
+import { SlotAdvicePanel } from './SlotAdvice.tsx';
 
 const actionText = { Close: 'slots.action.Close', Set: 'slots.action.Set', Adjust: 'slots.action.Adjust' } as const;
 
@@ -137,6 +138,8 @@ export function SlotBoard() {
             ))}
           </ul>
         )}
+
+        <SlotAdvicePanel editable={editable} onError={setError} onChanged={changed} />
       </div>
 
       {open && (

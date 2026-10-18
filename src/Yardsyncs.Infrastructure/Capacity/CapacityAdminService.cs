@@ -357,6 +357,10 @@ public sealed class CapacityAdminService(
             [TerminalSettings.DriverLimitPointsKey] = settings.DriverLimitPoints,
             [TerminalSettings.DriverRecordToCompanyKey] = settings.DriverRecordToCompany ? 1 : 0,
             [TerminalSettings.InductionModeKey] = settings.InductionMode,
+            [TerminalSettings.SlotAdviceKey] = settings.SlotAdvice,
+            [TerminalSettings.SlotTargetWaitKey] = settings.SlotTargetWaitMinutes,
+            [TerminalSettings.SlotMaxOverbookKey] = settings.SlotMaxOverbookPct,
+            [TerminalSettings.SlotHistoryWeeksKey] = settings.SlotHistoryWeeks,
         };
     }
 

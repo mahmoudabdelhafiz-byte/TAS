@@ -392,6 +392,20 @@ table.grid { width: 100%; border-collapse: collapse; }
 .overrides li:last-child { border-bottom-width: 1px; border-end-start-radius: var(--radius); border-end-end-radius: var(--radius); }
 .overrides .btn { min-height: 32px; padding: 4px 12px; }
 
+/* Suggestions from the history: when, what and why, approve or dismiss. */
+.advice li {
+  display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; gap: 14px; align-items: center;
+  padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-bottom-width: 0;
+  border-inline-start: 4px solid var(--teal);
+}
+.advice li.advice-BusyDay, .advice li.advice-LowerCapacity { border-inline-start-color: var(--amber); }
+.advice li:first-child { border-start-start-radius: var(--radius); border-start-end-radius: var(--radius); }
+.advice li:last-child { border-bottom-width: 1px; border-end-start-radius: var(--radius); border-end-end-radius: var(--radius); }
+.advice-when { font-weight: 600; }
+.advice-what { display: grid; gap: 2px; }
+.advice-actions { display: flex; gap: 8px; }
+.advice .btn { min-height: 32px; padding: 4px 12px; }
+
 .cat-bars li { display: grid; grid-template-columns: minmax(0, 1fr) 110px 52px; gap: 10px; align-items: center; padding: 5px 0; font-size: 14px; }
 .cat-bar { height: 8px; background: #e8eef1; border-radius: 2px; overflow: hidden; }
 .cat-bar span { display: block; height: 100%; }
@@ -455,6 +469,7 @@ table.grid { width: 100%; border-collapse: collapse; }
   .yard-picture { max-height: 120px; }
   .two, .move-fields { grid-template-columns: minmax(0, 1fr); }
   .overrides li { grid-template-columns: minmax(0, 1fr) auto; }
+  .advice li { grid-template-columns: minmax(0, 1fr); }
   .figures { margin-inline-start: 0; }
 }
 

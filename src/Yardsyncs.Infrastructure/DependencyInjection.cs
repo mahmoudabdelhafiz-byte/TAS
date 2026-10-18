@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<AvailabilityQueryService>();
         services.AddScoped<BookingCounterStore>();
         services.AddScoped<CapacityAdminService>();
+        services.AddScoped<SlotAdviceService>();
 
         // Master data
         services.AddScoped<FleetService>();

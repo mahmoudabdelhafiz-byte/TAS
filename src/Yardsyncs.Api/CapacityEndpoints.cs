@@ -8,6 +8,9 @@ public sealed record ReleaseRulesBody(IReadOnlyList<ReleaseRuleInput> Rules, str
 
 public sealed record SettingsBody(Dictionary<string, int> Values, string? Reason);
 
+/// <param name="Approve">True applies the suggestion; false dismisses it for four weeks.</param>
+public sealed record AdviceDecisionBody(string Key, bool Approve);
+
 /// <summary>
 /// Planner / terminal admin configuration under /api/terminals/{terminalId}.
 /// Reading: terminal staff of the terminal. Changing: planners and terminal admins of the terminal.
@@ -36,6 +39,15 @@ public static class CapacityEndpoints
             int terminalId, int templateId, ReasonInput? body, HttpContext http, CapacityAdminService service, CancellationToken ct) =>
             CanManage(http, terminalId)
             ?? ToResult(await service.DeactivateTemplateAsync(YardsyncsApi.User(http)!, terminalId, templateId, body?.Reason, ct)));
+
+        // ---------------------------------------------------------- suggestions from the history (AI-optimised slots 1)
+
+        capacity.MapGet("/advice", async (int terminalId, HttpContext http, SlotAdviceService service, CancellationToken ct) =>
+            CanView(http, terminalId) ?? Results.Ok(await service.AdviceAsync(terminalId, ct)));
+
+        capacity.MapPost("/advice/decide", async (int terminalId, AdviceDecisionBody body, HttpContext http, SlotAdviceService service, CancellationToken ct) =>
+            CanManage(http, terminalId)
+            ?? ToResult(await service.DecideAsync(YardsyncsApi.User(http)!, terminalId, body.Key ?? "", body.Approve, ct)));
 
         // ---------------------------------------------------------- overrides
 
