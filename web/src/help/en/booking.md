@@ -5,7 +5,8 @@
 1. Open **Book a truck**.
 2. **What is the truck doing?** Choose the move: import pickup, export drop-off, empty return, empty pickup or cargo.
 3. Pick the day and an **Arrival hour**. Each hour shows how many places are free; **Full** and **Closed** hours
-   can't be booked.
+   can't be booked. Once the terminal has a few weeks of gate history, **Fast gate** marks hours when trucks usually
+   get in quickly and **Busy gate** hours when they usually queue (point at it for the usual minutes).
 4. Under **Moves on this truck** enter the **Container number** (for an empty pickup a **Booking reference** is
    enough; for cargo the **BL / delivery order** and the **Planned tonnes**). **Add a move** puts a second move on the
    same truck, for example an export drop-off and an import pickup.

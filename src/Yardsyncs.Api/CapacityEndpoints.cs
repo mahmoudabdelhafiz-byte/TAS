@@ -108,9 +108,14 @@ public static class CapacityEndpoints
         terminal.MapGet("/settings", async (int terminalId, HttpContext http, CapacityAdminService service, CancellationToken ct) =>
             CanView(http, terminalId) ?? Results.Ok(await service.GetSettingsAsync(terminalId, ct)));
 
-        terminal.MapPut("/settings", async (int terminalId, SettingsBody body, HttpContext http, CapacityAdminService service, CancellationToken ct) =>
-            CanManage(http, terminalId)
-            ?? ToResult(await service.UpdateSettingsAsync(YardsyncsApi.User(http)!, terminalId, body.Values ?? new Dictionary<string, int>(), body.Reason, ct)));
+        terminal.MapPut("/settings", async (int terminalId, SettingsBody body, HttpContext http, CapacityAdminService service, GateSpeedCache gateSpeed, CancellationToken ct) =>
+        {
+            if (CanManage(http, terminalId) is { } denied)
+                return denied;
+            var result = await service.UpdateSettingsAsync(YardsyncsApi.User(http)!, terminalId, body.Values ?? new Dictionary<string, int>(), body.Reason, ct);
+            gateSpeed.Forget(terminalId); // the target wait or the history weeks may have changed
+            return ToResult(result);
+        });
 
         // Terminal KPIs for local dates from..to (at most 92 days): slot use, no-shows, punctuality, walk-ins, turn time.
         terminal.MapGet("/kpis", async (int terminalId, DateOnly from, DateOnly to, HttpContext http, Yardsyncs.Infrastructure.Reports.KpiService service, CancellationToken ct) =>

@@ -201,6 +201,12 @@ export function Book() {
                     <span className="hour-free">
                       {s.isClosed ? t('book.closed') : s.available <= 0 ? t('book.full') : t('book.free', { n: s.available })}
                     </span>
+                    {!unavailable && (s.gateSpeed === 'Fast' || s.gateSpeed === 'Slow') && (
+                      <span className={`hour-speed ${s.gateSpeed === 'Fast' ? 'fast' : 'slow'}`}
+                        title={s.expectedWaitMinutes == null ? undefined : t('book.wait', { n: s.expectedWaitMinutes })}>
+                        {s.gateSpeed === 'Fast' ? t('book.fast') : t('book.slow')}
+                      </span>
+                    )}
                   </label>
                 );
               })}

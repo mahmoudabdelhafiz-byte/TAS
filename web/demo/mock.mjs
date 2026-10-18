@@ -97,7 +97,10 @@ export function availability(date) {
   return Array.from({ length: 17 }, (_, i) => {
     const h = 6 + i;
     const full = h === 9 || h === 10;
-    return { slotId: 200 + h, startAt: iso(date, h), endAt: iso(date, h + 1), isClosed: h === 13, available: full ? 0 : Math.max(1, Math.round(15 * (1 - load[h]))) };
+    const wait = [8, 11, 18, 26, 31, 24, 15, 0, 14, 21, 17, 12, 13, 11, 9, 7, 6][i];
+    const speed = wait === 0 ? null : wait <= 10 ? 'Fast' : wait > 20 ? 'Slow' : 'Normal';
+    return { slotId: 200 + h, startAt: iso(date, h), endAt: iso(date, h + 1), isClosed: h === 13, available: full ? 0 : Math.max(1, Math.round(15 * (1 - load[h]))),
+      expectedWaitMinutes: wait || null, gateSpeed: speed };
   });
 }
 export const overrides = (date) => [
@@ -400,7 +403,7 @@ export function route(method, path, query, body) {
     { reservationId: 2, companyId: 7, category: 'IMP_PICKUP', startAt: iso('2026-10-18', 6), endAt: iso('2026-11-18', 14), unitsPerSlot: 4, releaseHoursBefore: 12, isActive: true },
   ]];
   if (path.endsWith('/capacity/release-rules')) return [200, method === 'GET' ? [{ category: 'MTY_RETURN', hoursBefore: 12 }] : { data: [], regeneratedSlots: null }];
-  if (path.endsWith('/settings')) return [200, method === 'GET' ? { early_grace_min: 30, late_grace_min: 30, cancel_cutoff_min: 60, max_appt_per_truck_per_day: 6, report_hour: 6, report_weekday: 0, induction_mode: 1, slot_advice: 1, slot_target_wait: 20, slot_max_overbook: 15, slot_history_weeks: 8, driver_points_days: 90, driver_warn_points: 6, driver_limit_points: 10, driver_record_company: 1 } : { data: {}, regeneratedSlots: null }];
+  if (path.endsWith('/settings')) return [200, method === 'GET' ? { early_grace_min: 30, late_grace_min: 30, cancel_cutoff_min: 60, max_appt_per_truck_per_day: 6, report_hour: 6, report_weekday: 0, induction_mode: 1, slot_advice: 1, slot_target_wait: 20, slot_max_overbook: 15, slot_history_weeks: 8, slot_gate_speed: 1, driver_points_days: 90, driver_warn_points: 6, driver_limit_points: 10, driver_record_company: 1 } : { data: {}, regeneratedSlots: null }];
   if (path.endsWith('/appointments/bulk')) {
     const dry = query.get('dryRun') === 'true';
     const rows = [

@@ -107,6 +107,9 @@ export interface SlotAvailability {
   endAt: string;
   isClosed: boolean;
   available: number;
+  /** The usual minutes from arrival to gate-in at this hour (null without enough history). */
+  expectedWaitMinutes?: number | null;
+  gateSpeed?: 'Fast' | 'Normal' | 'Slow' | null;
 }
 
 export type AppointmentStatus =

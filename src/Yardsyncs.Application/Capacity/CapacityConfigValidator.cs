@@ -43,6 +43,7 @@ public static class CapacityConfigValidator
         [TerminalSettings.SlotTargetWaitKey] = (5, 240),
         [TerminalSettings.SlotMaxOverbookKey] = (0, 50),
         [TerminalSettings.SlotHistoryWeeksKey] = (4, 26),
+        [TerminalSettings.SlotGateSpeedKey] = (0, 1),
     };
 
     // ------------------------------------------------------------ templates

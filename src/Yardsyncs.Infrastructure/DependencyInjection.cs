@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<BookingCounterStore>();
         services.AddScoped<CapacityAdminService>();
         services.AddScoped<SlotAdviceService>();
+        services.AddSingleton<GateSpeedCache>();
+        services.AddScoped<GateSpeedService>();
 
         // Master data
         services.AddScoped<FleetService>();
