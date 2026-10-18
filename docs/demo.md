@@ -43,10 +43,14 @@ storage charges), the control room map, **Ask the assistant**, switching to Arab
 
 Excel downloads say they are not in the demo. The driver app has its own demo (below).
 
+**Truck appointment system only:** open the demo with `?edition=tas` (for example
+`https://example.com/yardsyncs-demo/?edition=tas`) to show a customer who buys only the TAS: the Autogate screens
+(**Remote clerk**, **Inspections**) leave the menu and the bar says so. The choice lasts until the browser tab is closed.
+
 ## Sample data
 
 `web/demo/mock.mjs` holds the answers (one day at the fictional *Demo Container Terminal*); `web/demo/demo.js` answers
-the portal's `/api/…` calls from it and moves every date to the day the demo is shown. When a new screen is added,
+the portal's `/api/…` calls from it and moves every date, and the date inside each appointment number (`DEMO-261015-…`), to the day the demo is shown. When a new screen is added,
 add its answers to `mock.mjs`; CI builds the demo so it keeps compiling.
 
 ## Driver app demo (Android)

@@ -8,8 +8,20 @@ const shiftDays = Math.round((Date.parse(riyadhToday) - Date.parse(sampleDay)) /
 globalThis.__demoShiftMs = shiftDays * DAY;
 
 const DATE = /\b(20\d\d)-(\d\d)-(\d\d)\b/g;
-const moveDates = (text, days) => days === 0 ? text : text.replace(DATE, (_, y, m, d) =>
-  new Date(Date.UTC(+y, +m - 1, +d) + days * DAY).toISOString().slice(0, 10));
+const APPOINTMENT = /\bDEMO-(\d\d)(\d\d)(\d\d)-/g;           // appointment numbers carry their day: DEMO-261015-…
+const move = (y, m, d, days) => new Date(Date.UTC(+y, +m - 1, +d) + days * DAY).toISOString().slice(0, 10);
+const moveDates = (text, days) => days === 0 ? text : text
+  .replace(DATE, (_, y, m, d) => move(y, m, d, days))
+  .replace(APPOINTMENT, (_, y, m, d) => `DEMO-${move(`20${y}`, m, d, days).slice(2).replaceAll('-', '')}-`);
+
+// ?edition=tas shows the truck appointment system alone (no Autogate screens), for customers who buy only that.
+const params = new URLSearchParams(location.search);
+let edition = params.get('edition');
+try {
+  if (edition) sessionStorage.setItem('yardsyncs.demo.edition', edition);
+  else edition = sessionStorage.getItem('yardsyncs.demo.edition');
+} catch { /* private window */ }
+globalThis.__tasOnly = edition === 'tas';
 
 const notInDemo = { title: 'Not in the demo', detail: 'This action is not available in the demo. Everything else on this screen works with sample data.' };
 const realFetch = window.fetch.bind(window);
@@ -18,7 +30,7 @@ window.fetch = async (input, init = {}) => {
   const url = new URL(typeof input === 'string' ? input : input.url, location.href);
   const at = url.pathname.indexOf('/api/');
   if (at < 0) return realFetch(input, init);
-  const path = url.pathname.slice(at);
+  const path = moveDates(decodeURIComponent(url.pathname.slice(at)), -shiftDays);
   const method = (init.method ?? 'GET').toUpperCase();
   const query = new URLSearchParams(moveDates(url.search, -shiftDays));
   let body = null;
@@ -70,7 +82,8 @@ function decorate() {
     bar.id = 'demo-bar';
     document.body.prepend(bar);
   }
-  const barText = ar ? 'نسخة تجريبية ببيانات افتراضية — لا يُحفظ شيء.' : 'Demo with sample data — nothing is saved.';
+  const barText = (ar ? 'نسخة تجريبية ببيانات افتراضية — لا يُحفظ شيء.' : 'Demo with sample data — nothing is saved.')
+    + (globalThis.__tasOnly ? (ar ? ' نظام مواعيد الشاحنات فقط.' : ' Truck appointment system only.') : '');
   if (bar.textContent !== barText) bar.textContent = barText;
 
   const form = document.querySelector('input[type=password]')?.closest('form');
