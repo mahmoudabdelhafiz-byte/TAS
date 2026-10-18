@@ -1,13 +1,9 @@
 // The demo portal: the real screens, answered in the browser from sample data (mock.mjs) instead of the API.
 // Nothing is saved; a page reload starts the demo again. Built by build.mjs into a folder of static files.
-import { route, today as sampleDay } from './mock.mjs';
+import { DAY, shiftDays } from './shift.js'; // first: the sample data reads the shift when it loads
+import { route } from './mock.mjs';
 
-const DAY = 864e5;
-const riyadhToday = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
-const shiftDays = Math.round((Date.parse(riyadhToday) - Date.parse(sampleDay)) / DAY);
-globalThis.__demoShiftMs = shiftDays * DAY;
-
-const DATE = /\b(20\d\d)-(\d\d)-(\d\d)\b/g;
+const DATE = /\b(20\d\d)-(\d\d)-(\d\d)(?!\d)/g;          // also inside timestamps (2026-10-15T08:00…)
 const APPOINTMENT = /\bDEMO-(\d\d)(\d\d)(\d\d)-/g;           // appointment numbers carry their day: DEMO-261015-…
 const move = (y, m, d, days) => new Date(Date.UTC(+y, +m - 1, +d) + days * DAY).toISOString().slice(0, 10);
 const moveDates = (text, days) => days === 0 ? text : text
