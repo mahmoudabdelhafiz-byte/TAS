@@ -43,5 +43,14 @@ public static class IntegrationEventTypes
     /// <summary>The driver confirmed a stop is done ("Done here").</summary>
     public const string StopCompleted = "STOP_COMPLETED";
 
-    public static IReadOnlyList<string> All => [TruckCheckedIn, TruckAtBlock, StopCompleted];
+    /// <summary>A visit was booked: the pre-announcement for a zone system such as Nafith.</summary>
+    public const string AppointmentBooked = "APPOINTMENT_BOOKED";
+
+    /// <summary>A visit moved to another hour, or its truck or driver changed.</summary>
+    public const string AppointmentChanged = "APPOINTMENT_CHANGED";
+
+    /// <summary>A visit was cancelled.</summary>
+    public const string AppointmentCancelled = "APPOINTMENT_CANCELLED";
+
+    public static IReadOnlyList<string> All => [TruckCheckedIn, TruckAtBlock, StopCompleted, AppointmentBooked, AppointmentChanged, AppointmentCancelled];
 }

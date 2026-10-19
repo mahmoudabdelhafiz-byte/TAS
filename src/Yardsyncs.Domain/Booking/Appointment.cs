@@ -54,6 +54,9 @@ public enum CheckType
 
     /// <summary>The TOS could not be reached; the item is re-checked later.</summary>
     TosUnavailable,
+
+    /// <summary>The truck's or driver's entry permit in the zone system around the terminal (e.g. Nafith).</summary>
+    ZonePermit,
 }
 
 /// <summary>One truck visit to the terminal, holding one or more moves.</summary>

@@ -33,7 +33,8 @@ public sealed class GateService(
     Yardsyncs.Infrastructure.DriverApp.YardGuidanceService? yard = null,
     Microsoft.Extensions.Configuration.IConfiguration? config = null,
     IEnumerable<IGateHook>? hooks = null,
-    IExitCheck? exitCheck = null)
+    IExitCheck? exitCheck = null,
+    Yardsyncs.Application.Zone.IZoneSystem? zone = null)
 {
     // ================================================================ arrival
 
@@ -181,6 +182,34 @@ public sealed class GateService(
                 match = match with { Warnings = match.Warnings.Append(induction).ToList() };
             if (campaigns.Count > 0)
                 match = match with { Warnings = match.Warnings.Concat(campaigns).ToList() };
+        }
+
+        // The zone system's entry permit (Nafith): a truck without one goes to the trouble desk; if the zone system
+        // can't be reached the clerk gets a warning (the zone's own gate still checks the permit).
+        if (zone is not null && match.Appointment is not null && found is not null
+            && await TerminalProfiles.CodeAsync(db, terminalId, ct) is { } zoneTerminal && zone.CoversTerminal(zoneTerminal))
+        {
+            var zoneDriverId = found.DriverId;
+            var zoneDriver = zoneDriverId is null ? null : await db.Drivers.AsNoTracking()
+                .Where(d => d.DriverId == zoneDriverId).Select(d => new { d.IdNumber, d.Mobile }).SingleOrDefaultAsync(ct);
+            var zonePlate = found.Plate ?? (plate.Length > 0 ? plate : null);
+            try
+            {
+                var permit = await zone.PermitAsync(zoneTerminal,
+                    new Yardsyncs.Application.Zone.ZoneTruck(zonePlate, zoneDriver?.IdNumber, zoneDriver?.Mobile), now, ct);
+                if (Yardsyncs.Application.Zone.ZoneRules.GateProblem(zone.Name, zonePlate, permit) is { } permitProblem)
+                {
+                    if (decision.Kind == GateDecisionKind.Admit)
+                        decision = new GateDecision(GateDecisionKind.Refer, TroubleReason.Blocked, permitProblem);
+                    else
+                        match = match with { Warnings = match.Warnings.Append(permitProblem).ToList() };
+                }
+            }
+            catch (Yardsyncs.Application.Zone.ZoneUnavailableException ex)
+            {
+                logger.LogWarning(ex, "{Zone} unreachable for the entry permit at lane {Lane}", zone.Name, lane.LaneCode);
+                match = match with { Warnings = match.Warnings.Append($"{zone.Name} could not be reached to check the entry permit.").ToList() };
+            }
         }
 
         if (!record)

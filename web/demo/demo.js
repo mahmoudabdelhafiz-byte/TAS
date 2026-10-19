@@ -19,6 +19,18 @@ try {
 } catch { /* private window */ }
 globalThis.__tasOnly = edition === 'tas';
 
+// ?zone=nafith: the terminal works next to Nafith (Egypt's economic zones): customs clearance comes from Nafith.
+let zone = params.get('zone');
+try {
+  if (zone) sessionStorage.setItem('yardsyncs.demo.zone', zone);
+  else zone = sessionStorage.getItem('yardsyncs.demo.zone');
+} catch { /* private window */ }
+const nafith = zone === 'nafith';
+const zoneTexts = (text) => !nafith ? text : text
+  .replaceAll('MSCU7654329: customs hold (inspection)', 'MSCU7654329: not cleared by customs in NAFITH (inspection pending)')
+  .replaceAll('Customs hold on MSCU7654329', 'MSCU7654329: not cleared by customs in NAFITH (inspection pending)')
+  .replaceAll('Customs hold (inspection)', 'Not cleared by customs in NAFITH (inspection pending)');
+
 const notInDemo = { title: 'Not in the demo', detail: 'This action is not available in the demo. Everything else on this screen works with sample data.' };
 const realFetch = window.fetch.bind(window);
 
@@ -45,7 +57,7 @@ window.fetch = async (input, init = {}) => {
   }
   await new Promise(r => setTimeout(r, 120));
   if (status === 204 || json === null) return new Response(null, { status: status === 404 ? 404 : 204 });
-  return new Response(moveDates(JSON.stringify(json), shiftDays), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(zoneTexts(moveDates(JSON.stringify(json), shiftDays)), { status, headers: { 'Content-Type': 'application/json' } });
 };
 
 // The demo accounts, on the sign-in page.
@@ -79,7 +91,8 @@ function decorate() {
     document.body.prepend(bar);
   }
   const barText = (ar ? 'نسخة تجريبية ببيانات افتراضية — لا يُحفظ شيء.' : 'Demo with sample data — nothing is saved.')
-    + (globalThis.__tasOnly ? (ar ? ' نظام مواعيد الشاحنات فقط.' : ' Truck appointment system only.') : '');
+    + (globalThis.__tasOnly ? (ar ? ' نظام مواعيد الشاحنات فقط.' : ' Truck appointment system only.') : '')
+    + (nafith ? (ar ? ' متصل بمنصة نافذ (محاكاة).' : ' Connected to Nafith (simulated).') : '');
   if (bar.textContent !== barText) bar.textContent = barText;
 
   const form = document.querySelector('input[type=password]')?.closest('form');

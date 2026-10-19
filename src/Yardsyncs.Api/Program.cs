@@ -663,6 +663,7 @@ app.MapMessages();
 app.MapReportExports();
 app.MapDriverRecords();
 app.MapSafety();
+app.MapZone();
 
 // ================================================================ development helpers
 

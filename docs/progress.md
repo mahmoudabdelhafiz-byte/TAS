@@ -607,6 +607,16 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Per-terminal setting `slot_gate_speed` (on / off); kept 30 minutes per terminal, recomputed when the settings change |
 | ✅ | Demo: sample fast and busy hours; `?edition=tas` for the truck appointment system alone; dates inside timestamps and appointment numbers follow the day shown |
 
+### 65. Zone truck platform connector: Nafith (2026-10-19)
+| | Item |
+|---|---|
+| ✅ | Zone system as an extension point (`IZoneSystem`): customs clearance per container added to the TOS checks at booking, every re-check and the gate (not cleared = refused; unknown or unreachable = warning, re-checked); the truck's and driver's entry permit at the gate (none = trouble desk) |
+| ✅ | Nafith adapter: Live (configurable paths, API key, tolerant readers), Simulator for demos and tests, Off by default; per terminal (`Nafith__Terminals`) |
+| ✅ | Pre-announcements to the zone through the terminal's webhook: `APPOINTMENT_BOOKED`, `APPOINTMENT_CHANGED` (moved, truck or driver), `APPOINTMENT_CANCELLED`, with truck, driver and containers; only queued when the terminal's webhook takes them |
+| ✅ | Yard events in: `POST /api/zone/events` with the zone's key — truck entered / released from the yard (noted; a booked visit becomes on the way), permit withdrawn, clearance changed (its visits re-checked at once) |
+| ✅ | Demo `?zone=nafith`; [nafith.md](nafith.md) with the contract and configuration |
+| ⬜ | Map to Nafith's real API once its documentation and test environment are shared; driver and truck lists from Nafith |
+
 ---
 
 ## Remaining
