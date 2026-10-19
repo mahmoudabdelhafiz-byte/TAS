@@ -220,6 +220,7 @@
     "hold.Vgm": "VGM",
     "hold.Cutoff": "Cut-off",
     "hold.CargoRelease": "Cargo release",
+    "hold.ZonePermit": "Zone entry permit",
     "kpi.last7": "Last 7 days",
     "kpi.last30": "Last 30 days",
     "kpi.next7": "Next 7 days",

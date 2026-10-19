@@ -47,6 +47,10 @@ Excel downloads say they are not in the demo. The driver app has its own demo (b
 `https://example.com/yardsyncs-demo/?edition=tas`) to show a customer who buys only the TAS: the Autogate screens
 (**Remote clerk**, **Inspections**) leave the menu and the bar says so. The choice lasts until the browser tab is closed.
 
+**Next to Nafith (economic zones):** `?zone=nafith` shows customs clearance as it comes from Nafith ("not cleared by
+customs in NAFITH") and the bar says the terminal is connected to Nafith (simulated). Both can be combined:
+`?edition=tas&zone=nafith`. See [nafith.md](nafith.md) for the real connector.
+
 ## Sample data
 
 `web/demo/mock.mjs` holds the answers (one day at the fictional *Demo Container Terminal*); `web/demo/demo.js` answers

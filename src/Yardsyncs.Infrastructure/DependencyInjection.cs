@@ -64,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.DriverAppService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.DriverRecordService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.SafetyService>();
+        services.AddScoped<Yardsyncs.Infrastructure.Zone.ZoneEventService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.GatePassService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.TripTrackingService>();
         services.AddScoped<Yardsyncs.Infrastructure.DriverApp.YardGuidanceService>();
@@ -129,6 +130,9 @@ public static class DependencyInjection
         services.AddHttpClient<IN4Client, ArgoServiceClient>(c => c.Timeout = Timeout.InfiniteTimeSpan); // per-terminal timeout in the client
         services.AddScoped<N4TosAdapter>();
         services.AddScoped<TosRouter>();
+        // The zone system around the terminals (Nafith): customs clearance with the TOS checks, entry permits at the gate.
+        services.Configure<Yardsyncs.Infrastructure.Zone.NafithOptions>(config.GetSection("Nafith"));
+        services.AddHttpClient<Yardsyncs.Application.Zone.IZoneSystem, Yardsyncs.Infrastructure.Zone.NafithZoneSystem>(c => c.Timeout = Timeout.InfiniteTimeSpan);
         services.AddScoped<ITosAdapter>(sp => sp.GetRequiredService<TosRouter>());
 
         return services;

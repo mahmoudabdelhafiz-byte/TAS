@@ -28,7 +28,8 @@ public sealed class BookingService(
     TimeProvider clock,
     ILogger<BookingService> logger,
     TosSettings? tosSettings = null,
-    ChargeService? charges = null)
+    ChargeService? charges = null,
+    Microsoft.Extensions.Options.IOptions<Yardsyncs.Infrastructure.Integration.IntegrationOptions>? integration = null)
 {
     private readonly TosUnavailablePolicy _onTosUnavailable = (tosSettings ?? new TosSettings()).OnUnavailable;
 
@@ -297,6 +298,8 @@ public sealed class BookingService(
             await charges.ChargeAsync(appointment, ChargeKind.Booking, ct);
             await db.SaveChangesAsync(ct);
         }
+        if (await AnnounceAsync(appointment.TerminalId, appointment.AppointmentId, IntegrationEventTypes.AppointmentBooked, null, ct))
+            await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
         logger.LogInformation("Booked {AppointmentNo} for company {CompanyId} in slot {SlotId}", appointment.AppointmentNo, p.Company.CompanyId, p.Slot.SlotId);
@@ -330,6 +333,7 @@ public sealed class BookingService(
         if (charges is not null)
             await charges.CancelledAsync(appointment!, appointment!.Slot.StartAt, byTerminal: user.IsTerminalStaff, user.UserId, ct);
         AddHistory(appointment!, AppointmentStatus.Cancelled, user.UserId, string.IsNullOrWhiteSpace(reason) ? "Cancelled" : reason, now);
+        await AnnounceAsync(terminalId, appointment!.AppointmentId, IntegrationEventTypes.AppointmentCancelled, reason, ct);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
@@ -396,6 +400,7 @@ public sealed class BookingService(
             Reason = Truncate($"Moved from {TimeZoneInfo.ConvertTime(oldStart, timeZone):yyyy-MM-dd HH:mm} to {TimeZoneInfo.ConvertTime(newSlot.StartAt, timeZone):yyyy-MM-dd HH:mm}", 300),
             ChangedAt = now,
         });
+        await AnnounceAsync(terminalId, appointment.AppointmentId, IntegrationEventTypes.AppointmentChanged, "Moved to another hour", ct);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
@@ -423,8 +428,54 @@ public sealed class BookingService(
                 .SetProperty(a => a.DriverId, driverId), ct);
         if (updated == 0)
             return BookingOutcome.Conflict("The appointment changed in the meantime; reload and try again.");
+        if (await AnnounceAsync(terminalId, appointment.AppointmentId, IntegrationEventTypes.AppointmentChanged, "Truck or driver changed", ct))
+            await db.SaveChangesAsync(ct);
 
         return BookingOutcome.Updated((await queries.GetAsync(terminalId, appointment.AppointmentNo, ct))!);
+    }
+
+    /// <summary>
+    /// Tells the terminal's systems about a booking change (the pre-announcement a zone system such as Nafith needs to
+    /// issue the entry permit), when its webhook takes this event. Queued in the outbox, saved with the caller's change.
+    /// </summary>
+    private async Task<bool> AnnounceAsync(int terminalId, long appointmentId, string eventType, string? reason, CancellationToken ct)
+    {
+        if (integration is null)
+            return false;
+        var code = await TerminalProfiles.CodeAsync(db, terminalId, ct);
+        if (code is null || !integration.Value.Terminals.TryGetValue(code, out var hook) || !hook.Wants(eventType))
+            return false;
+
+        var visit = await db.Appointments.AsNoTracking()
+            .Where(a => a.AppointmentId == appointmentId)
+            .Select(a => new
+            {
+                a.AppointmentNo,
+                a.Status,
+                a.Slot.StartAt,
+                a.Slot.EndAt,
+                Company = a.Company.Name,
+                Plate = a.Truck != null ? a.Truck.PlateNumber : null,
+                DriverName = a.Driver != null ? a.Driver.FullName : null,
+                DriverIdNumber = a.Driver != null ? a.Driver.IdNumber : null,
+                DriverMobile = a.Driver != null ? a.Driver.Mobile : null,
+                Items = a.Items.OrderBy(i => i.ItemId).Select(i => new { i.ContainerNo, Category = i.Category.Code, i.BookingRef }).ToList(),
+            })
+            .SingleAsync(ct);
+        Yardsyncs.Infrastructure.Integration.IntegrationEventQueue.Add(db, terminalId, eventType, appointmentId, new
+        {
+            terminal = code,
+            appointmentNo = visit.AppointmentNo,
+            status = visit.Status.ToString(),
+            slotStart = visit.StartAt,
+            slotEnd = visit.EndAt,
+            company = visit.Company,
+            truck = new { plate = visit.Plate },
+            driver = visit.DriverName is null ? null : new { name = visit.DriverName, idNumber = visit.DriverIdNumber, mobile = visit.DriverMobile },
+            moves = visit.Items.Select(i => new { container = i.ContainerNo, category = i.Category, bookingRef = i.BookingRef }),
+            reason,
+        }, clock.GetUtcNow());
+        return true;
     }
 
     // ------------------------------------------------------------------ shared
