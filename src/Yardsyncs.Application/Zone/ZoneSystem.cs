@@ -59,12 +59,12 @@ public static class ZoneRules
     public static IReadOnlyList<TosCheck> ClearanceChecks(string system, IReadOnlyList<TosItemQuery> items, IReadOnlyList<ZoneClearance> answers)
     {
         var byContainer = answers
-            .GroupBy(a => a.ContainerNo.Trim().ToUpperInvariant())
+            .GroupBy(a => Booking.ContainerNumber.Normalize(a.ContainerNo))
             .ToDictionary(g => g.Key, g => g.First());
         var checks = new List<TosCheck>();
         foreach (var item in items.Where(i => i.ContainerNo is not null && i.Mode == CategoryMode.Container))
         {
-            var container = item.ContainerNo!.Trim().ToUpperInvariant();
+            var container = Booking.ContainerNumber.Normalize(item.ContainerNo!);
             if (!byContainer.TryGetValue(container, out var answer))
                 answer = new ZoneClearance(container, ZoneClearanceState.Unknown, null, null);
             checks.Add(answer.State switch

@@ -20,7 +20,7 @@ public sealed class ZoneTosAdapter(ITosAdapter inner, IZoneSystem zone, string t
     {
         var checks = (await inner.ValidateAsync(terminalId, items, ct)).ToList();
         var containers = items.Where(i => i.ContainerNo is not null && i.Mode == CategoryMode.Container)
-            .Select(i => i.ContainerNo!.Trim().ToUpperInvariant()).Distinct().ToList();
+            .Select(i => Yardsyncs.Application.Booking.ContainerNumber.Normalize(i.ContainerNo!)).Distinct().ToList();
         if (containers.Count == 0)
             return checks;
         try
