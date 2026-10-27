@@ -53,6 +53,7 @@ public class YardsyncsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Auth:AdminTwoStep", "Optional"); // required by default; TwoStepApiTests checks it
         builder.UseSetting("PasswordLinks:ExposeTokenForTesting", "true");
         builder.UseSetting("FakeTos:CustomsHold:0", "MSCU7654329");
+        builder.UseSetting("FakeTos:CustomsHold:1", "JN1TBNT30Z0123460"); // a vehicle (RoRo) on customs hold
         builder.UseSetting("FakeTos:PaymentWarning:0", "CMAU5100028");
         builder.UseSetting("FakeTos:GateRefused:0", "MSCU5523417"); // the demo TOS refuses this one at the gate
         builder.UseSetting("FakeTos:YardPositions:MSCU1234566", "B2.14.03.2");

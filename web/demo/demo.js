@@ -1,7 +1,7 @@
 // The demo portal: the real screens, answered in the browser from sample data (mock.mjs) instead of the API.
 // Nothing is saved; a page reload starts the demo again. Built by build.mjs into a folder of static files.
 import { DAY, shiftDays } from './shift.js'; // first: the sample data reads the shift when it loads
-import { route } from './mock.mjs';
+import { route, useRoro } from './mock.mjs';
 
 const DATE = /\b(20\d\d)-(\d\d)-(\d\d)(?!\d)/g;          // also inside timestamps (2026-10-15T08:00…)
 const APPOINTMENT = /\bDEMO-(\d\d)(\d\d)(\d\d)-/g;           // appointment numbers carry their day: DEMO-261015-…
@@ -18,6 +18,8 @@ try {
   else edition = sessionStorage.getItem('yardsyncs.demo.edition');
 } catch { /* private window */ }
 globalThis.__tasOnly = edition === 'tas';
+// ?edition=roro adds vehicles (RoRo): car carriers booked by VIN, a drive-away visit and a vehicle on customs hold.
+if (edition === 'roro') useRoro();
 
 // ?zone=nafith: the terminal works next to Nafith (Egypt's economic zones): customs clearance comes from Nafith.
 let zone = params.get('zone');

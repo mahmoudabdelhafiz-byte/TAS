@@ -140,7 +140,7 @@ public sealed class BulkBookingService(YardsyncsDbContext db, BookingService boo
 
             var request = new BookingRequest(
                 companyId, userId, slotId, truckId, driverId,
-                visit.Rows.Select(r => new BookingItemRequest(r.Category!, r.ContainerNo, r.IsoType, r.BookingRef, r.EdoRef, r.CargoRef, r.PlannedTonnage)).ToList());
+                visit.Rows.Select(r => new BookingItemRequest(r.Category!, r.ContainerNo, r.IsoType, r.BookingRef, r.EdoRef, r.CargoRef, r.PlannedTonnage, r.Vin, r.VehicleDesc)).ToList());
 
             db.ChangeTracker.Clear();
 

@@ -3,7 +3,7 @@ using Yardsyncs.Domain.Booking;
 
 namespace Yardsyncs.Application.Tos;
 
-/// <summary>One move to check against the terminal operating system.</summary>
+/// <summary>One move to check against the terminal operating system (a vehicle move carries its VIN, no container).</summary>
 public sealed record TosItemQuery(
     int Index,
     string CategoryCode,
@@ -12,7 +12,8 @@ public sealed record TosItemQuery(
     string? BookingRef,
     string? EdoRef,
     string? CargoRef,
-    DateTimeOffset SlotStart);
+    DateTimeOffset SlotStart,
+    string? Vin = null);
 
 /// <summary>The result of one TOS check for one item.</summary>
 public sealed record TosCheck(int ItemIndex, CheckType Type, CheckResult Result, string? Message, string? TosRef = null);

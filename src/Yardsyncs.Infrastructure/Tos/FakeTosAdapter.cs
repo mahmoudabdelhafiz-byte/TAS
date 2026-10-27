@@ -51,6 +51,9 @@ public sealed class FakeTosOptions
     /// <summary>Blocks used for unlisted import / empty pickups.</summary>
     public List<string> DefaultBlocks { get; set; } = [];
 
+    /// <summary>RoRo parking areas used for vehicles (VIN) without a listed position.</summary>
+    public List<string> VehicleBlocks { get; set; } = [];
+
     /// <summary>Block where deliveries of a move type go, e.g. EXP_DROP → E1, MTY_RETURN → M1.</summary>
     public Dictionary<string, string> ReceivalBlocks { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -102,6 +105,24 @@ public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : IT
             {
                 Check(CheckType.CargoRelease, o.CargoNotReleased, item.CargoRef, $"Cargo {item.CargoRef} is not released by customs");
                 Check(CheckType.Payment, o.Unpaid, item.CargoRef, $"Charges for {item.CargoRef} are unpaid");
+                continue;
+            }
+
+            // RoRo: vehicles by VIN, in the same lists as containers.
+            if (item.Mode == CategoryMode.Vehicle)
+            {
+                var vin = item.Vin;
+                if (TosContract.KindOf(item) == MoveKind.VehicleExport)
+                {
+                    Check(CheckType.BookingValid, o.InvalidBookings, item.BookingRef, $"Booking {item.BookingRef} is not valid");
+                    Check(CheckType.Cutoff, o.ClosedBookings, item.BookingRef, $"Cut-off has passed for booking {item.BookingRef}");
+                    continue;
+                }
+                Check(CheckType.Availability, o.NotAvailable, vin, $"Vehicle {vin} is not in the terminal yet");
+                Check(CheckType.CustomsRelease, o.CustomsHold, vin, $"Customs hold on vehicle {vin}");
+                Check(CheckType.LineRelease, o.LineHold, vin, $"Shipping line has not released vehicle {vin}");
+                Check(CheckType.TerminalHold, o.TerminalHold, vin, $"Terminal hold on vehicle {vin}");
+                Check(CheckType.Payment, o.Unpaid, vin, $"Charges for vehicle {vin} are unpaid");
                 continue;
             }
 
@@ -167,6 +188,12 @@ public sealed class FakeTosAdapter(IOptionsMonitor<FakeTosOptions> options) : IT
             else if (o.ReceivalBlocks.TryGetValue(code, out var block))
             {
                 result.Add(new TosYardPosition(item.Index, block, null, null));
+            }
+            else if (item.Vin is { Length: 17 } vin && o.VehicleBlocks.Count > 0)
+            {
+                // RoRo: a made-up parking row and bay from the VIN's serial digits, the same every time.
+                var n = vin[^6..].Where(char.IsDigit).Sum(ch => ch - '0');
+                result.Add(new TosYardPosition(item.Index, o.VehicleBlocks[n % o.VehicleBlocks.Count], $"{1 + n % 12:00}.{1 + (n / 2) % 30:00}", null));
             }
             else if (item.ContainerNo is { Length: >= 11 } c && o.DefaultBlocks.Count > 0)
             {

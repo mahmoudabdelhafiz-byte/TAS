@@ -46,9 +46,16 @@ public sealed partial class OnboardingService(
     [GeneratedRegex("^[A-Z0-9]{2,20}$")]
     private static partial Regex CodePattern();
 
-    /// <summary>The move types most terminals start with; a multipurpose terminal also gets breakbulk delivery.</summary>
+    /// <summary>The move types most terminals start with; a multipurpose terminal also gets breakbulk delivery; a RoRo terminal gets vehicle moves.</summary>
     public static IReadOnlyList<(string Code, string En, string Ar, CategoryMode Mode, UnitType Unit)> StandardMoveTypes(TerminalType type)
     {
+        if (type == TerminalType.Roro)
+            return
+            [
+                ("RORO_PICKUP", "Vehicle pickup (car carrier)", "استلام مركبات (ناقلة سيارات)", CategoryMode.Vehicle, UnitType.Move),
+                ("RORO_DRIVEAWAY", "Vehicle drive-away", "استلام مركبة بالقيادة", CategoryMode.Vehicle, UnitType.Move),
+                ("RORO_EXPORT", "Export vehicle delivery", "تسليم مركبات للتصدير", CategoryMode.Vehicle, UnitType.Move),
+            ];
         var list = new List<(string, string, string, CategoryMode, UnitType)>
         {
             ("IMP_PICKUP", "Import pickup", "استلام حاوية وارد", CategoryMode.Container, UnitType.Move),
@@ -161,7 +168,8 @@ public sealed partial class OnboardingService(
             db.TransactionCategories.Add(new TransactionCategory
             {
                 TerminalId = terminal.TerminalId, Code = code, NameEn = en, NameAr = ar, Mode = mode, UnitType = unit, SortOrder = order,
-                Flow = TransactionCategory.GuessFlow(code),
+                Flow = code switch { "RORO_DRIVEAWAY" => CategoryFlow.Out, "RORO_EXPORT" => CategoryFlow.In, _ => TransactionCategory.GuessFlow(code) },
+                DriveAway = code == "RORO_DRIVEAWAY",
             });
             added++;
         }

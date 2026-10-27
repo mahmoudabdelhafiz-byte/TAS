@@ -95,10 +95,10 @@ public static class BulkFiles
         var d = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         return
         [
-            ["V1", d, "10:00", "EXP_DROP", "HLXU8700018", "45G1", "BKG1001", "", "", "", "1234 ABJ", "1012345678"],
-            ["V1", d, "10:00", "IMP_PICKUP", "MSCU1234566", "", "", "EDO-5501", "", "", "1234 ABJ", "1012345678"],
-            ["", d, "11:00", "MTY_RETURN", "MAEU4001110", "", "", "", "", "", "5678 HDR", "2012345678"],
-            ["", d, "12:00", "BB_DELIVERY", "", "", "", "", "BL-STEEL-001", "28", "", ""],
+            ["V1", d, "10:00", "EXP_DROP", "HLXU8700018", "45G1", "BKG1001", "", "", "", "1234 ABJ", "1012345678", "", ""],
+            ["V1", d, "10:00", "IMP_PICKUP", "MSCU1234566", "", "", "EDO-5501", "", "", "1234 ABJ", "1012345678", "", ""],
+            ["", d, "11:00", "MTY_RETURN", "MAEU4001110", "", "", "", "", "", "5678 HDR", "2012345678", "", ""],
+            ["", d, "12:00", "BB_DELIVERY", "", "", "", "", "BL-STEEL-001", "28", "", "", "", ""],
         ];
     }
 
@@ -109,6 +109,7 @@ public static class BulkFiles
         "category: the transaction code, e.g. IMP_PICKUP, EXP_DROP, MTY_RETURN, MTY_PICKUP, BB_DELIVERY.",
         "Container moves: container_no (or booking_ref alone for an empty pickup). Export drops: booking_ref. Import pickups: edo_ref if you have one.",
         "Breakbulk / bulk: cargo_ref (BL / DO) instead of a container; planned_tonnage optional.",
+        "RoRo (vehicles): one row per vehicle with its vin (chassis number) and, if you like, vehicle_desc (make / model); a car carrier's vehicles share a 'visit'. cargo_ref: the vehicle's BL if you have it.",
         "Dual transaction: give the rows the same 'visit' value (same date, time, truck and driver). Up to 4 moves per visit.",
         "truck_plate and driver_id (ID / Iqama) are optional; they must be registered for your company. Arabic plates are accepted.",
         "Upload with dryRun=true first to see what would be booked and why anything would fail. Nothing is booked in a dry run.",

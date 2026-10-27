@@ -347,7 +347,7 @@ public sealed class GateService(
         // The exit check (an add-on such as Autogate): what is on the truck against what should leave.
         var now = clock.GetUtcNow();
         var items = await db.AppointmentItems.AsNoTracking().Where(i => i.AppointmentId == appointment.AppointmentId)
-            .Select(i => new ExitItem(i.Category.Code, i.Category.Mode, i.Category.Flow, i.ContainerNo)).ToListAsync(ct);
+            .Select(i => new ExitItem(i.Category.Code, i.Category.Mode, i.Category.Flow, i.ContainerNo ?? i.Vin)).ToListAsync(ct);
         var exitContext = new ExitContext(terminalId, lane, appointment.AppointmentId, appointment.TruckId, input.PlateRead,
             input.ContainerReads, input.WeightKg, items, now);
         var check = exitCheck is null

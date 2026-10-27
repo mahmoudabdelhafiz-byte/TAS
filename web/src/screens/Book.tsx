@@ -14,9 +14,14 @@ interface ItemDraft {
   bookingRef: string;
   cargoRef: string;
   tonnage: string;
+  vin: string;
+  vehicleDesc: string;
 }
 
-const emptyItem = (category: string): ItemDraft => ({ category, containerNo: '', bookingRef: '', cargoRef: '', tonnage: '' });
+const emptyItem = (category: string): ItemDraft => ({ category, containerNo: '', bookingRef: '', cargoRef: '', tonnage: '', vin: '', vehicleDesc: '' });
+
+/** The most vehicles the form offers on one car carrier (the terminal's own limit is checked when booking). */
+const MAX_VEHICLES = 20;
 
 export function categoryName(c: Category | undefined, code: string, lang: string): string {
   if (!c) return code;
@@ -73,6 +78,10 @@ export function Book() {
   const now = Date.now();
   const chosen = slots.data?.find(s => s.slotId === slotId) ?? null;
   const containerMove = byCode.get(mainCategory)?.mode === 'Container';
+  // RoRo: a car carrier takes several vehicles of the same move type; a drive-away visit is one vehicle and no truck.
+  const vehicleMove = byCode.get(mainCategory)?.mode === 'Vehicle';
+  const driveAway = vehicleMove && !!byCode.get(mainCategory)?.driveAway;
+  const maxItems = vehicleMove ? (driveAway ? 1 : MAX_VEHICLES) : 4;
   const severalTrucks = many && containerMove;
   const pickedHours = (slots.data ?? []).filter(s => hourSet.includes(s.slotId));
 
@@ -87,6 +96,8 @@ export function Book() {
     setRefusal(null);
     const payload: BookingItemInput[] = items.map(item => {
       const mode = byCode.get(item.category)?.mode;
+      if (mode === 'Vehicle')
+        return { category: item.category, vin: item.vin.trim(), vehicleDesc: item.vehicleDesc.trim() || undefined, cargoRef: item.cargoRef.trim() || undefined };
       return mode === 'Cargo'
         ? { category: item.category, cargoRef: item.cargoRef.trim(), plannedTonnage: item.tonnage ? Number(item.tonnage) : undefined }
         : { category: item.category, containerNo: item.containerNo.trim() || undefined, bookingRef: item.bookingRef.trim() || undefined };
@@ -95,7 +106,7 @@ export function Book() {
       const appointment = await api.post<Appointment>(`${base}/appointments`, {
         slotId: chosen.slotId,
         companyId: companyUser ? undefined : companyId,
-        truckId: truckId ? Number(truckId) : undefined,
+        truckId: truckId && !driveAway ? Number(truckId) : undefined,
         driverId: driverId ? Number(driverId) : undefined,
         items: payload,
       });
@@ -161,7 +172,11 @@ export function Book() {
               {(categories.data ?? []).map(c => (
                 <label key={c.code} className={mainCategory === c.code ? 'seg active' : 'seg'}>
                   <input type="radio" name="category" value={c.code} checked={mainCategory === c.code}
-                    onChange={() => setItems(list => [{ ...(list[0] ?? emptyItem(c.code)), category: c.code }, ...list.slice(1)])} />
+                    onChange={() => setItems(list =>
+                      // Vehicles (RoRo) never share a visit with containers or cargo: start again when switching.
+                      c.mode === 'Vehicle' || byCode.get(list[0]?.category ?? '')?.mode === 'Vehicle'
+                        ? [emptyItem(c.code)]
+                        : [{ ...(list[0] ?? emptyItem(c.code)), category: c.code }, ...list.slice(1)])} />
                   {categoryName(c, c.code, lang)}
                 </label>
               ))}
@@ -226,12 +241,12 @@ export function Book() {
               return (
                 <div className="move" key={index}>
                   <div className="move-head">
-                    <span className="move-label">{t('book.move', { n: index + 1 })}</span>
-                    {index === 0
+                    <span className="move-label">{t(vehicleMove ? 'book.vehicle' : 'book.move', { n: index + 1 })}</span>
+                    {index === 0 || vehicleMove
                       ? <span className="move-cat">{categoryName(category, item.category, lang)}</span>
                       : (
                         <select value={item.category} onChange={e => update(index, { category: e.target.value })} aria-label={t('book.category')}>
-                          {(categories.data ?? []).map(c => <option key={c.code} value={c.code}>{categoryName(c, c.code, lang)}</option>)}
+                          {(categories.data ?? []).filter(c => c.mode !== 'Vehicle').map(c => <option key={c.code} value={c.code}>{categoryName(c, c.code, lang)}</option>)}
                         </select>
                       )}
                     {index > 0 && (
@@ -240,7 +255,17 @@ export function Book() {
                       </button>
                     )}
                   </div>
-                  {category?.mode === 'Cargo' ? (
+                  {category?.mode === 'Vehicle' ? (
+                    <div className="move-fields">
+                      <label className="field"><span>{t('book.vin')}</span>
+                        <input value={item.vin} dir="ltr" placeholder="WDD2050421R123456" className="mono-ish" maxLength={21}
+                          onChange={e => update(index, { vin: e.target.value.toUpperCase() })} /></label>
+                      <label className="field"><span>{t('book.vehicleDesc')}</span>
+                        <input value={item.vehicleDesc} maxLength={60} onChange={e => update(index, { vehicleDesc: e.target.value })} /></label>
+                      <label className="field"><span>{t('book.vehicleBl')}</span>
+                        <input value={item.cargoRef} dir="ltr" onChange={e => update(index, { cargoRef: e.target.value.toUpperCase() })} /></label>
+                    </div>
+                  ) : category?.mode === 'Cargo' ? (
                     <div className="move-fields">
                       <label className="field"><span>{t('book.cargoRef')}</span>
                         <input value={item.cargoRef} dir="ltr" onChange={e => update(index, { cargoRef: e.target.value })} /></label>
@@ -259,19 +284,20 @@ export function Book() {
                 </div>
               );
             })}
-            {items.length > 0 && items.length < 4 && (
+            {items.length > 0 && items.length < maxItems && (
               <button type="button" className="btn btn-quiet" onClick={() => setItems(list => [...list, emptyItem(mainCategory)])}>
-                {t('book.addMove')}
+                {t(vehicleMove ? 'book.addVehicle' : 'book.addMove')}
               </button>
             )}
+            {driveAway && <p className="hint">{t('book.driveAwayNote')}</p>}
           </fieldset>
 
           <fieldset className="block two">
-            <label className="field"><span>{t('book.truck')}</span>
+            {!driveAway && <label className="field"><span>{t('book.truck')}</span>
               <select value={truckId} onChange={e => setTruckId(e.target.value)} dir="ltr">
                 <option value="">{t('book.later')}</option>
                 {(fleet.data?.trucks ?? []).filter(x => !x.isBlocked).map(x => <option key={x.truckId} value={x.truckId}>{x.plateNumber}</option>)}
-              </select></label>
+              </select></label>}
             <label className="field"><span>{t('book.driver')}</span>
               <select value={driverId} onChange={e => setDriverId(e.target.value)}>
                 <option value="">{t('book.later')}</option>

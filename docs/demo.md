@@ -51,6 +51,10 @@ Excel downloads say they are not in the demo. The driver app has its own demo (b
 customs in NAFITH") and the bar says the terminal is connected to Nafith (simulated). Both can be combined:
 `?edition=tas&zone=nafith`. See [nafith.md](nafith.md) for the real connector.
 
+**RoRo (vehicles):** `?edition=roro` adds vehicle move types: a car carrier with six vehicles booked by VIN, a
+drive-away visit with no truck, and a vehicle on customs hold. **Book a truck** → **Vehicle pickup (car carrier)** shows
+the VIN fields and **Add a vehicle**.
+
 ## Sample data
 
 `web/demo/mock.mjs` holds the answers (one day at the fictional *Demo Container Terminal*); `web/demo/demo.js` answers

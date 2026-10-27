@@ -7,7 +7,8 @@ using Yardsyncs.Infrastructure.Persistence;
 
 namespace Yardsyncs.Infrastructure.DriverApp;
 
-public sealed record DriverMove(string Category, string CategoryEn, string CategoryAr, string? ContainerNo, string? BookingRef, string? CargoRef);
+public sealed record DriverMove(string Category, string CategoryEn, string CategoryAr, string? ContainerNo, string? BookingRef, string? CargoRef,
+    string? Vin = null, string? VehicleDesc = null);
 
 /// <param name="UtcOffsetMinutes">The terminal's UTC offset at the slot, so the app shows terminal time without a time-zone database.</param>
 /// <param name="GateCode">What the lane reads (QR) — only while the appointment can still pass the gate.</param>
@@ -109,7 +110,7 @@ public sealed class DriverAppService(YardsyncsDbContext db, AppointmentQueryServ
                 i.Category,
                 names.TryGetValue(i.Category, out var n) ? n.NameEn : i.Category,
                 names.TryGetValue(i.Category, out var m) ? m.NameAr : i.Category,
-                i.ContainerNo, i.BookingRef, i.CargoRef)).ToList(),
+                i.ContainerNo, i.BookingRef, i.CargoRef, i.Vin, i.VehicleDesc)).ToList(),
             live ? dto.QrToken : null,
             dto.Eta,
             await db.AppointmentMessages.CountAsync(m => m.AppointmentId != null

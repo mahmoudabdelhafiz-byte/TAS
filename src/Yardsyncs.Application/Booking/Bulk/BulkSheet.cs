@@ -17,7 +17,9 @@ public sealed record BulkRow(
     string? CargoRef,
     decimal? PlannedTonnage,
     string? TruckPlate,
-    string? DriverId);
+    string? DriverId,
+    string? Vin = null,
+    string? VehicleDesc = null);
 
 /// <summary>Rows that make up one truck visit (one appointment).</summary>
 public sealed record BulkVisit(string Key, IReadOnlyList<BulkRow> Rows, DateOnly Date, TimeOnly Time, string? TruckPlate, string? DriverId);
@@ -27,6 +29,7 @@ public sealed record RowError(int Row, string Message);
 /// <summary>
 /// Reads an upload laid out as a table with a header row. Columns (any order, case-insensitive):
 ///   visit · date · time · category · container_no · iso_type · booking_ref · edo_ref · cargo_ref · planned_tonnage · truck_plate · driver_id
+///   · vin · vehicle_desc (RoRo: one row per vehicle; a car carrier's vehicles share a visit)
 /// Required: date, time, category. Rows sharing a <c>visit</c> value become one appointment (e.g. a dual
 /// transaction); rows without one are each their own visit.
 /// </summary>
@@ -34,8 +37,11 @@ public static class BulkSheet
 {
     public const int MaxRows = 500;
 
+    /// <summary>The most vehicles a visit can list in a file (each terminal sets its own lower limit).</summary>
+    public const int MaxVehiclesPerVisit = 20;
+
     public static readonly IReadOnlyList<string> Columns =
-        ["visit", "date", "time", "category", "container_no", "iso_type", "booking_ref", "edo_ref", "cargo_ref", "planned_tonnage", "truck_plate", "driver_id"];
+        ["visit", "date", "time", "category", "container_no", "iso_type", "booking_ref", "edo_ref", "cargo_ref", "planned_tonnage", "truck_plate", "driver_id", "vin", "vehicle_desc"];
 
     private static readonly string[] Required = ["date", "time", "category"];
 
@@ -53,6 +59,8 @@ public static class BulkSheet
         ["tonnage"] = "planned_tonnage", ["tons"] = "planned_tonnage",
         ["truck"] = "truck_plate", ["plate"] = "truck_plate", ["plate_no"] = "truck_plate",
         ["driver"] = "driver_id", ["driver_id_number"] = "driver_id", ["iqama"] = "driver_id", ["id_number"] = "driver_id",
+        ["chassis"] = "vin", ["chassis_no"] = "vin", ["vin_no"] = "vin", ["chassis_number"] = "vin",
+        ["vehicle"] = "vehicle_desc", ["make_model"] = "vehicle_desc", ["model"] = "vehicle_desc", ["description"] = "vehicle_desc",
     };
 
     private static readonly string[] DateFormats = ["yyyy-MM-dd", "yyyy/MM/dd", "dd/MM/yyyy", "d/M/yyyy", "dd-MM-yyyy", "d-M-yyyy", "dd.MM.yyyy"];
@@ -134,7 +142,9 @@ public static class BulkSheet
                 Cell(line, "cargo_ref"),
                 tonnage,
                 Cell(line, "truck_plate"),
-                Cell(line, "driver_id")));
+                Cell(line, "driver_id"),
+                Cell(line, "vin"),
+                Cell(line, "vehicle_desc")));
         }
 
         if (rows.Count == 0 && errors.Count == 0)
@@ -153,6 +163,7 @@ public static class BulkSheet
         var errors = new List<RowError>();
         var parsed = new List<(BulkRow Row, DateOnly Date, TimeOnly Time)>();
         var containers = new Dictionary<string, int>();
+        var vins = new Dictionary<string, int>();
 
         foreach (var row in rows)
         {
@@ -173,6 +184,15 @@ public static class BulkSheet
                     containers[container] = row.RowNumber;
             }
 
+            if (row.Vin is not null)
+            {
+                var vin = Vin.Normalize(row.Vin);
+                if (vins.TryGetValue(vin, out var firstRow))
+                    rowErrors.Add($"vehicle {vin} is already on row {firstRow}.");
+                else
+                    vins[vin] = row.RowNumber;
+            }
+
             if (rowErrors.Count > 0)
                 errors.AddRange(rowErrors.Select(e => new RowError(row.RowNumber, e)));
             else
@@ -186,9 +206,11 @@ public static class BulkSheet
             var first = items[0];
             var problems = new List<RowError>();
 
-            if (items.Count > BookingRequestValidator.MaxItemsPerAppointment)
+            // A car carrier takes several vehicles (the terminal's own limit is checked at booking); other visits at most 4 moves.
+            var limit = items.Any(i => i.Row.Vin is not null) ? MaxVehiclesPerVisit : BookingRequestValidator.MaxItemsPerAppointment;
+            if (items.Count > limit)
                 problems.Add(new RowError(first.Row.RowNumber,
-                    $"visit '{first.Row.Visit}' has {items.Count} moves; a truck visit can have at most {BookingRequestValidator.MaxItemsPerAppointment}."));
+                    $"visit '{first.Row.Visit}' has {items.Count} moves; a truck visit can have at most {limit}."));
 
             foreach (var other in items.Skip(1))
             {

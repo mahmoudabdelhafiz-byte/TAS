@@ -54,7 +54,8 @@ const lanes = [
   lane(4, 'OUT-1', 'Out', { mode: 'Automatic', transaction: { transactionId: 6, laneCode: 'OUT-1', status: 'Passed', startedAt: '2026-10-15T07:55:00+00:00', lastReadAt: '2026-10-15T07:55:02+00:00', decidedAt: '2026-10-15T07:55:03+00:00', closedAt: '2026-10-15T07:55:09+00:00', readCount: 1, plate: '5678HDR', containers: [], appointmentNo: 'DEMO-261015-8MZ1K', gatePassScanned: false, weightKg: null, troubleId: null, reason: null, message: 'Gated out after 52 min.' }, identifies: ['AppointmentNo', 'GatePass', 'Plate', 'Container'], devices: [dev(7, 'OUT1-CAM', 'Camera', ['Plate', 'Container']), dev(8, 'OUT1-BARRIER', 'Barrier')] }),
 ];
 const check = (type, result, message) => ({ item: 1, type, result, message, source: 'TOS' });
-const item = (category, containerNo, checks) => ({ category, containerNo, isoType: '45G1', bookingRef: null, edoRef: null, cargoRef: null, plannedTonnage: null, validationStatus: 'Pass', checks });
+const item = (category, containerNo, checks) => ({ category, containerNo, isoType: containerNo ? '45G1' : null, bookingRef: null, edoRef: null, cargoRef: null, plannedTonnage: null, validationStatus: 'Pass', checks });
+const vehicle = (category, vin, vehicleDesc, cargoRef, checks) => ({ ...item(category, null, checks), vin, vehicleDesc, cargoRef });
 const appt = (no, hour, status, light, reason, plate, driver, items, company = ['Al Noor Transport', 7]) => ({
   appointmentNo: no, status, slotId: 100 + hour, slotStart: iso(today, hour), slotEnd: iso(today, hour + 1),
   slotLocal: `${today} ${String(hour).padStart(2, '0')}:00–${String(hour + 1).padStart(2, '0')}:00`,
@@ -75,9 +76,37 @@ export const appointments = [
   appt('DEMO-261015-5RT2Y', 17, 'Confirmed', 'Green', 'All checks passed.', '7731 NJD', 'Omar Siddiqui', [item('EXP_DROP', 'MSKU9081726', ok)], ['Gulf Haulage', 8]),
 ];
 appointments[5].items[0].bookingRef = 'BKG2210487';
+const [enRouteSample, heldSample] = [appointments[2], appointments[3]]; // useRoro() re-sorts the list
 
 const mix = [['IMP_PICKUP', 15], ['EXP_DROP', 12], ['MTY_RETURN', 8], ['MTY_PICKUP', 6], ['BB_DELIVERY', 5]];
 const load = [0, 0, 0, 0, 0, 0, 0.35, 0.8, 0.95, 1.0, 0.9, 0.85, 0.7, 0, 0.75, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05, 0];
+
+// ?edition=roro (demo.js): the terminal also handles vehicles. Car carriers book each vehicle by VIN; a drive-away visit
+// has no truck; one vehicle is on customs hold.
+const HELD_VIN = 'JN1TBNT30Z0123460';
+export function useRoro() {
+  if (categories.some(c => c.mode === 'Vehicle')) return;
+  [['RORO_PICKUP', 'Vehicle pickup (car carrier)', 'استلام مركبات (ناقلة سيارات)', false],
+   ['RORO_DRIVEAWAY', 'Vehicle drive-away', 'خروج مركبة بالقيادة', true],
+   ['RORO_EXPORT', 'Vehicle export delivery', 'تسليم مركبات للتصدير', false]]
+    .forEach(([code, nameEn, nameAr, driveAway]) => categories.push({ categoryId: categories.length + 1, code, nameEn, nameAr, mode: 'Vehicle',
+      unitType: 'Move', sortOrder: categories.length + 1, isActive: true, driveAway, flow: code === 'RORO_EXPORT' ? 'In' : 'Out' }));
+  mix.push(['RORO_PICKUP', 24], ['RORO_DRIVEAWAY', 6]);
+  const bl = 'NYKS260415AB';
+  const carrier = [['JTDBR32E730012457', 'Toyota Corolla'], ['JTDBR32E730012461', 'Toyota Corolla'], ['KMHCT41BAEU123458', 'Hyundai Accent'],
+    ['KMHCT41BAEU123462', 'Hyundai Accent'], ['MALA841CAFM123455', 'Hyundai Creta'], ['JN1TBNT30Z0123456', 'Nissan Sunny']];
+  const held = [check('Availability', 'Pass', 'Discharged, in vehicle park R2'), check('CustomsRelease', 'Fail', 'Customs hold (duty not paid)'), check('LineRelease', 'Pass', 'Line release received')];
+  appointments.push(
+    appt('DEMO-261015-8RC4V', 10, 'EnRoute', 'Green', 'All checks passed.', '3307 KSA', 'Hamad Al-Mutairi',
+      carrier.map(([vin, desc]) => vehicle('RORO_PICKUP', vin, desc, bl, ok)), ['Gulf Haulage', 8]),
+    appt('DEMO-261015-2DV7W', 15, 'Confirmed', 'Green', 'All checks passed.', null, 'Saeed Al-Dosari',
+      [vehicle('RORO_DRIVEAWAY', 'WVWZZZAWZKU012345', 'Volkswagen Polo', 'MAEU261009XY', ok)]),
+    appt('DEMO-261015-6HV2N', 16, 'Confirmed', 'Red', `Customs hold on ${HELD_VIN}.`, '3307 KSA', 'Hamad Al-Mutairi',
+      [vehicle('RORO_PICKUP', HELD_VIN, 'Nissan Sunny', bl, held)], ['Gulf Haulage', 8]),
+  );
+  appointments.sort((a, b) => a.slotStart.localeCompare(b.slotStart));
+}
+
 export function slotBoard(date) {
   return Array.from({ length: 24 }, (_, h) => {
     const closed = h === 13;
@@ -372,7 +401,7 @@ export function route(method, path, query, body) {
       { template: 'STATUS_RED', channel: 'Sms', language: 'ar', status: 'Sent', recipient: '+9665…01', attempts: 1, lastError: null, createdAt: iso(today, 8), sentAt: iso(today, 8) },
       { template: 'STATUS_RED', channel: 'Email', language: 'en', status: 'Sent', recipient: 'dispatcher@…', attempts: 1, lastError: null, createdAt: iso(today, 8), sentAt: iso(today, 8) },
     ]];
-    return [200, appointments.find(a => a.appointmentNo === m[1]) ?? appointments[3]];
+    return [200, appointments.find(a => a.appointmentNo === m[1]) ?? heldSample];
   }
   if (path.endsWith('/appointments') && method === 'GET') {
     const company = query.get('companyId');
@@ -403,7 +432,7 @@ export function route(method, path, query, body) {
     { reservationId: 2, companyId: 7, category: 'IMP_PICKUP', startAt: iso('2026-10-18', 6), endAt: iso('2026-11-18', 14), unitsPerSlot: 4, releaseHoursBefore: 12, isActive: true },
   ]];
   if (path.endsWith('/capacity/release-rules')) return [200, method === 'GET' ? [{ category: 'MTY_RETURN', hoursBefore: 12 }] : { data: [], regeneratedSlots: null }];
-  if (path.endsWith('/settings')) return [200, method === 'GET' ? { early_grace_min: 30, late_grace_min: 30, cancel_cutoff_min: 60, max_appt_per_truck_per_day: 6, report_hour: 6, report_weekday: 0, induction_mode: 1, slot_advice: 1, slot_target_wait: 20, slot_max_overbook: 15, slot_history_weeks: 8, slot_gate_speed: 1, driver_points_days: 90, driver_warn_points: 6, driver_limit_points: 10, driver_record_company: 1 } : { data: {}, regeneratedSlots: null }];
+  if (path.endsWith('/settings')) return [200, method === 'GET' ? { early_grace_min: 30, late_grace_min: 30, cancel_cutoff_min: 60, max_appt_per_truck_per_day: 6, report_hour: 6, report_weekday: 0, induction_mode: 1, slot_advice: 1, slot_target_wait: 20, slot_max_overbook: 15, slot_history_weeks: 8, slot_gate_speed: 1, roro_max_per_truck: 8, driver_points_days: 90, driver_warn_points: 6, driver_limit_points: 10, driver_record_company: 1 } : { data: {}, regeneratedSlots: null }];
   if (path.endsWith('/appointments/bulk')) {
     const dry = query.get('dryRun') === 'true';
     const rows = [
@@ -461,13 +490,17 @@ export function route(method, path, query, body) {
       no === 'MSCU1234567' ? row(no, null, 'Blocked', [`${no} has a wrong check digit — please re-check the number`]) : row(no, null, 'Ready')) } }];
   }
   if (path.endsWith('/appointments') && method === 'POST') {
+    if (body.items.some(i => i.vin === HELD_VIN))
+      return [422, { title: 'Not cleared for booking', detail: 'Item 1: customs hold.', errors: ['Item 1: customs hold.'], checks: [check('CustomsRelease', 'Fail', `${HELD_VIN}: customs hold (duty not paid)`)] }];
     if (body.items.some(i => i.containerNo === 'MSCU7654329'))
       return [422, { title: 'Not cleared for booking', detail: 'Item 1: customs hold.', errors: ['Item 1: customs hold.'], checks: [check('CustomsRelease', 'Fail', 'MSCU7654329: customs hold (inspection)')] }];
     const slot = availability('2026-10-16').find(x => x.slotId === body.slotId) ?? availability('2026-10-16')[4];
     if (body.items.some(i => i.containerNo === 'MEDU2601014')) return [409, { title: 'No capacity', detail: 'This slot is full for Import pickup.' }];
     globalThis.__n = (globalThis.__n ?? 0) + 1;
-    return [201, { ...appointments[2], appointmentNo: `DEMO-261016-${['9TF3A', '4KD8E', '7QW2R', '2MN6P', '5HX1C'][globalThis.__n % 5]}`, status: 'Confirmed', slotStart: slot.startAt, slotEnd: slot.endAt,
-      trafficLight: body.items.some(i => i.containerNo === 'CMAU5100028') ? 'Amber' : 'Green', items: body.items.map(i => item(i.category, i.containerNo, ok)) }];
+    return [201, { ...enRouteSample, appointmentNo: `DEMO-261016-${['9TF3A', '4KD8E', '7QW2R', '2MN6P', '5HX1C'][globalThis.__n % 5]}`, status: 'Confirmed', slotStart: slot.startAt, slotEnd: slot.endAt,
+      trafficLight: body.items.some(i => i.containerNo === 'CMAU5100028') ? 'Amber' : 'Green',
+      truckPlate: body.items.some(i => categories.find(c => c.code === i.category)?.driveAway) ? null : enRouteSample.truckPlate,
+      items: body.items.map(i => i.vin ? vehicle(i.category, i.vin, i.vehicleDesc ?? null, i.cargoRef ?? null, ok) : item(i.category, i.containerNo, ok)) }];
   }
   if (path.endsWith('/report-subscriptions') && method === 'GET') return [200, [
     { subscriptionId: 1, email: 'ops.manager@demo-terminal.example', language: 'en', daily: true, weekly: true, lastDailyOn: today, lastWeeklyOn: '2026-10-11' },

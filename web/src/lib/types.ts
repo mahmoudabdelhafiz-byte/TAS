@@ -71,12 +71,15 @@ export interface Category {
   code: string;
   nameEn: string;
   nameAr: string;
-  mode: 'Container' | 'Cargo';
+  /** Vehicle: RoRo, booked by VIN (a car carrier takes several). */
+  mode: 'Container' | 'Cargo' | 'Vehicle';
   unitType: 'Move' | 'Trip';
   sortOrder: number;
   isActive: boolean;
   /** Which way the cargo goes: In (brought into the terminal), Out (taken out); null = not checked at the exit. */
   flow?: 'In' | 'Out' | null;
+  /** RoRo: the driver drives the vehicle in or out — one vehicle, no truck. */
+  driveAway?: boolean;
 }
 
 export interface Company {
@@ -137,6 +140,9 @@ export interface AppointmentItem {
   checks: Check[];
   /** The seal number the company declared. */
   sealNo?: string | null;
+  /** RoRo: the vehicle's VIN (chassis number) and make / model. */
+  vin?: string | null;
+  vehicleDesc?: string | null;
 }
 
 export interface Appointment {
@@ -167,6 +173,8 @@ export interface BookingItemInput {
   bookingRef?: string;
   cargoRef?: string;
   plannedTonnage?: number;
+  vin?: string;
+  vehicleDesc?: string;
 }
 
 export interface NotificationView {

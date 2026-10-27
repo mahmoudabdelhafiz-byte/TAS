@@ -41,6 +41,14 @@ For a day's plan prepared in a spreadsheet:
 2. **Choose file** and **Check the file**. Checking books nothing: every row is checked and errors are shown by row.
 3. **Book** books every visit that passed; the others stay listed with the reason. Up to 500 rows and 2 MB per file.
 
+## Vehicles (RoRo)
+
+At a RoRo terminal each vehicle is booked by its **VIN (chassis number)**, 17 letters and digits. Choose a vehicle move,
+enter the VIN, **Make and model** and the bill of lading, and **Add a vehicle** for each car on the same car carrier, up
+to the terminal's limit. Vehicles can't share a truck with containers or cargo. A **Drive-away** move is one vehicle
+with no truck: the driver drives it out himself. In the bulk upload, put the VIN in `vin` and the model in
+`vehicle_desc`; rows with the same `visit` go on the same car carrier.
+
 ## Your appointments
 
 **Appointments** lists the day's visits with their hour, truck, driver, moves, status and **Ready to go?**. Open one

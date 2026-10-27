@@ -617,6 +617,17 @@ Details in [`releasing.md`](releasing.md).
 | ✅ | Demo `?zone=nafith`; [nafith.md](nafith.md) with the contract and configuration |
 | ⬜ | Map to Nafith's real API once its documentation and test environment are shared; driver and truck lists from Nafith |
 
+### 66. RoRo terminals: vehicles by VIN (2026-10-27)
+| | Item |
+|---|---|
+| ✅ | Move types in vehicle mode: each vehicle booked by its VIN (17 characters, no I, O or Q), make and model, BL as the release reference; one live visit per vehicle |
+| ✅ | Car carriers: up to the terminal's `roro_max_per_truck` vehicles per visit (default 8, 1–20); vehicles never share a visit with containers or cargo; capacity counted per vehicle |
+| ✅ | Drive-away move types: one vehicle, no truck (the driver drives it out); a truck can't be assigned later |
+| ✅ | TOS checks by VIN (availability, customs, line release, holds, payment; export bookings and cut-off); N4 and the fake TOS; exit check and yard directions by VIN; the driver app shows VIN and model |
+| ✅ | Bulk upload: `vin` and `vehicle_desc` columns (also "chassis", "make model"), a car carrier per `visit`; terminal type RoRo with its standard move types; portal booking, set-up and help in English and Arabic |
+| ✅ | Demo `?edition=roro`: a car carrier with six vehicles, a drive-away visit and a vehicle on customs hold |
+| ⬜ | Vehicle damage inspection by VIN at gate-in and gate-out (next) |
+
 ---
 
 ## Remaining

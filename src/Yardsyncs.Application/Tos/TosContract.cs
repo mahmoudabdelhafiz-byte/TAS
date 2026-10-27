@@ -28,6 +28,10 @@ public static class TosContract
     public static MoveKind KindOf(TosItemQuery item)
     {
         var code = item.CategoryCode.ToUpperInvariant();
+        if (item.Mode == CategoryMode.Vehicle)
+            return code.StartsWith("EXP", StringComparison.Ordinal) || code.Contains("EXPORT", StringComparison.Ordinal) || code.Contains("RECEIVAL", StringComparison.Ordinal)
+                ? MoveKind.VehicleExport
+                : MoveKind.VehiclePickup;
         return item.Mode == CategoryMode.Cargo ? MoveKind.Cargo
             : code.StartsWith("IMP", StringComparison.Ordinal) ? MoveKind.ImportPickup
             : code.StartsWith("EXP", StringComparison.Ordinal) ? MoveKind.ExportDrop
@@ -41,7 +45,9 @@ public static class TosContract
     ///   export drop-off — BookingValid; unless that fails, also Cutoff;
     ///   empty pickup — BookingValid;
     ///   other container moves (empty return…) — TerminalHold;
-    ///   cargo (BL / DO) — CargoRelease.
+    ///   cargo (BL / DO) — CargoRelease;
+    ///   vehicle pickup (RoRo, by VIN) — like an import: Availability, then customs, line, terminal hold and payment;
+    ///   vehicle brought in for export — BookingValid, then Cutoff.
     /// </summary>
     public static IReadOnlyList<CheckType> RequiredChecks(TosItemQuery item, IReadOnlyCollection<TosCheck> answered)
     {
@@ -52,6 +58,8 @@ public static class TosContract
             MoveKind.ImportPickup => Failed(CheckType.Availability) ? [CheckType.Availability] : [CheckType.Availability, .. ImportReleaseChecks],
             MoveKind.ExportDrop => Failed(CheckType.BookingValid) ? [CheckType.BookingValid] : [CheckType.BookingValid, CheckType.Cutoff],
             MoveKind.EmptyPickup => [CheckType.BookingValid],
+            MoveKind.VehiclePickup => Failed(CheckType.Availability) ? [CheckType.Availability] : [CheckType.Availability, .. ImportReleaseChecks],
+            MoveKind.VehicleExport => Failed(CheckType.BookingValid) ? [CheckType.BookingValid] : [CheckType.BookingValid, CheckType.Cutoff],
             _ => [CheckType.TerminalHold],
         };
     }
@@ -140,4 +148,10 @@ public enum MoveKind
     EmptyPickup,
     OtherContainer,
     Cargo,
+
+    /// <summary>RoRo: a vehicle taken out of the terminal (car carrier or drive-away), by VIN.</summary>
+    VehiclePickup,
+
+    /// <summary>RoRo: a vehicle brought in for export, by VIN and the vessel booking.</summary>
+    VehicleExport,
 }

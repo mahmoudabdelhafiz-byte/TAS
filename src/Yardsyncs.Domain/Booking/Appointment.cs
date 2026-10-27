@@ -124,6 +124,12 @@ public sealed class AppointmentItem
     public int? CargoAllocationId { get; set; }
     public CargoAllocation? CargoAllocation { get; set; }
     public int? Trips { get; set; }
+    /// <summary>A vehicle's VIN (chassis number), for RoRo moves.</summary>
+    public string? Vin { get; set; }
+
+    /// <summary>Make and model of the vehicle as the company gives it.</summary>
+    public string? VehicleDesc { get; set; }
+
     public decimal? PlannedTonnage { get; set; }
     public decimal? ActualTonnage { get; set; }
     public ValidationStatus ValidationStatus { get; set; } = ValidationStatus.Pending;

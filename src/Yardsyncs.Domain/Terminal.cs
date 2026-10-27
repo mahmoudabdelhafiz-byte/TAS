@@ -4,6 +4,9 @@ public enum TerminalType
 {
     Container,
     Multipurpose,
+
+    /// <summary>Vehicles (RoRo): car carriers, drive-away and export vehicles, booked by VIN.</summary>
+    Roro,
 }
 
 /// <summary>

@@ -121,3 +121,15 @@ public class TerminalProfilesTests
         Assert.StartsWith("Yardsyncs — ", NotificationText.Render(NotificationTemplates.StatusRed, "en", values).Subject);
     }
 }
+
+/// <summary>A RoRo terminal starts with vehicle move types.</summary>
+public class RoroMoveTypesTests
+{
+    [Fact]
+    public void A_roro_terminal_gets_vehicle_move_types()
+    {
+        var types = Yardsyncs.Infrastructure.Onboarding.OnboardingService.StandardMoveTypes(TerminalType.Roro);
+        Assert.Equal(new[] { "RORO_PICKUP", "RORO_DRIVEAWAY", "RORO_EXPORT" }, types.Select(t => t.Code).ToArray());
+        Assert.All(types, t => Assert.Equal(CategoryMode.Vehicle, t.Mode));
+    }
+}

@@ -51,6 +51,7 @@ public sealed class TerminalDataService(YardsyncsDbContext db, SlotGenerationSer
             SortOrder = input.SortOrder,
             IsActive = input.IsActive,
             Flow = input.Flow ?? TransactionCategory.GuessFlow(code),
+            DriveAway = input.DriveAway,
         };
 
         await using (var tx = await db.Database.BeginTransactionAsync(ct))
@@ -92,6 +93,7 @@ public sealed class TerminalDataService(YardsyncsDbContext db, SlotGenerationSer
         category.IsActive = input.IsActive;
         if (input.Flow is not null)
             category.Flow = input.Flow;
+        category.DriveAway = input.DriveAway;
         Audit(terminalId, "transaction_category", category.CategoryId, AuditAction.Update, before, CategoryView.From(category), actor);
         await db.SaveChangesAsync(ct);
 
