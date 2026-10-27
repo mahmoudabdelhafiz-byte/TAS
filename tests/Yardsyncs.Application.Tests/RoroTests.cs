@@ -2,6 +2,7 @@ using Yardsyncs.Application.Booking;
 using Yardsyncs.Application.Booking.Bulk;
 using Yardsyncs.Application.Gate;
 using Yardsyncs.Domain;
+using Yardsyncs.Domain.Gate;
 
 namespace Yardsyncs.Application.Tests;
 
