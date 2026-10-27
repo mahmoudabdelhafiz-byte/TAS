@@ -65,12 +65,15 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
         var checks = new List<TosCheck>();
         foreach (var item in items)
         {
-            var unit = item.ContainerNo is null ? null : units.GetValueOrDefault(item.ContainerNo);
+            var unitId = item.ContainerNo ?? item.Vin; // RoRo: N4 keeps a vehicle as a unit named by its VIN
+            var unit = unitId is null ? null : units.GetValueOrDefault(unitId);
             var order = item.BookingRef is null ? null : orders.GetValueOrDefault(item.BookingRef);
             var code = item.CategoryCode.ToUpperInvariant();
 
             if (item.Mode == CategoryMode.Cargo)
                 checks.AddRange(Cargo(item, item.CargoRef is null ? null : bls.GetValueOrDefault(item.CargoRef)));
+            else if (item.Mode == CategoryMode.Vehicle)
+                checks.AddRange(TosContract.KindOf(item) == MoveKind.VehicleExport ? ExportDrop(item, unit, order) : ImportPickup(item, unit));
             else if (code.StartsWith("IMP", StringComparison.Ordinal))
                 checks.AddRange(ImportPickup(item, unit));
             else if (code.StartsWith("EXP", StringComparison.Ordinal))
@@ -80,7 +83,7 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
             else if (code == "MTY_RETURN")
                 checks.AddRange(EmptyReturn(item, unit));
             else
-                checks.AddRange(HoldChecks(item.Index, unit?.Holds, item.ContainerNo, unit?.Gkey, [CheckType.TerminalHold]));
+                checks.AddRange(HoldChecks(item.Index, unit?.Holds, item.ContainerNo ?? item.Vin, unit?.Gkey, [CheckType.TerminalHold]));
         }
         return checks;
     }
@@ -89,7 +92,7 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
 
     private IEnumerable<TosCheck> ImportPickup(TosItemQuery item, N4Unit? unit)
     {
-        var ctr = item.ContainerNo;
+        var ctr = item.ContainerNo ?? item.Vin;
         if (unit is null || !unit.Found)
         {
             yield return Fail(item.Index, CheckType.Availability, $"{ctr} is not known in N4");
@@ -114,7 +117,7 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
 
     private IEnumerable<TosCheck> ExportDrop(TosItemQuery item, N4Unit? unit, N4Order? order)
     {
-        var ctr = item.ContainerNo;
+        var ctr = item.ContainerNo ?? item.Vin;
 
         // Booking
         if (item.BookingRef is null)
@@ -183,11 +186,11 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
     private IEnumerable<TosCheck> EmptyReturn(TosItemQuery item, N4Unit? unit)
     {
         if (unit is { Found: true } && unit.TransitState?.ToUpperInvariant() is { } state && InTerminal.Contains(state))
-            yield return Fail(item.Index, CheckType.Availability, $"{item.ContainerNo} is already in the terminal", unit.Gkey);
+            yield return Fail(item.Index, CheckType.Availability, $"{item.ContainerNo ?? item.Vin} is already in the terminal", unit.Gkey);
         else
             yield return Pass(item.Index, CheckType.Availability, unit?.Gkey);
 
-        foreach (var check in HoldChecks(item.Index, unit?.Holds, item.ContainerNo, unit?.Gkey, [CheckType.TerminalHold]))
+        foreach (var check in HoldChecks(item.Index, unit?.Holds, item.ContainerNo ?? item.Vin, unit?.Gkey, [CheckType.TerminalHold]))
             yield return check;
     }
 
@@ -242,7 +245,7 @@ public sealed class N4CheckEvaluator(N4HoldClassifier holds, TimeZoneInfo termin
     /// <summary>The container numbers, orders and BLs to ask N4 about for these items.</summary>
     public static N4LookupRequest RequestFor(IReadOnlyList<TosItemQuery> items) =>
         new(
-            items.Where(i => i.ContainerNo is not null).Select(i => i.ContainerNo!.ToUpperInvariant()).Distinct().ToList(),
+            items.Where(i => (i.ContainerNo ?? i.Vin) is not null).Select(i => (i.ContainerNo ?? i.Vin)!.ToUpperInvariant()).Distinct().ToList(),
             items.Where(i => i.BookingRef is not null && i.Mode == CategoryMode.Container).Select(i => i.BookingRef!.ToUpperInvariant()).Distinct().ToList(),
             items.Where(i => i.CargoRef is not null).Select(i => i.CargoRef!.ToUpperInvariant()).Distinct().ToList());
 }

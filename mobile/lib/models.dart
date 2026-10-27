@@ -19,7 +19,7 @@ class DriverProfile {
 }
 
 class Move {
-  const Move({required this.category, required this.categoryEn, required this.categoryAr, this.containerNo, this.bookingRef, this.cargoRef});
+  const Move({required this.category, required this.categoryEn, required this.categoryAr, this.containerNo, this.bookingRef, this.cargoRef, this.vin, this.vehicleDesc});
 
   final String category;
   final String categoryEn;
@@ -27,9 +27,11 @@ class Move {
   final String? containerNo;
   final String? bookingRef;
   final String? cargoRef;
+  final String? vin;
+  final String? vehicleDesc;
 
-  /// What the driver reads: the container number, else the booking or cargo reference.
-  String get reference => containerNo ?? bookingRef ?? cargoRef ?? category;
+  /// What the driver reads: the container number, else the vehicle (VIN and model), else the booking or cargo reference.
+  String get reference => containerNo ?? (vin == null ? null : vehicleDesc == null ? vin : '$vin · $vehicleDesc') ?? bookingRef ?? cargoRef ?? category;
 
   String name(String lang) => lang == 'ar' ? categoryAr : categoryEn;
 
@@ -40,6 +42,8 @@ class Move {
         containerNo: json['containerNo'] as String?,
         bookingRef: json['bookingRef'] as String?,
         cargoRef: json['cargoRef'] as String?,
+        vin: json['vin'] as String?,
+        vehicleDesc: json['vehicleDesc'] as String?,
       );
 }
 

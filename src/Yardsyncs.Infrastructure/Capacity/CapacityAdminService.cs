@@ -362,6 +362,7 @@ public sealed class CapacityAdminService(
             [TerminalSettings.SlotMaxOverbookKey] = settings.SlotMaxOverbookPct,
             [TerminalSettings.SlotHistoryWeeksKey] = settings.SlotHistoryWeeks,
             [TerminalSettings.SlotGateSpeedKey] = settings.SlotGateSpeed ? 1 : 0,
+            [TerminalSettings.RoroMaxPerTruckKey] = settings.RoroMaxPerTruck,
         };
     }
 

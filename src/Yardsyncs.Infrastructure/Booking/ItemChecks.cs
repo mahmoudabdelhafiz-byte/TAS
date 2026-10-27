@@ -9,7 +9,7 @@ namespace Yardsyncs.Infrastructure.Booking;
 public sealed record ItemCheck(int Index, CheckType Type, CheckResult Result, string? Message, string Source, string? TosRef);
 
 public sealed record ItemToCheck(
-    int Index, string CategoryCode, CategoryMode Mode, string? ContainerNo, string? BookingRef, string? EdoRef, string? CargoRef);
+    int Index, string CategoryCode, CategoryMode Mode, string? ContainerNo, string? BookingRef, string? EdoRef, string? CargoRef, string? Vin = null);
 
 /// <summary>The checks run for every item — at booking and again before the truck arrives.</summary>
 public static class ItemChecks
@@ -40,7 +40,7 @@ public static class ItemChecks
         {
             tosChecks = await tos.ValidateAsync(
                 terminalId,
-                items.Select(i => new TosItemQuery(i.Index, i.CategoryCode, i.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoRef, slotStart)).ToList(),
+                items.Select(i => new TosItemQuery(i.Index, i.CategoryCode, i.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoRef, slotStart, i.Vin)).ToList(),
                 ct);
         }
         catch (TosUnavailableException) when (onUnavailable == TosUnavailablePolicy.Warn)

@@ -151,7 +151,9 @@ public sealed class AppointmentQueryService(YardsyncsDbContext db, TimeProvider 
                     .OrderBy(v => v.ValidationId)
                     .Select(v => new CheckDto(n + 1, v.CheckType, v.Result, ServerText.TOrNull(v.Message), v.Source))
                     .ToList(),
-                i.SealNo)).ToList(),
+                i.SealNo,
+                i.Vin,
+                i.VehicleDesc)).ToList(),
             a.CreatedAt,
             a.Status == AppointmentStatus.EnRoute ? a.CurrentEta : null);
     }

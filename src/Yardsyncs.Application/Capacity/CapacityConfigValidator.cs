@@ -44,6 +44,7 @@ public static class CapacityConfigValidator
         [TerminalSettings.SlotMaxOverbookKey] = (0, 50),
         [TerminalSettings.SlotHistoryWeeksKey] = (4, 26),
         [TerminalSettings.SlotGateSpeedKey] = (0, 1),
+        [TerminalSettings.RoroMaxPerTruckKey] = (1, 20),
     };
 
     // ------------------------------------------------------------ templates

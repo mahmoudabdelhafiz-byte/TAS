@@ -49,7 +49,7 @@ public sealed class N4TosAdapter(
 
     public async Task<IReadOnlyList<TosYardPosition>> YardPositionsAsync(int terminalId, IReadOnlyList<TosItemQuery> items, CancellationToken ct = default)
     {
-        var containers = items.Where(i => i.ContainerNo is not null).Select(i => i.ContainerNo!).Distinct().ToList();
+        var containers = items.Where(i => (i.ContainerNo ?? i.Vin) is not null).Select(i => (i.ContainerNo ?? i.Vin)!).Distinct().ToList(); // RoRo: vehicles by VIN
         if (containers.Count == 0)
             return Array.Empty<TosYardPosition>();
 
@@ -65,7 +65,7 @@ public sealed class N4TosAdapter(
         var positions = new List<TosYardPosition>();
         foreach (var item in items)
         {
-            if (item.ContainerNo is null || !units.TryGetValue(item.ContainerNo.ToUpperInvariant(), out var unit))
+            if ((item.ContainerNo ?? item.Vin) is not { } unitId || !units.TryGetValue(unitId.ToUpperInvariant(), out var unit))
                 continue;
             var slot = string.IsNullOrWhiteSpace(unit.Position) ? null : unit.Position.Trim();
             var block = string.IsNullOrWhiteSpace(unit.Block) ? null : unit.Block.Trim();

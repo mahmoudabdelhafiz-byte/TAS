@@ -22,6 +22,9 @@ public class TosContractTests
     [InlineData("MTY_PICKUP", CategoryMode.Container, MoveKind.EmptyPickup)]
     [InlineData("MTY_RETURN", CategoryMode.Container, MoveKind.OtherContainer)]
     [InlineData("IMP_CARGO", CategoryMode.Cargo, MoveKind.Cargo)]
+    [InlineData("RORO_PICKUP", CategoryMode.Vehicle, MoveKind.VehiclePickup)]
+    [InlineData("RORO_DRIVEAWAY", CategoryMode.Vehicle, MoveKind.VehiclePickup)]
+    [InlineData("RORO_EXPORT", CategoryMode.Vehicle, MoveKind.VehicleExport)]
     public void Moves_are_sorted_by_kind(string category, CategoryMode mode, MoveKind kind) =>
         Assert.Equal(kind, TosContract.KindOf(Item(0, category, mode)));
 

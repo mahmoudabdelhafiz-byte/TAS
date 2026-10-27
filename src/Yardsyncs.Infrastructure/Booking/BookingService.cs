@@ -121,12 +121,12 @@ public sealed class BookingService(
             .Where(c => c.TerminalId == terminalId && c.IsActive)
             .ToDictionaryAsync(c => c.Code.ToUpperInvariant(), ct);
 
-        var (items, errors) = BookingRequestValidator.Validate(request, categories);
-        if (errors.Count > 0)
-            return (null, BookingOutcome.Invalid(errors));
-
         var settings = TerminalSettings.From(
             await db.TerminalSettings.AsNoTracking().Where(s => s.TerminalId == terminalId).ToListAsync(ct));
+
+        var (items, errors) = BookingRequestValidator.Validate(request, categories, settings.RoroMaxPerTruck);
+        if (errors.Count > 0)
+            return (null, BookingOutcome.Invalid(errors));
         var timeZone = TimeZoneInfo.FindSystemTimeZoneById(terminal.TimeZone);
 
         if (request.TruckId is { } truckId && settings.MaxAppointmentsPerTruckPerDay > 0)
@@ -148,6 +148,18 @@ public sealed class BookingService(
                 .ToListAsync(ct);
             if (taken.Count > 0)
                 return (null, BookingOutcome.Conflict($"Container {string.Join(", ", taken.Distinct())} already has a live appointment."));
+        }
+
+        var vins = items.Where(i => i.Vin is not null).Select(i => i.Vin!).ToList();
+        if (vins.Count > 0)
+        {
+            var takenVins = await LiveAppointments(terminalId)
+                .SelectMany(a => a.Items)
+                .Where(i => i.Vin != null && vins.Contains(i.Vin))
+                .Select(i => i.Vin!)
+                .ToListAsync(ct);
+            if (takenVins.Count > 0)
+                return (null, BookingOutcome.Conflict($"Vehicle {string.Join(", ", takenVins.Distinct())} already has a live appointment."));
         }
 
         // Multipurpose cargo references must exist, be open and belong to this company (if assigned).
@@ -172,7 +184,7 @@ public sealed class BookingService(
             checks = await ItemChecks.RunAsync(
                 tos,
                 terminalId,
-                items.Select(i => new ItemToCheck(i.Index, i.Category.Code, i.Category.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoRef)).ToList(),
+                items.Select(i => new ItemToCheck(i.Index, i.Category.Code, i.Category.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoRef, i.Vin)).ToList(),
                 slot.StartAt,
                 ct,
                 _onTosUnavailable);
@@ -217,6 +229,24 @@ public sealed class BookingService(
             }
         }
 
+        // The same for vehicles (RoRo), by VIN.
+        var vins = p.Items.Where(i => i.Vin is not null).Select(i => i.Vin!).Distinct().Order(StringComparer.Ordinal).ToList();
+        if (vins.Count > 0)
+        {
+            foreach (var vin in vins)
+                await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtext({"vin:" + p.Terminal.TerminalId + ":" + vin}))", ct);
+            var takenVins = await LiveAppointments(p.Terminal.TerminalId)
+                .SelectMany(a => a.Items)
+                .Where(i => i.Vin != null && vins.Contains(i.Vin))
+                .Select(i => i.Vin!)
+                .ToListAsync(ct);
+            if (takenVins.Count > 0)
+            {
+                await tx.RollbackAsync(ct);
+                return BookingOutcome.Conflict($"Vehicle {string.Join(", ", takenVins.Distinct())} already has a live appointment.");
+            }
+        }
+
         var unitsByCategory = p.Items.GroupBy(i => i.Category.CategoryId).ToDictionary(g => g.Key, g => g.Count());
         var capacityError = await TryConsumeSlotAsync(p.Slot, p.Company.CompanyId, unitsByCategory, now, ct, request.WalkIn);
         if (capacityError is not null)
@@ -256,6 +286,8 @@ public sealed class BookingService(
                 {
                     CategoryId = i.Category.CategoryId,
                     ContainerNo = i.ContainerNo,
+                    Vin = i.Vin,
+                    VehicleDesc = i.VehicleDesc,
                     IsoType = i.IsoType,
                     BookingRef = i.BookingRef,
                     EdoRef = i.EdoRef,
@@ -419,6 +451,13 @@ public sealed class BookingService(
         var vehicleError = await CheckTruckAndDriverAsync(appointment!.CompanyId, truckId, driverId, ct);
         if (vehicleError is not null)
             return BookingOutcome.Invalid(vehicleError);
+        // RoRo drive-away: the driver drives the vehicle out; the visit never has a truck.
+        if (truckId is not null)
+        {
+            var categoryIds = appointment.Items.Select(i => i.CategoryId).ToList();
+            if (await db.TransactionCategories.AnyAsync(c => categoryIds.Contains(c.CategoryId) && c.DriveAway, ct))
+                return BookingOutcome.Invalid("A drive-away visit has no truck: the driver drives the vehicle.");
+        }
 
         var updated = await db.Appointments
             .Where(a => a.AppointmentId == appointment.AppointmentId

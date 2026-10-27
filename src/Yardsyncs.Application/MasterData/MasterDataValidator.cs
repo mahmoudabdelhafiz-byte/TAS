@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Yardsyncs.Application.Languages;
+using Yardsyncs.Domain;
 using Yardsyncs.Domain.Booking;
 
 namespace Yardsyncs.Application.MasterData;
@@ -76,6 +77,8 @@ public static partial class MasterDataValidator
             errors.Add("Arabic name is required (max 100 characters).");
         if (!Enum.IsDefined(input.Mode) || !Enum.IsDefined(input.UnitType))
             errors.Add("Unknown mode or unit type.");
+        if (input.DriveAway && input.Mode != CategoryMode.Vehicle)
+            errors.Add("Only a vehicle (RoRo) move type can be drive-away.");
         return errors;
     }
 

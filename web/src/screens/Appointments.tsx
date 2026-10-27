@@ -10,7 +10,8 @@ import { InspectionSummary } from '../ui/Inspection.tsx';
 const active = (a: Appointment) => a.status === 'Confirmed' || a.status === 'EnRoute';
 
 export function itemLabel(item: AppointmentItem): string {
-  return item.containerNo ?? item.cargoRef ?? item.bookingRef ?? item.category;
+  const vehicle = item.vin ? (item.vehicleDesc ? `${item.vin} · ${item.vehicleDesc}` : item.vin) : null;
+  return item.containerNo ?? vehicle ?? item.cargoRef ?? item.bookingRef ?? item.category;
 }
 
 export function Appointments() {

@@ -17,6 +17,7 @@ public enum ExitProblemKind
 }
 
 /// <summary>A move of the visit as the exit gate sees it.</summary>
+/// <param name="ContainerNo">The container number, or a vehicle's VIN (RoRo).</param>
 public sealed record ExitItem(string Category, CategoryMode Mode, CategoryFlow? Flow, string? ContainerNo);
 
 public sealed record ExitProblem(ExitProblemKind Kind, string ContainerNo, string Message);
@@ -38,7 +39,7 @@ public static class ExitRules
             return new ExitCheckResult(ExitCheckStatus.NotChecked, [], null);
         var onTruck = seen.Select(ContainerNumber.Normalize).Where(c => c.Length > 0).Distinct().ToList();
         var problems = new List<ExitProblem>();
-        var containers = items.Where(i => i.Mode == CategoryMode.Container && i.ContainerNo is not null).ToList();
+        var containers = items.Where(i => i.Mode is CategoryMode.Container or CategoryMode.Vehicle && i.ContainerNo is not null).ToList();
 
         foreach (var item in containers.Where(i => i.Flow == CategoryFlow.Out && !onTruck.Contains(i.ContainerNo!)))
             problems.Add(new ExitProblem(ExitProblemKind.NotOnTruck, item.ContainerNo!,
@@ -48,7 +49,7 @@ public static class ExitRules
                 $"{item.ContainerNo} was brought to be dropped but is still on the truck."));
         var leaving = containers.Where(i => i.Flow is CategoryFlow.Out or null).Select(i => i.ContainerNo!).ToHashSet();
         var dropping = containers.Where(i => i.Flow == CategoryFlow.In).Select(i => i.ContainerNo!).ToHashSet();
-        foreach (var c in onTruck.Where(c => ContainerNumber.IsValid(c) && !leaving.Contains(c) && !dropping.Contains(c)))
+        foreach (var c in onTruck.Where(c => (ContainerNumber.IsValid(c) || Vin.HasValidFormat(c)) && !leaving.Contains(c) && !dropping.Contains(c)))
             problems.Add(new ExitProblem(ExitProblemKind.NotBooked, c, $"{c} is on the truck but this visit doesn't take it out."));
 
         return new ExitCheckResult(problems.Count == 0 ? ExitCheckStatus.Ok : ExitCheckStatus.Problem, problems, onTruck);

@@ -64,7 +64,7 @@ public sealed class RevalidationService(
         var checks = await ItemChecks.RunAsync(
             tos,
             a.TerminalId,
-            items.Select((i, n) => new ItemToCheck(n, i.Category.Code, i.Category.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoAllocation?.CargoRef)).ToList(),
+            items.Select((i, n) => new ItemToCheck(n, i.Category.Code, i.Category.Mode, i.ContainerNo, i.BookingRef, i.EdoRef, i.CargoAllocation?.CargoRef, i.Vin)).ToList(),
             a.Slot.StartAt,
             ct);
 

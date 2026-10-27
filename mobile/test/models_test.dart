@@ -33,6 +33,16 @@ void main() {
     expect(a.isActive, isTrue);
   });
 
+  test('a car carrier shows each vehicle by VIN and model', () {
+    final json = sample();
+    json['moves'] = [
+      {'category': 'RORO_PICKUP', 'categoryEn': 'Vehicle pickup', 'categoryAr': 'استلام مركبة', 'vin': 'JTDKB20U793456781', 'vehicleDesc': 'Toyota Corolla'},
+      {'category': 'RORO_PICKUP', 'categoryEn': 'Vehicle pickup', 'categoryAr': 'استلام مركبة', 'vin': 'WVWZZZ1KZ8W123456'},
+    ];
+    final a = DriverAppointment.fromJson(json);
+    expect(a.moves.map((m) => m.reference), ['JTDKB20U793456781 · Toyota Corolla', 'WVWZZZ1KZ8W123456']);
+  });
+
   test('midnight shows as 24:00; today and tomorrow are judged at the terminal', () {
     final late = DriverAppointment.fromJson(sample(start: '2026-10-20T20:00:00Z', end: '2026-10-20T21:00:00Z'));
     expect(hours(late), '23:00–24:00');

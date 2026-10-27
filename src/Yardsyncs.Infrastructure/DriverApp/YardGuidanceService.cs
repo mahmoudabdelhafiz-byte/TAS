@@ -158,7 +158,7 @@ public sealed class YardGuidanceService(YardsyncsDbContext db, ITosAdapter tos, 
         {
             positions = await tos.YardPositionsAsync(appointment.TerminalId,
                 items.Select(x => new TosItemQuery(x.Index, x.Item.Category.Code, x.Item.Category.Mode, x.Item.ContainerNo,
-                    x.Item.BookingRef, x.Item.EdoRef, null, appointment.Slot.StartAt)).ToList(), ct);
+                    x.Item.BookingRef, x.Item.EdoRef, null, appointment.Slot.StartAt, x.Item.Vin)).ToList(), ct);
         }
         catch (TosUnavailableException)
         {
@@ -228,7 +228,7 @@ public sealed class YardGuidanceService(YardsyncsDbContext db, ITosAdapter tos, 
             point ??= target?.ToArray();
 
             result.Add(new GuidanceStop(sequence, stop.Kind, stop.Block, stop.Slot,
-                stop.Items.Select(i => i.ContainerNo ?? i.BookingRef ?? i.Category.Code).ToList(),
+                stop.Items.Select(i => i.ContainerNo ?? i.Vin ?? i.BookingRef ?? i.Category.Code).ToList(),
                 stop.Items.Select(i => i.Category.NameEn).Distinct().ToList(),
                 stop.Items.Select(i => i.Category.NameAr).Distinct().ToList(),
                 moved, point, existing?.ArrivedAt is not null, existing?.Status == "DONE"));
@@ -274,9 +274,12 @@ public sealed class YardGuidanceService(YardsyncsDbContext db, ITosAdapter tos, 
             row.Status = "ACTIVE";
     }
 
-    /// <summary>Collect moves (imports, empties out, cargo); everything else is a delivery into the terminal.</summary>
+    /// <summary>Collect moves (imports, empties out, cargo, vehicles taken out); everything else is a delivery into the terminal.</summary>
     internal static bool IsPickup(TransactionCategory category) =>
         category.Mode == CategoryMode.Cargo
+        || (category.Mode == CategoryMode.Vehicle && category.Flow != CategoryFlow.In
+            && !category.Code.Contains("EXP", StringComparison.OrdinalIgnoreCase)
+            && !category.Code.Contains("RECEIV", StringComparison.OrdinalIgnoreCase))
         || category.Code.StartsWith("IMP", StringComparison.OrdinalIgnoreCase)
         || category.Code.EndsWith("_PICKUP", StringComparison.OrdinalIgnoreCase);
 

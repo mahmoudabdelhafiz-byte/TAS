@@ -5,8 +5,11 @@ public enum CategoryMode
     /// <summary>Booked by container number.</summary>
     Container,
 
-    /// <summary>Booked by BL / cargo reference (breakbulk, bulk, RoRo, project cargo).</summary>
+    /// <summary>Booked by BL / cargo reference (breakbulk, bulk, project cargo, RoRo by BL only).</summary>
     Cargo,
+
+    /// <summary>RoRo: booked vehicle by vehicle, by VIN (chassis number); a car carrier takes several on one visit.</summary>
+    Vehicle,
 }
 
 /// <summary>Which way a move's cargo goes through the gate.</summary>
@@ -40,6 +43,9 @@ public sealed class TransactionCategory
 
     /// <summary>Which way the cargo goes, for the exit check; null = not checked.</summary>
     public CategoryFlow? Flow { get; set; }
+
+    /// <summary>Vehicles driven in or out by the driver himself: the visit has no truck, one vehicle (RoRo).</summary>
+    public bool DriveAway { get; set; }
 
     /// <summary>The usual direction for a move type code: …PICKUP / …DELIVERY go out, …DROP / …RETURN / …RECEIV… come in.</summary>
     public static CategoryFlow? GuessFlow(string code)

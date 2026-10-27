@@ -135,7 +135,7 @@ function MoveTypes({ onChanged, onError }: { onChanged: (m?: string) => void; on
   const { api, t, lang, terminal } = useApp();
   const base = `/api/terminals/${terminal.terminalId}`;
   const list = useLoad(() => api.get<Category[]>(`${base}/categories`), [base]);
-  const [form, setForm] = useState({ code: '', nameEn: '', nameAr: '', mode: 'Container' as 'Container' | 'Cargo', flow: '' as '' | 'In' | 'Out' });
+  const [form, setForm] = useState({ code: '', nameEn: '', nameAr: '', mode: 'Container' as 'Container' | 'Cargo' | 'Vehicle', flow: '' as '' | 'In' | 'Out', driveAway: false });
   return (
     <>
       {list.data && list.data.length > 0 && (
@@ -156,10 +156,15 @@ function MoveTypes({ onChanged, onError }: { onChanged: (m?: string) => void; on
         <label className="field"><span>{t('onboard.nameEn')}</span><input dir="ltr" value={form.nameEn} onChange={e => setForm({ ...form, nameEn: e.target.value })} /></label>
         <label className="field"><span>{t('onboard.nameAr')}</span><input dir="rtl" value={form.nameAr} onChange={e => setForm({ ...form, nameAr: e.target.value })} /></label>
         <label className="field field-short"><span>{t('onboard.mode')}</span>
-          <select value={form.mode} onChange={e => setForm({ ...form, mode: e.target.value as 'Container' | 'Cargo' })}>
+          <select value={form.mode} onChange={e => setForm({ ...form, mode: e.target.value as 'Container' | 'Cargo' | 'Vehicle', driveAway: false })}>
             <option value="Container">{t('onboard.mode.Container')}</option>
             <option value="Cargo">{t('onboard.mode.Cargo')}</option>
+            <option value="Vehicle">{t('onboard.mode.Vehicle')}</option>
           </select></label>
+        {form.mode === 'Vehicle' && (
+          <label className="check"><input type="checkbox" checked={form.driveAway} onChange={e => setForm({ ...form, driveAway: e.target.checked })} />
+            {t('onboard.driveAway')}</label>
+        )}
         <label className="field field-short"><span>{t('onboard.flow')}</span>
           <select value={form.flow} onChange={e => setForm({ ...form, flow: e.target.value as '' | 'In' | 'Out' })}>
             <option value="">{t('onboard.flow.auto')}</option>
@@ -170,8 +175,9 @@ function MoveTypes({ onChanged, onError }: { onChanged: (m?: string) => void; on
           await api.post(`${base}/categories`, {
             code: form.code.trim(), nameEn: form.nameEn.trim(), nameAr: form.nameAr.trim(), mode: form.mode,
             unitType: form.mode === 'Cargo' ? 'Trip' : 'Move', sortOrder: (list.data?.length ?? 0) + 1, flow: form.flow || null,
+            driveAway: form.mode === 'Vehicle' && form.driveAway,
           });
-          setForm({ code: '', nameEn: '', nameAr: '', mode: 'Container', flow: '' });
+          setForm({ code: '', nameEn: '', nameAr: '', mode: 'Container', flow: '', driveAway: false });
           list.reload();
           onChanged();
         }}>{t('onboard.addMoveType')}</ActionButton>
@@ -308,6 +314,7 @@ function NewTerminal({ onError }: { onError: (m: string) => void }) {
           <select value={form.terminalType} onChange={e => setForm({ ...form, terminalType: e.target.value })}>
             <option value="Container">{t('onboard.type.Container')}</option>
             <option value="Multipurpose">{t('onboard.type.Multipurpose')}</option>
+            <option value="Roro">{t('onboard.type.Roro')}</option>
           </select></label>
       </div>
       <label className="field"><span>{t('onboard.terminalName')}</span>
